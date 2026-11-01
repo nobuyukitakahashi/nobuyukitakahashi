@@ -3,20 +3,25 @@
 @[global-policy](.agents/rules/global-policy.md)
 
 ## プロジェクト概要
-本ワークスペースは、Antigravityの**階層型ルール（`AGENTS.md`）**・**スキル（`.agents/skills/`）**・**ネイティブサブエージェント機能（`define_subagent` / `invoke_subagent`）**を組み合わせ、フォルダ構造による明確な成果物管理と専門サブエージェントによる分業パイプラインを実現するバーチャル組織システムです。
+本ワークスペースは、Antigravityの**階層型ルール（`AGENTS.md`）**・**スキル（`.agents/skills/`）**・**ネイティブサブエージェント機能（`define_subagent` / `invoke_subagent`）**を組み合わせた自律進化型バーチャル組織システムです。
+1. **最終出力の完全固定化**: どんな形式の成果物であっても、専門の納品部門（`04_Delivery_Dept`）がすべて引き受け、単一の固定フォルダ **`04_Delivery_Dept/outputs/`** に格納します。
+2. **自律的組織改善（Self-Evolution）**: 専門の組織進化部門（`05_System_Evolution_Dept`）が常時Antigravityの最新仕様・機能をチェックし、人間の指示を待たずにルールやスキルを自律アップデートします。
 
 ## 組織構成とディレクトリマップ
 
 | 部署ディレクトリ | 役割 | ルール定義ファイル | 入力（Read） | 出力（Write） | 対応スキル |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| [`00_COO/`](00_COO/) | 統括COO（司令塔・品質監査） | [`00_COO/AGENTS.md`](00_COO/AGENTS.md) | ユーザー指示 / 各部署成果物 | `01_Research_Dept/inputs/`<br>`00_COO/task_logs/` | `/coo-orchestrator` |
-| [`01_Research_Dept/`](01_Research_Dept/) | リサーチ部門（調査・出典収集） | [`01_Research_Dept/AGENTS.md`](01_Research_Dept/AGENTS.md) | `01_Research_Dept/inputs/` | `01_Research_Dept/reports/` | `/research-dept` |
-| [`02_Creative_Dept/`](02_Creative_Dept/) | 制作・編集部門（執筆・校正） | [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) | `01_Research_Dept/reports/` | `02_Creative_Dept/drafts/`<br>`02_Creative_Dept/final_outputs/` | `/creative-dept` |
-| [`03_Marketing_Dept/`](03_Marketing_Dept/) | マーケティング部門（SNS・PR文） | [`03_Marketing_Dept/AGENTS.md`](03_Marketing_Dept/AGENTS.md) | `02_Creative_Dept/final_outputs/` | `03_Marketing_Dept/promos/` | `/marketing-dept` |
+| [`00_COO/`](00_COO/) | 統括COO（司令塔・品質監査） | [`00_COO/AGENTS.md`](00_COO/AGENTS.md) | ユーザー指示 / 全成果物 | `01_Research_Dept/inputs/`<br>`00_COO/task_logs/` | `/coo-orchestrator` |
+| [`01_Research_Dept/`](01_Research_Dept/) | リサーチ部門（調査・出典収集） | [`01_Research_Dept/AGENTS.md`](01_Research_Dept/AGENTS.md) | `01_Research_Dept/inputs/` | `01_Research_Dept/reports/`<br>（※中間成果物） | `/research-dept` |
+| [`02_Creative_Dept/`](02_Creative_Dept/) | 制作・編集部門（執筆・校正） | [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) | `01_Research_Dept/reports/` | `02_Creative_Dept/drafts/`<br>`02_Creative_Dept/final_outputs/`（※中間成果物） | `/creative-dept` |
+| [`03_Marketing_Dept/`](03_Marketing_Dept/) | マーケティング部門（SNS・PR文） | [`03_Marketing_Dept/AGENTS.md`](03_Marketing_Dept/AGENTS.md) | `02_Creative_Dept/final_outputs/` | `03_Marketing_Dept/promos/`<br>（※中間成果物） | `/marketing-dept` |
+| **[`04_Delivery_Dept/`](04_Delivery_Dept/)** | **納品・出力統合部門（最終出力窓口）** | [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md) | `01`〜`03` の全中間成果物 | **`04_Delivery_Dept/outputs/`**<br>**（※唯一の最終成果物受取フォルダ）** | `/delivery-dept` |
+| **[`05_System_Evolution_Dept/`](05_System_Evolution_Dept/)** | **組織進化・AGY最新仕様監査部門** | [`05_System_Evolution_Dept/AGENTS.md`](05_System_Evolution_Dept/AGENTS.md) | AGY内蔵スキル・公式Doc / `00_COO/task_logs/` | `05_System_Evolution_Dept/evolution_logs/`<br>各 `AGENTS.md` / `.agents/skills/` | `/system-evolution` |
 
 ## 実行モード（メインエージェントの振る舞い）
-1. **一気通貫パイプライン実行（デフォルト / `/coo-orchestrator`）**:
+1. **一気通貫パイプライン＋自律進化実行（デフォルト / `/coo-orchestrator`）**:
    - ユーザーからテーマや課題を与えられた場合、メインエージェントは **統括COO（`00_COO`）** として振る舞う。
-   - [`00_COO/AGENTS.md`](00_COO/AGENTS.md) およびスキル [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md) の手順に従い、`define_subagent` と `invoke_subagent` を用いて各部署のサブエージェントを順次起動し、リサーチ ➔ 記事制作 ➔ マーケ告知文作成までを自律的に完遂させる。
-2. **部門単体実行（`/research-dept`, `/creative-dept`, `/marketing-dept`）**:
+   - `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ **`04_Delivery_Dept`** を順次起動し、指定されたあらゆるフォーマットの最終成果物を **`04_Delivery_Dept/outputs/`** に出力させる。
+   - パイプライン完了時（または開始前）に **`05_System_Evolution_Dept`** を自律稼働させ、Antigravity最新機能への追従やワークフロー改善点の有無を点検・自動反映する。
+2. **部門単体実行（`/research-dept`, `/creative-dept`, `/marketing-dept`, `/delivery-dept`, `/system-evolution`）**:
    - 特定の部門のみ実行・再実行したい場合は、該当する部門スキルを使用して対象フェーズのみを実行する。
