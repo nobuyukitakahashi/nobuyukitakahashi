@@ -30,3 +30,5 @@
    - パイプライン完了時（または開始前）に **`05_System_Evolution_Dept`** を自律稼働させ、Antigravity最新機能への追従やワークフロー改善点の有無を点検・自動反映する。
 2. **部門単体実行（`/research-dept`, `/creative-dept`, `/marketing-dept`, `/delivery-dept`, `/system-evolution`）**:
    - 特定の部門のみ実行・再実行したい場合も、窓口である統括COOが指示を受け、該当する部門スキルを使って対象サブエージェントのみを稼働させる。
+3. **マルチPC環境セットアップ・同期（`/pc-env-sync`）**:
+   - 別のPCで本プロジェクトを開き「環境セットアップして」「環境同期して」と指示された場合、統括COOは `.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1` を実行し、Git最新化・グローバルスキル同期・Obsidian MCP登録・NotebookLM認証状態確認を一括で完了させる。
