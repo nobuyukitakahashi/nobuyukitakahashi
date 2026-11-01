@@ -1,5 +1,22 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-01 (v3): リサーチ部門（01_Research_Dept）への Google NotebookLM MCP 統合プラグインの組み込み
+
+### 変更理由
+リサーチ部門（`01_Research_Dept`）が Web 検索だけでなく、人間オーナーの Google NotebookLM 内のノートブック検索・質問・引用抽出・ソース追加（Ingest）を直接実行できるよう、ワークスペースプラグインとして `notebooklm-mcp` を組み込むため。
+
+### Before / After
+- **Before**:
+  - `01_Research_Dept` の調査手段は `search_web` とローカルファイルのみだった。
+- **After**:
+  - **ワークスペースプラグイン [`.agents/plugins/notebooklm-plugin/`](.agents/plugins/notebooklm-plugin/) の新設**:
+    - [`plugin.json`](.agents/plugins/notebooklm-plugin/plugin.json) および [`mcp_config.json`](.agents/plugins/notebooklm-plugin/mcp_config.json) を構成し、Windows 環境で確実に起動する `npx.cmd -y notebooklm-mcp@latest`（MCPサーバー名: `notebooklm-research`）を登録。
+  - **リサーチ部門 [`01_Research_Dept/AGENTS.md`](01_Research_Dept/AGENTS.md) とスキルの更新**:
+    - `research-dept` サブエージェントの定義時に `EnableMCPTools: true` を付与。
+    - NotebookLM ナレッジ照会（`[NotebookLM]` タグ）と 2026年最新 Web 調査（`[Web]` タグ）を組み合わせるハイブリッド調査手順および出典記載フォーマットを実装。
+
+---
+
 ## 2026-11-01 (v2): 最終出力引き受け専門部門（04_Delivery_Dept）と自律進化部門（05_System_Evolution_Dept）の実装
 
 ### 変更理由

@@ -1,51 +1,52 @@
 ---
 name: coo-orchestrator
 description: >-
-  AIバーチャル組織の統括COO（司令塔）として、ユーザーから与えられたテーマや課題を分解し、
-  リサーチ部門（01）・制作部門（02）・マーケティング部門（03）・最終出力納品部門（04_Delivery_Dept）・
+  AIバーチャル組織の統括COO「ジン」として、ユーザーから与えられたテーマや課題を分解し、
+  リサーチ部門（01：NotebookLM×Web調査）・制作部門（02）・マーケティング部門（03）・最終出力納品部門（04_Delivery_Dept）・
   組織自律進化部門（05_System_Evolution_Dept）の専任サブエージェントを順次定義・起動し、
   どんな形式の成果物も固定フォルダ（04_Delivery_Dept/outputs/）に出力するとともに組織の自律改善を行うオーケストレーションスキル。
   ユーザーがテーマを指定して作業を依頼した際、または /coo-orchestrator コマンド実行時に使用する。
 ---
 
-# AI組織 統括COO オーケストレーション手順
+# AI組織 統括COO「ジン」 オーケストレーション手順
 
-本スキルは、親エージェントが **統括COO（`00_COO`）** として振る舞い、Antigravityのネイティブサブエージェント機能（`define_subagent` / `invoke_subagent`）を用いて全専門部署を自律稼働させるための実行ランブックです。
+本スキルは、親エージェントが **統括COO「ジン」（`00_COO`）** として振る舞い、Antigravityのネイティブサブエージェント機能（`define_subagent` / `invoke_subagent`）を用いて全専門部署を自律稼働させるための実行ランブックです。
 
 ---
 
 ## Step 1: タスクの初期化とリサーチ指示書の作成
 
-1. ユーザーの依頼内容から **テーマ識別子（`[テーマ名]`）**、**要求されている出力フォーマット（Markdown、HTML、CSV、JSON、テキスト等）**、および **現在日付（`[YYYYMMDD]`）** を決定する。
+1. ユーザーの依頼内容から **テーマ識別子（`[テーマ名]`）**、**NotebookLM 参照/保存の有無**、**要求されている出力フォーマット（Markdown、HTML、CSV、JSON、テキスト等）**、および **現在日付（`[YYYYMMDD]`）** を決定する。
 2. `00_COO/task_logs/log_[YYYYMMDD]_[テーマ名].md` を作成し、以下の項目を記録する：
-   - 依頼内容・目的・ターゲット読者・要求出力フォーマット
+   - 依頼内容・目的・ターゲット読者・要求出力フォーマット・NotebookLM連携指定
    - パイプライン進捗チェックリスト：
-     - `- [ ] Step 1: Research (01_Research_Dept)`
+     - `- [ ] Step 1: Research - NotebookLM & Web (01_Research_Dept)`
      - `- [ ] Step 2: Creative (02_Creative_Dept)`
      - `- [ ] Step 3: Marketing (03_Marketing_Dept)`
      - `- [ ] Step 4: Final Delivery to 04_Delivery_Dept/outputs/ (04_Delivery_Dept)`
      - `- [ ] Step 5: Autonomous System Evolution (05_System_Evolution_Dept)`
-3. `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` を作成し、リサーチ部門への具体的な調査指示（調査背景、深掘りすべきキーワード、求めるデータ・事例、想定読者、最終出力フォーマット要件）を記述する。
+3. `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` を作成し、リサーチ部門への具体的な調査指示（調査背景、NotebookLMで照会すべきノートブックやトピック、深掘りすべきWebキーワード、求めるデータ・事例、想定読者、最終出力フォーマット要件）を記述する。
 
 ---
 
 ## Step 2: 専任サブエージェントの定義（`define_subagent`）
 
-未定義の場合、以下の5つの専門サブエージェントを `define_subagent` ツールで定義する（すべて `EnableWriteTools: true`, `EnableSubagentTools: false`）：
+未定義の場合、以下の5つの専門サブエージェントを `define_subagent` ツールで定義する：
 
-1. **`research-dept`**:
-   - **Description**: `01_Research_Dept` 専任の調査エージェント。`inputs/` の指示に基づきWeb検索を行い、`reports/` に出典付き調査レポート（中間成果物）を作成する。
+1. **`research-dept`**（**`EnableWriteTools: true`, `EnableMCPTools: true`, `EnableSubagentTools: false`**）:
+   - ※NotebookLM MCP サーバー（`notebooklm-research`）のツール群を使用できるよう、必ず **`EnableMCPTools: true`** を付与する。
+   - **Description**: `01_Research_Dept` 専任の調査エージェント。`inputs/` の指示に基づき Google NotebookLM（MCP `notebooklm-research`）および Web検索（`search_web`）でハイブリッド調査を行い、`reports/` に出典付き調査レポート（中間成果物）を作成する。
    - **SystemPrompt**: [`01_Research_Dept/AGENTS.md`](../../../01_Research_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
-2. **`creative-dept`**:
+2. **`creative-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `02_Creative_Dept` 専任の制作・編集エージェント。`01_Research_Dept/reports/` のレポートをもとに `drafts/` に初稿を作成・校正し、`final_outputs/` に完成原稿（中間成果物）を出力する。
    - **SystemPrompt**: [`02_Creative_Dept/AGENTS.md`](../../../02_Creative_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
-3. **`marketing-dept`**:
+3. **`marketing-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `03_Marketing_Dept` 専任のマーケティング・広報エージェント。`02_Creative_Dept/final_outputs/` の完成原稿から `promos/` にSNS・PR告知文（中間成果物）を作成する。
    - **SystemPrompt**: [`03_Marketing_Dept/AGENTS.md`](../../../03_Marketing_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
-4. **`delivery-dept`**:
+4. **`delivery-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `04_Delivery_Dept` 専任の最終納品・出力統合エージェント。`01`〜`03` の中間成果物を集約し、ユーザー指定のあらゆるフォーマットに変換して唯一の固定出力フォルダ `04_Delivery_Dept/outputs/` に格納する。
    - **SystemPrompt**: [`04_Delivery_Dept/AGENTS.md`](../../../04_Delivery_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
-5. **`system-evolution-dept`**:
+5. **`system-evolution-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `05_System_Evolution_Dept` 専任の自律組織改善・Antigravity最新仕様監査エージェント。Antigravity最新仕様と実行ログを点検し、指示を待たずに自律的にルール（`AGENTS.md`）やスキル（`SKILL.md`）を改善する。
    - **SystemPrompt**: [`05_System_Evolution_Dept/AGENTS.md`](../../../05_System_Evolution_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
 
@@ -55,9 +56,9 @@ description: >-
 
 各サブエージェントは **上流から下流へ1段階ずつ** `invoke_subagent`（`Model: "inherit"`, `Workspace: "inherit"`）で起動し、完了通知を受け取るたびにCOOが成果物を `read_file` で検収してから次工程へ進める。
 
-### 3-1. リサーチ工程（`01_Research_Dept`）
-1. `invoke_subagent(TypeName="research-dept", Role="Research Dept Agent", Prompt="...")` を呼び出し、`01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` の調査と `01_Research_Dept/reports/report_[テーマ名].md` の出力を指示する。
-2. 完了後、レポートのフォーマット・出典URLの記載、`inputs/` 先頭への `[完了]` 追記を確認し、進行ログの Step 1 を `[x]` に更新する。
+### 3-1. リサーチ工程（`01_Research_Dept`：NotebookLM × Web）
+1. `invoke_subagent(TypeName="research-dept", Role="Research Dept Agent", Prompt="...")` を呼び出し、`01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` の調査（NotebookLM MCP照会＋Web検索）と `01_Research_Dept/reports/report_[テーマ名].md` の出力を指示する。
+2. 完了後、レポートのフォーマット・出典（NotebookLM / Web）の記載、`inputs/` 先頭への `[完了]` 追記を確認し、進行ログの Step 1 を `[x]` に更新する。
 
 ### 3-2. 制作・編集工程（`02_Creative_Dept`）
 1. `invoke_subagent(TypeName="creative-dept", Role="Creative Dept Agent", Prompt="...")` を呼び出し、ドラフト（`02_Creative_Dept/drafts/draft_[テーマ名].md`）および校正済み原稿（`02_Creative_Dept/final_outputs/content_[テーマ名].md`）の作成を指示する。

@@ -17,8 +17,8 @@
 
 | 部署ディレクトリ | 役割 | ルール定義ファイル | 入力（Read） | 出力（Write） | 対応スキル |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **[`00_COO/`](00_COO/)** | **統括COO（ユーザー対話窓口・司令塔）** | [`00_COO/AGENTS.md`](00_COO/AGENTS.md) | ユーザー指示 / 全成果物 | `01_Research_Dept/inputs/`<br>`00_COO/task_logs/` | `/coo-orchestrator` |
-| [`01_Research_Dept/`](01_Research_Dept/) | リサーチ部門（調査・出典収集） | [`01_Research_Dept/AGENTS.md`](01_Research_Dept/AGENTS.md) | `01_Research_Dept/inputs/` | `01_Research_Dept/reports/`<br>（※中間成果物） | `/research-dept` |
+| **[`00_COO/`](00_COO/)** | **統括COO「ジン」（ユーザー対話窓口・司令塔）** | [`00_COO/AGENTS.md`](00_COO/AGENTS.md) | ユーザー指示 / 全成果物 | `01_Research_Dept/inputs/`<br>`00_COO/task_logs/` | `/coo-orchestrator` |
+| [`01_Research_Dept/`](01_Research_Dept/) | リサーチ部門（**NotebookLM MCP** × Web調査） | [`01_Research_Dept/AGENTS.md`](01_Research_Dept/AGENTS.md) | `01_Research_Dept/inputs/`<br>NotebookLM (`notebooklm-research`) | `01_Research_Dept/reports/`<br>（※中間成果物） | `/research-dept` |
 | [`02_Creative_Dept/`](02_Creative_Dept/) | 制作・編集部門（執筆・校正） | [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) | `01_Research_Dept/reports/` | `02_Creative_Dept/drafts/`<br>`02_Creative_Dept/final_outputs/`（※中間成果物） | `/creative-dept` |
 | [`03_Marketing_Dept/`](03_Marketing_Dept/) | マーケティング部門（SNS・PR文） | [`03_Marketing_Dept/AGENTS.md`](03_Marketing_Dept/AGENTS.md) | `02_Creative_Dept/final_outputs/` | `03_Marketing_Dept/promos/`<br>（※中間成果物） | `/marketing-dept` |
 | **[`04_Delivery_Dept/`](04_Delivery_Dept/)** | **納品・出力統合部門（最終出力窓口）** | [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md) | `01`〜`03` の全中間成果物 | **`04_Delivery_Dept/outputs/`**<br>**（※唯一の最終成果物受取フォルダ）** | `/delivery-dept` |
