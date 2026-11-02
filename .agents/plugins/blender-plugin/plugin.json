@@ -1,0 +1,11 @@
+{
+  "name": "blender-creative-plugin",
+  "displayName": "Blender MCP 3D Creative Integration",
+  "version": "1.0.0",
+  "description": "Blender MCP integration (mcp-for-blender) for 02_Creative_Dept: live 3D modeling via bpy, asset search/import (Poly Haven, Sketchfab, Poly Pizza), AI 3D model generation, and scene rendering.",
+  "suggestedPrompts": [
+    "ジン、Blenderの接続状態とシーン情報を確認して",
+    "ジン、Blenderで〇〇の3Dシーンを作成してレンダリングして",
+    "ジン、Poly Havenからアセットを検索してBlenderにインポートして"
+  ]
+}

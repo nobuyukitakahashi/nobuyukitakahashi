@@ -1,5 +1,51 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-02 (v5): 制作・編集部門（02_Creative_Dept）への Blender MCP 統合プラグインの組み込みとマルチPC環境同期の拡張
+
+### 変更理由
+制作部門（`02_Creative_Dept`）がテキスト執筆・編集だけでなく、**Blender MCP（`mcp-for-blender` / MCPサーバー名: `blender`）** を用いたライブ3Dモデリング、アセット検索・インポート（Poly Haven / Sketchfab / Poly Pizza）、AI 3Dモデル生成、カメラ視点・マルチアングル視覚検証（`look`）、およびシーン・画像出力を自律実行できるよう、ワークスペースプラグイン・部門ルール・マルチPC同期スクリプトに組み込むため。
+
+### Before / After
+- **Before**:
+  - `02_Creative_Dept`（`creative-dept` サブエージェント）は `EnableMCPTools: false` で定義されており、テキスト原稿の作成のみを対象としていた。
+  - Windows 用環境同期スクリプト（`sync_pc_env.ps1`）およびワークスペースプラグイン（`.agents/plugins/`）に Blender MCP の定義がなかった。
+- **After**:
+  - **ワークスペースプラグイン [`.agents/plugins/blender-plugin/`](.agents/plugins/blender-plugin/) の新設**:
+    - [`plugin.json`](.agents/plugins/blender-plugin/plugin.json)、[`mcp_config.json`](.agents/plugins/blender-plugin/mcp_config.json)、[`README.md`](.agents/plugins/blender-plugin/README.md) を作成し、`uvx mcp-for-blender`（MCPサーバー名: `blender`）をワークスペースプラグインとして登録。
+  - **制作部門 [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) およびスキルの更新**:
+    - `creative-dept` サブエージェント定義時に **`EnableMCPTools: true`** を付与（[`coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md) および [`creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md)）。
+    - `get_addon_status` ➔ `get_scene_info` ➔ `search_assets` / `import_asset` / `generate_3d` / `execute_blender_code` ➔ `look` によるマルチアングル視覚監査 ➔ `04_Delivery_Dept/outputs/` への最終納品フローを標準化。
+  - **Windows 環境同期スクリプト [`sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1) の拡張**:
+    - macOS 版（`sync_mac_env.sh`）と同様に、Windows 版でも `uvx` パスを自動検出して `~/.gemini/config/mcp_config.json` および `~/.gemini/antigravity/mcp_config.json` に `blender`（および `obsidian`）を自動登録するよう更新。
+
+### 影響範囲
+- 新設: [`.agents/plugins/blender-plugin/plugin.json`](.agents/plugins/blender-plugin/plugin.json), [`.agents/plugins/blender-plugin/mcp_config.json`](.agents/plugins/blender-plugin/mcp_config.json), [`.agents/plugins/blender-plugin/README.md`](.agents/plugins/blender-plugin/README.md)
+- 更新: [`AGENTS.md`](AGENTS.md), [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md), [`.agents/skills/creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md), [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md), [`.agents/skills/pc-env-sync/SKILL.md`](.agents/skills/pc-env-sync/SKILL.md), [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1)
+
+---
+
+## 2026-11-01 (v4): 条件付き・オンデマンド稼働型「法務・コンプライアンス部門（06_Legal_Dept）」の新設
+
+### 変更理由
+通常案件におけるパイプラインの処理スピードを維持しつつ、法的リスク（薬機法・景品表示法・ステマ規制・著作権引用・個人情報保護・誹謗中傷リスク等）が含まれる案件や契約書・利用規約等の法務文書案件においてのみ専門的なリーガルスクリーニングと「安全な代替表現」の提示を行うため、条件付き審査ゲート（Conditional Gate）兼オンデマンド専門部署として `06_Legal_Dept` を新設。
+
+### Before / After
+- **Before**:
+  - 法務・コンプライアンス専門の審査部門が存在せず、広告規制（薬機法・景表法・ステマ規制）や著作権引用要件、個人情報マスキング、契約・規約レビューを専門的に検証・代替案提示する仕組みがなかった。
+- **After**:
+  - **`06_Legal_Dept`（法務・コンプライアンス部門）と `/legal-dept` スキルの新設**:
+    - [`06_Legal_Dept/AGENTS.md`](06_Legal_Dept/AGENTS.md) および [`.agents/skills/legal-dept/SKILL.md`](.agents/skills/legal-dept/SKILL.md) を作成。
+    - 通常案件ではスキップし、統括COOが「5大法務リスクトリガー」に該当すると判定した案件（Step 3.5）、またはオーナーから `/legal-dept` で直接指名された案件のみ起動するハイブリッド稼働方式を採用。
+    - 審査結果は3段階ステータス（`[APPROVED]` / `[CONDITIONAL_APPROVED]` / `[HOLD]`）で判定し、リスク箇所には「そのまま使える安全な代替表現（修正文案）」と弁護士法第72条配慮の免責注記を付与して `06_Legal_Dept/reviews/review_[テーマ名].md` に出力。
+  - **最終出力固定ルール（`04_Delivery_Dept/outputs/`）との完全統合**:
+    - `04_Delivery_Dept` が `06_Legal_Dept` の修正指示（安全な代替表現）を反映した上で統合納品パッケージ（Part 4）として `04_Delivery_Dept/outputs/` に格納するフローを確立。
+
+### 影響範囲
+- 新設: [`06_Legal_Dept/AGENTS.md`](06_Legal_Dept/AGENTS.md), [`06_Legal_Dept/reviews/.gitkeep`](06_Legal_Dept/reviews/.gitkeep), [`.agents/skills/legal-dept/SKILL.md`](.agents/skills/legal-dept/SKILL.md)
+- 更新: [`AGENTS.md`](AGENTS.md), [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md), [`00_COO/AGENTS.md`](00_COO/AGENTS.md), [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md), [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md)
+
+---
+
 ## 2026-11-01 (v3): リサーチ部門（01_Research_Dept）への Google NotebookLM MCP 統合プラグインの組み込み
 
 ### 変更理由

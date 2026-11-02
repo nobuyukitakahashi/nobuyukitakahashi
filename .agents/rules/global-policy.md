@@ -5,17 +5,17 @@
 ## 1. ディレクトリ（縄張り）と権限境界の厳守
 - すべてのサブエージェントは、自身に割り当てられた部署フォルダ内、および明確に許可された連携先フォルダ（指定されたインプット読み込み先／アウトプット出力先）以外のファイルを**変更・削除・作成**してはならない。
 - **ルール改訂権限の原則と唯一の例外**:
-  - 一般業務サブエージェント（`01_Research_Dept`〜`04_Delivery_Dept`）が共通ルール（`AGENTS.md` や `.agents/` 配下）および他部署の `AGENTS.md` を書き換えることは厳密に禁止する。
+  - 一般業務サブエージェント（`01_Research_Dept`〜`04_Delivery_Dept` および `06_Legal_Dept`）が共通ルール（`AGENTS.md` や `.agents/` 配下）および他部署の `AGENTS.md` を書き換えることは厳密に禁止する。
   - **例外**: **`05_System_Evolution_Dept`（組織進化・Antigravity監査部門）** のみ、Antigravityの最新機能追従および業務フローの自律的改善を目的として、`00_COO` の管理下で各部署の `AGENTS.md` および `.agents/` 配下のスキル・ルールを更新する特権を持つ。
 
 ## 2. 単方向パイプラインと最終出力（Output）一元化の絶対原則
 - 業務ファイルの書き込み（編集・作成）は「上流から下流へ」の単方向フローに限定する。
   - **標準業務パイプライン**:
-    `00_COO` ➔ `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ **`04_Delivery_Dept`（最終出力窓口）**
+    `00_COO` ➔ `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ `[06_Legal_Dept（※条件付き法務審査ゲート）]` ➔ **`04_Delivery_Dept`（最終出力窓口）**
 - **【全サブエージェント徹底事項】最終成果物（Output）固定フォルダの原則**:
-  - `01_Research_Dept`・`02_Creative_Dept`・`03_Marketing_Dept` の各フォルダ内に出力されるファイルはすべて**「中間成果物（工程内ファイル）」**である。
+  - `01_Research_Dept`・`02_Creative_Dept`・`03_Marketing_Dept`・`06_Legal_Dept` の各フォルダ内に出力されるファイルはすべて**「中間成果物（工程内ファイル）」**である。
   - ユーザーがどのような形式（Markdown、HTML、CSV、JSON、プレーンテキスト、コード、統合パッケージ等）で成果物を要求した場合であっても、ユーザーへ引き渡す**すべての最終成果物（Output）は必ず `04_Delivery_Dept`（出力・納品部門）が引き受け、固定フォルダ [`04_Delivery_Dept/outputs/`](../../04_Delivery_Dept/outputs/) に集約・変換して格納**しなければならない。
-  - 上流の各サブエージェント（`01`〜`03`）は、最終的に `04_Delivery_Dept` が任意のフォーマットへ正確に変換・パッケージングできるよう、構造化された中間成果物を作成して引き継ぐ義務を負う。
+  - 上流の各サブエージェント（`01`〜`03` および `06`）は、最終的に `04_Delivery_Dept` が任意のフォーマットへ正確に変換・パッケージングできるよう、構造化された中間成果物を作成して引き継ぐ義務を負う。
 
 ## 3. Antigravity最新機能の常時確認と自律的組織改善（Self-Evolution）
 - 本組織は、人間のオーナーから都度「組織やルールを改善して」と指示されなくても、**`05_System_Evolution_Dept`** を通じて常時Antigravityの最新機能・仕様（内蔵スキル `agy-customizations` / `antigravity-guide` および公式ドキュメント・Changelog）と業務ログを監査し、自律的に組織構造・ルール・スキルを最新化する。

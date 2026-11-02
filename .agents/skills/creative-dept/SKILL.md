@@ -1,17 +1,18 @@
 ---
 name: creative-dept
 description: >-
-  制作・編集部門（02_Creative_Dept）を稼働させ、01_Research_Dept/reports/ の調査レポートをもとに
-  ドラフト執筆（drafts/）とセルフ校正を経て完成原稿（final_outputs/）を出力した後、
+  制作・編集部門（02_Creative_Dept）を稼働させ、01_Research_Dept/reports/ の調査レポートや制作指示をもとに
+  テキスト原稿の執筆・セルフ校正、または Blender MCP（MCP: blender）を用いた3Dモデリング・アセット導入・
+  レンダリングを実行して完成成果物（final_outputs/）を出力した後、
   04_Delivery_Dept を通じて固定出力フォルダ 04_Delivery_Dept/outputs/ に最終成果物を納品するスキル。
-  /creative-dept コマンド実行時に使用する。
+  記事執筆やBlender 3D制作、/creative-dept コマンド実行時に使用する。
 ---
 
-# 制作・編集部門（`02_Creative_Dept`）実行スキル
+# 制作・編集・Blender 3D部門（`02_Creative_Dept`）実行スキル
 
 1. [`02_Creative_Dept/AGENTS.md`](../../../02_Creative_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) を読み込む。
-2. 対象となる `01_Research_Dept/reports/report_[テーマ名].md` が存在することを確認する。
-3. `define_subagent` および `invoke_subagent` で `creative-dept` サブエージェントを起動し、以下を実行させる：
-   - 初稿 `02_Creative_Dept/drafts/draft_[テーマ名].md` の作成とセルフ校正
-   - 完成原稿（中間成果物） `02_Creative_Dept/final_outputs/content_[テーマ名].md` の保存
-4. **固定出力ルールの適用**: 単体実行時であっても、続けて `delivery-dept` サブエージェントを起動し、ユーザーが指定した形式で固定フォルダ `04_Delivery_Dept/outputs/` に最終成果物を格納・`INDEX.md` を更新する。
+2. 対象となる `01_Research_Dept/reports/report_[テーマ名].md`（またはユーザーからの直接の制作・3Dモデリング要件）を確認する。
+3. `define_subagent`（**`EnableWriteTools: true`, `EnableMCPTools: true`, `EnableSubagentTools: false`**）および `invoke_subagent` で `creative-dept` サブエージェントを起動し、以下を実行させる：
+   - **テキスト制作時**: 初稿 `02_Creative_Dept/drafts/draft_[テーマ名].md` の作成・セルフ校正、および完成原稿 `02_Creative_Dept/final_outputs/content_[テーマ名].md` の保存
+   - **Blender 3D制作時**: MCPサーバー `blender`（`get_addon_status`, `get_scene_info`, `execute_blender_code`, `look`, `search_assets`, `import_asset`, `generate_3d`）を用いた3Dシーン構築・視覚監査・レンダリング出力、および制作レポート `02_Creative_Dept/final_outputs/content_[テーマ名].md`（＋関連 `.blend` / `.glb` / `.png`）の保存
+4. **固定出力ルールの適用**: 単体実行時であっても、続けて `delivery-dept` サブエージェントを起動し、ユーザーが指定した形式（Markdown、HTML、レンダリング画像、3Dモデルファイル等）で固定フォルダ `04_Delivery_Dept/outputs/` に最終成果物を格納・`INDEX.md` を更新する。

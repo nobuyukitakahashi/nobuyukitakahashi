@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "notebooklm-research": {
-      "command": "npx.cmd",
+      "command": "npx",
       "args": [
         "-y",
         "notebooklm-mcp@latest"
