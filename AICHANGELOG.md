@@ -1,5 +1,22 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v9): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.4改修（ボディ〜足付け根のへこみ解消・単一強凸曲面化、および頭頂ラインのC∞解析的ドーム曲線化）
+
+### 変更理由
+ユーザーからの追加デザイン指示（①ボディと足の付け根が不自然にへこんでいるためもっとなめらかに、②頭のラインがきれいでない）を受け、胴体下部から足先までの変曲点（凹み・くびれ）の根絶と、頭頂ラインのピクセル補間歪みの完全解消を実施するため。
+
+### Before / After
+- **Before (Rev.3)**:
+  - 胴体底部を一旦閉じてから足領域を局所突出させていたため、脇腹〜太もも外側およびお腹・お尻下の付け根に変曲点（凹み・くびれ）が生じていた。また頭頂ラインに2D画像のピクセルLUT補間とスーパー楕円体（`p = 2.12`）による微細な歪みが残っていた。
+- **After (Rev.4)**:
+  - **単一強凸曲面＋Taubin平滑化によるへこみゼロの一体造形**: 外側輪郭および前後断面に全区間で二階微分 $f''(u) < 0$ となる単一強凸プロファイルを採用し、股下アーチと足先を $C^2$ 連続エルミート曲線で接続、さらに下半部メッシュに20反復の体積保存型Taubin平滑化を適用することで、脇腹・お腹・お尻から足先まで一切へこみのない滑らかな曲面を実現。
+  - **$C^\infty$ 解析的ドーム曲線＋純粋楕円断面による頭頂ラインの完全平滑化**: 上半球を純粋楕円断面（`p = 2.0`）とし、正面頭頂プロファイルを $Z_{\text{top}}(|X|) = Z_{\text{eq}} + (Z_{\text{apex}} - Z_{\text{eq}})(1 - (|X|/W_{\max})^2)^{0.480}$ の解析関数へ刷新。
+
+### 影響範囲
+- 更新: [`02_Creative_Dept/drafts/build_iinet_kun.py`](02_Creative_Dept/drafts/build_iinet_kun.py), [`02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md`](02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md), [`04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md`](04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md), [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) および全レンダリング画像・`.blend` / `.glb` ファイル
+
+---
+
 ## 2026-11-05 (v8): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.3改修（両腕風の丸く尖った足造形・地球儀真下への尻尾接続・TV青枠のスリム化＆微拡大・Cycles 3DCGマット質感レンダリング・全周360度地球儀テクスチャ）
 
 ### 変更理由

@@ -371,68 +371,71 @@ class IINetSurfaceModel:
         self.W_max = float(self.X_lut[-1])    # 0.91625 m
         self.D_max = 342.0 / 400.0            # 0.85500 m
         self.Z_eq = (1022.0 - 560.0) / 400.0  # 1.15500 m
+        self.Z_apex = 2.01000                 # 頭頂高さ (m)
+        self.x_foot = 0.25800                 # 左右の足先の中心X座標 (m)
+        self.z_tip = -0.06800                 # 足先の最下端Z座標 (m)
+        self.z_crotch = 0.15200               # 股下アーチ中央のZ座標 (m)
 
     def z_top_of_x(self, abs_x):
-        return np.interp(np.clip(abs_x, 0.0, self.W_max), self.X_lut, self.Z_top_lut)
+        """
+        Rev.4: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
+        正面・側面・背面・斜め3/4のどの角度から見ても歪みのない完璧に滑らかな頭頂ラインを実現
+        """
+        u = np.clip(abs_x / self.W_max, 0.0, 1.0)
+        return self.Z_eq + (self.Z_apex - self.Z_eq) * ((1.0 - u * u) ** 0.480)
 
-    def z_bot_egg_of_x(self, abs_x):
-        return np.interp(np.clip(abs_x, 0.0, self.W_max), self.X_lut, self.Z_bot_egg_lut)
+    def _f_convex_profile(self, u, alpha, delta):
+        """
+        u in [0, 1] に対して f(0)=1, f(1)=0, f'(0)=0, f'(1)=-inf かつ
+        全区間 u in (0, 1) で二階微分 f''(u) < 0 (変曲点・凹みゼロの完全凸曲線) を満たす解析関数
+        """
+        u_clamped = np.clip(np.abs(u), 0.0, 1.0)
+        circ = np.sqrt(np.maximum(1.0 - u_clamped * u_clamped, 0.0))
+        denom = math.hypot(1.0, delta) - delta
+        hyp = 1.0 - (np.sqrt(u_clamped * u_clamped + delta * delta) - delta) / denom
+        return (1.0 - alpha) * circ + alpha * hyp
 
-    def z_bot_crotch_of_x(self, abs_x):
-        return np.interp(np.clip(abs_x, 0.0, self.W_max), self.X_lut, self.Z_bot_crotch_lut)
+    def _eval_lower_z(self, abs_x, abs_ct):
+        """
+        下半球 (Z <= Z_eq) の高さを、胴体から足先まで一度も凹まない単一の強凸曲面として評価
+        """
+        # 1) 外側輪郭 (|X| >= x_foot): 赤道(W_max, Z_eq)から足先(x_foot, z_tip)まで変曲点ゼロの単一凸曲線
+        u_out = np.clip((abs_x - self.x_foot) / (self.W_max - self.x_foot), 0.0, 1.0)
+        f_x = self._f_convex_profile(u_out, alpha=0.34, delta=0.22)
+        z_outer = self.Z_eq - (self.Z_eq - self.z_tip) * f_x
+
+        # 2) 内側股下アーチ (|X| < x_foot): 足先(x_foot, z_tip)と C^2 連続で繋がり中央(X=0, z_crotch)へ滑らかに上がる曲線
+        w_in = np.clip((self.x_foot - abs_x) / self.x_foot, 0.0, 1.0)
+        p_in = 0.38 * (w_in ** 2) * (3.0 - 2.0 * w_in) + 0.62 * (w_in ** 3) * (4.0 - 3.0 * w_in)
+        dz_crotch = (self.z_crotch - self.z_tip) * p_in
+
+        # お腹(LILI-netロゴ領域 abs_ct>=0.44)・お尻では股下の溝を完全ゼロにし、100%丸く滑らかなお腹・お尻を保つ
+        t_cy = np.clip(abs_ct / 0.44, 0.0, 1.0)
+        crotch_y_weight = (1.0 - t_cy * t_cy) ** 2
+        z_b = z_outer + dz_crotch * crotch_y_weight
+
+        # 3) 前後方向 (Y方向, abs_ct = |Y|/Y_max): お腹・お尻の豊かな丸みを保ちつつ足先(Y=0)まで変曲点ゼロで絞る単一凸曲線
+        f_y = self._f_convex_profile(abs_ct, alpha=0.34, delta=0.11)
+        return self.Z_eq - (self.Z_eq - z_b) * f_y
 
     def map_unit_sphere_to_body(self, nx, ny, nz):
-        X_torso = self.W_max * nx
-        abs_x = np.abs(X_torso)
+        # 水平断面 (X, Y) はくびれ・引っ張りの一切ない純粋な楕円座標とし、脇腹や付け根の凹みを根絶
+        X = self.W_max * nx
+        Y = self.D_max * ny
+        abs_x = np.abs(X)
+
         r_yz = np.sqrt(np.maximum(ny * ny + nz * nz, 1e-12))
-        ct = ny / r_yz
+        abs_ct = np.clip(np.abs(ny) / r_yz, 0.0, 1.0)
         st = nz / r_yz
 
-        p = 2.12
-        f_yz = (np.abs(ct) ** p + np.abs(st) ** p) ** (-1.0 / p)
-
+        # 上半球 (st >= 0): 純粋な楕円断面 (p=2.0 -> f_yz=1.0) × C^∞ 解析ドーム曲線で完璧に綺麗な頭頂ラインを構築
         z_t = self.z_top_of_x(abs_x)
-        z_b_egg = self.z_bot_egg_of_x(abs_x)
+        Z_upper = self.Z_eq + (z_t - self.Z_eq) * np.maximum(st, 0.0)
 
-        # 股下・お腹・お尻中央は Z ≈ +0.175m に持ち上げつつ、外側は原画の滑らかなボディ曲線 z_b_egg に段差ゼロで合流させる
-        z_floor = 0.175 - 0.072 * (np.clip(abs_x / 0.46, 0.0, 1.0) ** 2)
-        diff_z = z_b_egg - z_floor
-        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.032 ** 2))
+        # 下半球 (st < 0): 胴体から足先まで凹みゼロで連続する単一凸曲面
+        Z_lower = self._eval_lower_z(abs_x, abs_ct)
 
-        Z_torso = np.where(
-            st >= 0.0,
-            self.Z_eq + (z_t - self.Z_eq) * st * f_yz,
-            self.Z_eq - (self.Z_eq - z_b_torso) * (-st) * f_yz,
-        )
-        Y_torso = self.D_max * r_yz * ct * f_yz
-
-        # 左右の足ディスク: 中心(|nx|=0.2816 -> |X|=0.258m, ny=0.0 -> Y=0.0m)で胴体と C1 連続のまま
-        # 原画・両腕と同様に「下に向かってぷっくり丸くすぼまり、先端が丸く尖った」造形として滑らかに突き出させる
-        sign_x = np.where(nx >= 0.0, 1.0, -1.0)
-        dx_nx = np.abs(nx) - 0.2816
-        rx_u = np.where(dx_nx >= 0.0, 0.275, 0.268)
-        ux_rel = dx_nx / rx_u
-        uy_rel = ny / 0.295
-        r_u = np.sqrt(ux_rel * ux_rel + uy_rel * uy_rel)
-
-        t = np.where(nz < 0.0, np.clip(1.0 - r_u, 0.0, 1.0), 0.0)
-        s = 1.0 - t  # s = r_u in [0, 1]
-
-        # s=1 (付け根) では scale=1, 勾配=0 で胴体へ段差ゼロで接続し、
-        # s->0 (先端) では半径が s^0.50 で丸く膨らみながら収束する「両腕と同じ丸く尖ったパドル/しずく先端」プロファイル
-        s_safe = np.maximum(s, 1e-8)
-        target_rad_ratio = ((s_safe ** 0.50) * (0.68 + 0.32 * s_safe)) / s_safe
-        blend_t = (t ** 1.60) * (1.60 - 0.60 * t)
-        rad_mult = 1.0 + (target_rad_ratio - 1.0) * blend_t
-
-        x_center = sign_x * 0.258
-        X = x_center + (X_torso - x_center) * rad_mult
-        Y = Y_torso * rad_mult
-
-        # 付け根(s=1)で勾配ゼロ(C1連続)、先端(s=0)までぷっくり伸びる高さプロファイル
-        phi_leg = np.where(nz < 0.0, ((1.0 - (s ** 1.52)) ** 1.85), 0.0)
-        z_tip_target = -0.110
-        Z = Z_torso - (Z_torso - z_tip_target) * phi_leg
+        Z = np.where(st >= 0.0, Z_upper, Z_lower)
         return X, Y, Z
 
     def front_surface_y_and_normal(self, X, Z):
@@ -453,26 +456,29 @@ class IINetSurfaceModel:
         nx = abs_x / self.W_max
         r_yz = np.sqrt(np.maximum(1.0 - nx * nx, 1e-8))
         z_t = self.z_top_of_x(abs_x)
-        z_b_egg = self.z_bot_egg_of_x(abs_x)
-        z_floor = 0.175 - 0.072 * (np.clip(abs_x / 0.46, 0.0, 1.0) ** 2)
-        diff_z = z_b_egg - z_floor
-        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.032 ** 2))
 
-        u = np.where(
-            Z >= self.Z_eq,
-            (Z - self.Z_eq) / np.maximum(z_t - self.Z_eq, 1e-5),
-            (Z - self.Z_eq) / np.maximum(self.Z_eq - z_b_torso, 1e-5),
-        )
-        u = np.clip(u, -0.999, 0.999)
-        p = 2.12
-        v = -((1.0 - np.abs(u) ** p) ** (1.0 / p))
-        return self.D_max * r_yz * v
+        # 上半球 (Z >= Z_eq): 解析解 st = (Z - Z_eq) / (z_t - Z_eq), |ct| = sqrt(1 - st^2)
+        st_up = np.clip((Z - self.Z_eq) / np.maximum(z_t - self.Z_eq, 1e-5), 0.0, 0.9999)
+        ct_up = np.sqrt(np.maximum(1.0 - st_up * st_up, 0.0))
+
+        # 下半球 (Z < Z_eq): _eval_lower_z(abs_x, abs_ct) = Z を満たす abs_ct in [0, 1] を二分法で高精度逆算
+        lo = np.zeros_like(abs_x, dtype=np.float64)
+        hi = np.ones_like(abs_x, dtype=np.float64)
+        for _ in range(16):
+            mid = 0.5 * (lo + hi)
+            z_mid = self._eval_lower_z(abs_x, mid)
+            lo = np.where(z_mid < Z, mid, lo)
+            hi = np.where(z_mid >= Z, mid, hi)
+        ct_low = 0.5 * (lo + hi)
+
+        abs_ct = np.where(Z >= self.Z_eq, ct_up, ct_low)
+        return -self.D_max * r_yz * abs_ct
 
 
 # ==========================================
 # 3. 各パーツのメッシュ生成関数
 # ==========================================
-def create_body_mesh(surf_model, res=120):
+def create_body_mesh(surf_model, res=128):
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=2.0)
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=res - 1, use_grid_fill=True)
@@ -487,6 +493,25 @@ def create_body_mesh(surf_model, res=120):
     X, Y, Z = surf_model.map_unit_sphere_to_body(unit_p[:, 0], unit_p[:, 1], unit_p[:, 2])
     for i, v in enumerate(verts):
         v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
+
+    # 下半部 (Z < 0.48m) に体積収縮のない Taubin スムージングを適用し、局所曲率の変化を極限まで滑らかに均す
+    adj = [[e.other_vert(v).index for e in v.link_edges] for v in verts]
+    pos = np.array([[v.co.x, v.co.y, v.co.z] for v in verts], dtype=np.float64)
+    w_sm = np.clip((0.48 - pos[:, 2]) / 0.22, 0.0, 1.0)[:, None]
+    active_idx = np.where(w_sm[:, 0] > 0.0)[0]
+
+    for step in range(20):
+        lam = 0.45 if (step % 2 == 0) else -0.47
+        new_pos = pos.copy()
+        for idx in active_idx:
+            nbs = adj[idx]
+            if nbs:
+                avg = pos[nbs].mean(axis=0)
+                new_pos[idx] = pos[idx] + (lam * w_sm[idx]) * (avg - pos[idx])
+        pos = new_pos
+
+    for i, v in enumerate(verts):
+        v.co = Vector((float(pos[i, 0]), float(pos[i, 1]), float(pos[i, 2])))
 
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     mesh = bpy.data.meshes.new("Body_Mesh")
