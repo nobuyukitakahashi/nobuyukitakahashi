@@ -17,8 +17,9 @@
 ## パイプライン進捗チェックリスト
 - [x] Step 1: 5面図の立体的整合性解析・モデリング仕様策定 (`01_Research_Dept/inputs/task_20261104_cvn_iinet_3d_modeling.md`)
 - [x] Step 2: Blender 3Dモデリング・マテリアル構築・マルチアングルレンダリング (v1完了)
-- [x] Step 2-Rev2: ユーザーフィードバック全7項目反映（①足の延長・2本脚造形、②完全無反射マット質感、③TV青枠のサイズ縮小＆立体化、④青枠スリム化、⑤目の拡大＆立体化、⑥お尻からの尻尾接続、⑦胸元ロゴ `LILI-net` 3D立体メッシュ化） (`02_Creative_Dept`)
+- [x] Step 2-Rev2: ユーザーフィードバック全7項目反映 (`02_Creative_Dept`)
+- [x] Step 2-Rev3: ユーザーフィードバック全5項目反映（①足を完全な靴型にせず原画・両腕のような「先端が丸く尖った造形」を維持したまま多少足らしく延長、②尻尾先端と地球儀の接続位置を地球儀の真下へ移動、③顔の青枠の枠幅をもう少し細く＆全体サイズをRev.2よりもう少し大きく、④アニメ調を排したCycles 3DCGマット質感レンダリング、⑤全周360度地球儀テクスチャ） (`02_Creative_Dept`)
 - [x] Step 3: Marketing (`03_Marketing_Dept` - SKIPPED)
 - [x] Step 3.5: [Conditional] Legal & Compliance Review (`06_Legal_Dept` - SKIPPED)
-- [x] Step 4: Final Delivery Rev.2更新 to `04_Delivery_Dept/outputs/` (`04_Delivery_Dept`)
+- [x] Step 4: Final Delivery Rev.3更新 to `04_Delivery_Dept/outputs/` (`04_Delivery_Dept`)
 - [x] Step 5: Autonomous System Evolution (`05_System_Evolution_Dept`)

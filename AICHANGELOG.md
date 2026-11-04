@@ -1,5 +1,25 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v8): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.3改修（両腕風の丸く尖った足造形・地球儀真下への尻尾接続・TV青枠のスリム化＆微拡大・Cycles 3DCGマット質感レンダリング・全周360度地球儀テクスチャ）
+
+### 変更理由
+ユーザーからの追加デザイン指示（①足を完全な足型にせず原画・両腕のように先端が丸く尖った造形のまま多少足らしく延長、②尻尾の先端と地球儀の接続位置を地球儀の真下へ移動、③顔の青枠の枠幅をもう少し細く＆全体サイズをもう少し大きく、④アニメ調ではなく3DCGマット質感でレンダリング、⑤地球儀上の海と大陸を原図にとらわれず全アングルで地球儀らしく描画）をすべて反映するため。
+
+### Before / After
+- **Before (Rev.2)**:
+  - 平底・足首くびれのある靴型脚、地球儀背面への尻尾接続、Freestyle黒輪郭線＋自己発光によるアニメ調マット表現、正面半球のみの地球儀大陸配置。
+- **After (Rev.3)**:
+  - **先端が丸く尖った両腕風の足造形**: 靴型を廃止し、原画および両腕と同様に下に向かって丸くすぼまり先端が丸く尖ったパドル／しずく先端形状を維持したまま $Z = -0.110\text{ m}$ まで延長（胴体下部と $C^1$ 連続で接続）。
+  - **地球儀真下への尻尾接続**: S字パイプの先端を地球儀の真下（南極中心 $Z = 2.1925\text{ m}$）へ移動し、真下から上向き（$+Z$ 方向）に垂直接続する軌道へ改修。
+  - **TV青枠のスリム化＆全体サイズの微拡大**: 青枠・画面の全体スケールを `0.84倍` から `0.905倍` へ拡大し、枠幅係数を `0.74` から `0.54` へスリム化。
+  - **Cycles GPU 3DCGマット質感レンダリング**: Freestyle黒輪郭線と自己発光を完全撤廃し、Cyclesパストレーシング＋4灯スタジオソフトボックス照明＋Principled BSDF（`Roughness = 0.94`, `Specular IOR Level = 0.08`）による自然な3DCGマットラバー／クレイフィギュア調陰影へ刷新。
+  - **全周360度・世界大陸テクスチャ**: 経度 $-180^\circ \sim +180^\circ$・緯度 $-90^\circ \sim +90^\circ$ 全域に世界の大陸・半島・島列を配置した `2048×1024 px` テクスチャを生成し、全アングルで地球儀として視認可能に改修。
+
+### 影響範囲
+- 更新: [`02_Creative_Dept/drafts/build_iinet_kun.py`](02_Creative_Dept/drafts/build_iinet_kun.py), [`02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md`](02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md), [`04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md`](04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md), [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) および全レンダリング画像・`.blend` / `.glb` ファイル
+
+---
+
 ## 2026-11-05 (v7): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.2改修（2本脚延長・完全無反射マット質感・TV青枠の縮小/スリム化/立体化・目の拡大/立体化・お尻からの尻尾接続・胸元ロゴの3D立体メッシュ化）
 
 ### 変更理由

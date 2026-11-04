@@ -118,33 +118,124 @@ def extract_textures_and_profiles():
     body_tex[r_start:r_end, u0_px:u1_px, :3] = np.clip(comp_rgb, 0, 255).astype(np.uint8)
     save_rgba_uint8_as_png(body_tex, BODY_TEX_PATH)
 
-    # --- (B) 頭上の地球儀テクスチャ生成 (1024x512 Equirectangular) ---
-    gw, gh = 1024, 512
+    # --- (B) 頭上の地球儀テクスチャ生成 (2048x1024 全周360度・世界大陸Equirectangularマップ) ---
+    gw, gh = 2048, 1024
     u_grid = np.linspace(0.0, 1.0, gw, endpoint=False)[None, :]
     v_grid = np.linspace(0.0, 1.0, gh)[:, None]
-    lon = (u_grid - 0.5) * 2.0 * math.pi
-    lat = (0.5 - v_grid) * math.pi
+    lon_deg = (u_grid - 0.5) * 360.0
+    lat_deg = (0.5 - v_grid) * 180.0
+    lon_rad = np.radians(lon_deg)
+    lat_rad = np.radians(lat_deg)
 
-    nz = np.sin(lat)
+    # 3D単位球面上の座標 (経度±180度境界で完全周期・シームレスな海岸線摂動を生成)
+    nx_s = np.cos(lat_rad) * np.sin(lon_rad)
+    ny_s = -np.cos(lat_rad) * np.cos(lon_rad)
+    nz_s = np.sin(lat_rad)
+
+    w_lon = (
+        0.45 * np.sin(7.0 * nx_s + 5.0 * ny_s + 4.0 * nz_s)
+        + 0.30 * np.cos(13.0 * nx_s - 11.0 * ny_s + 9.0 * nz_s)
+        + 0.18 * np.sin(23.0 * nx_s + 19.0 * ny_s - 17.0 * nz_s)
+        + 0.10 * np.cos(37.0 * nx_s - 29.0 * ny_s + 31.0 * nz_s)
+    )
+    w_lat = (
+        0.45 * np.cos(6.0 * nx_s - 8.0 * ny_s + 5.0 * nz_s)
+        + 0.30 * np.sin(15.0 * nx_s + 12.0 * ny_s - 10.0 * nz_s)
+        + 0.18 * np.cos(25.0 * nx_s - 21.0 * ny_s + 19.0 * nz_s)
+        + 0.10 * np.sin(41.0 * nx_s + 33.0 * ny_s - 27.0 * nz_s)
+    )
+    lon_w = ((lon_deg + 2.4 * w_lon + 180.0) % 360.0) - 180.0
+    lat_w = np.clip(lat_deg + 1.5 * w_lat, -89.9, 89.9)
+
+    # 全周360度どの角度(正面・側面・背面・上面・底面・斜め)から見ても地球儀と一目でわかる世界の大陸・半島・島列ポリゴン
+    world_polygons = [
+        # 1. アフリカ大陸 (正面左〜側面左〜底面)
+        [(-64, 10), (-66, 22), (-58, 32), (-42, 33), (-32, 29), (-24, 30), (-16, 12), (-14, 10),
+         (-22, -2), (-24, -14), (-32, -26), (-40, -36), (-46, -35), (-48, -22), (-50, -8), (-46, 2), (-56, 5)],
+        # 2. マダガスカル島
+        [(-18, -14), (-13, -15), (-15, -27), (-20, -28), (-21, -20)],
+        # 3. ヨーロッパ本土・イベリア・イタリア・バルカン (正面左上〜側面左上〜上面)
+        [(-62, 37), (-64, 43), (-54, 44), (-52, 50), (-42, 55), (-32, 58), (-15, 62), (-10, 48),
+         (-18, 42), (-26, 38), (-32, 43), (-37, 39), (-40, 44), (-48, 43), (-54, 36)],
+        # 4. スカンジナビア半島
+        [(-44, 58), (-40, 68), (-26, 71), (-16, 66), (-22, 60), (-32, 57), (-38, 56)],
+        # 5. イギリス・アイルランド
+        [(-62, 50), (-59, 58), (-53, 57), (-54, 50)],
+        # 6. アラビア半島
+        [(-24, 28), (-14, 30), (-4, 22), (-8, 12), (-18, 13)],
+        # 7. ユーラシア大陸・インド・インドシナ・東アジア・シベリア・カムチャツカ (正面中央〜右〜背面左上〜上面)
+        [(-18, 42), (-15, 65), (5, 71), (35, 73), (75, 72), (118, 70), (148, 65), (156, 54),
+         (142, 44), (134, 34), (124, 42), (114, 34), (96, 26), (78, 20), (64, 10),
+         (54, 12), (46, 22), (32, 23), (22, 8), (12, 22), (-2, 25), (-14, 32)],
+        # 8. 日本列島・東アジア島弧 (正面右＆背面左上)
+        [(52, 28), (58, 35), (63, 43), (67, 44), (62, 34), (56, 26)],
+        [(118, 22), (128, 30), (138, 40), (144, 43), (138, 31), (125, 20)],
+        # 9. 東南アジア諸島 (スマトラ・ジャワ・ボルネオ・ニューギニア)
+        [(54, 4), (66, -6), (80, -9), (78, -4), (64, 0), (56, 7)],
+        [(70, -3), (84, -3), (86, 6), (74, 7)],
+        [(94, -8), (128, -9), (130, -1), (96, 0)],
+        # 10. オーストラリア大陸 (正面右下〜背面左下〜底面)
+        [(58, -22), (68, -13), (92, -11), (122, -11), (144, -17), (148, -28),
+         (136, -38), (112, -39), (82, -35), (60, -33)],
+        # 11. ニュージーランド
+        [(148, -46), (162, -34), (156, -31), (144, -43)],
+        # 12. 北アメリカ大陸・アラスカ・フロリダ・中央アメリカ (経度180度を跨いで背面中央上〜側面右上〜上面に配置)
+        [(154, 52), (164, 67), (186, 71), (218, 70), (236, 65), (242, 54), (254, 58), (258, 46),
+         (248, 34), (242, 24), (236, 30), (222, 28), (212, 16), (222, 9), (212, 8),
+         (194, 16), (176, 26), (164, 38), (156, 46)],
+        # 13. グリーンランド・アイスランド (側面中央上〜斜め〜上面)
+        [(-96, 60), (-102, 72), (-88, 81), (-68, 78), (-72, 66), (-86, 59)],
+        [(-68, 63), (-60, 66), (-58, 63), (-66, 61)],
+        # 14. カリブ諸島
+        [(224, 22), (244, 20), (246, 16), (224, 18)],
+        # 15. 南アメリカ大陸 (背面中央右下〜側面右下〜底面)
+        [(196, 11), (224, 8), (246, -3), (256, -10), (250, -24), (234, -38),
+         (218, -49), (208, -55), (198, -51), (200, -35), (196, -18), (184, -5), (188, 5)],
+        # 16. 太平洋諸島・ハワイ
+        [(150, 14), (164, 18), (162, 23), (148, 19)],
+    ]
+
+    is_land = np.zeros((gh, gw), dtype=bool)
+    for poly in world_polygons:
+        pts = np.asarray(poly, dtype=np.float64)
+        px, py = pts[:, 0], pts[:, 1]
+        lon0 = 0.5 * (px.min() + px.max())
+        lon_rel = lon0 + ((lon_w - lon0 + 180.0) % 360.0) - 180.0
+        in_bbox = (
+            (lon_rel >= px.min() - 0.5) & (lon_rel <= px.max() + 0.5)
+            & (lat_w >= py.min() - 0.5) & (lat_w <= py.max() + 0.5)
+        )
+        if not np.any(in_bbox):
+            continue
+        xs = lon_rel[in_bbox]
+        ys = lat_w[in_bbox]
+        inside = np.zeros(xs.shape, dtype=bool)
+        n_v = len(pts)
+        j = n_v - 1
+        for i in range(n_v):
+            xi, yi = px[i], py[i]
+            xj, yj = px[j], py[j]
+            cond = ((yi > ys) != (yj > ys)) & (xs < (xj - xi) * (ys - yi) / ((yj - yi) + 1e-12) + xi)
+            inside ^= cond
+            j = i
+        is_land[in_bbox] |= inside
+
+    # 海岸線のジャギーを防ぐアンチエイリアス補間
+    land_f = is_land.astype(np.float32)
+    land_aa = (
+        0.52 * land_f
+        + 0.12 * (
+            np.roll(land_f, 1, axis=1) + np.roll(land_f, -1, axis=1)
+            + np.roll(land_f, 1, axis=0) + np.roll(land_f, -1, axis=0)
+        )
+    )
+    ocean_rgb = np.array([16.0, 196.0, 238.0], dtype=np.float32)
+    land_rgb = np.array([0.0, 156.0, 52.0], dtype=np.float32)
+    globe_rgb = ocean_rgb[None, None, :] * (1.0 - land_aa[:, :, None]) + land_rgb[None, None, :] * land_aa[:, :, None]
+
     globe_tex = np.zeros((gh, gw, 4), dtype=np.uint8)
-    globe_tex[:, :, 0] = 16
-    globe_tex[:, :, 1] = 196
-    globe_tex[:, :, 2] = 238
+    globe_tex[:, :, :3] = np.clip(np.round(globe_rgb), 0, 255).astype(np.uint8)
     globe_tex[:, :, 3] = 255
-
-    front_mask = np.abs(lon) < (0.50 * math.pi)
-    lon_clamped = np.clip(lon, -0.499 * math.pi, 0.499 * math.pi)
-    nx_proj = np.cos(lat) * np.sin(lon_clamped)
-    nz_proj = nz
-
-    px_x = np.clip(np.round(393.5 + nx_proj * 71.0).astype(int), 321, 466)
-    px_y = np.clip(np.round(73.0 - nz_proj * 71.0).astype(int), 2, 144)
-
-    sampled = im_f[px_y, px_x]
-    is_land = front_mask & (sampled[:, :, 1] > 125) & (sampled[:, :, 0] < 70) & (sampled[:, :, 2] < 130)
-    globe_tex[is_land, 0] = 0
-    globe_tex[is_land, 1] = 153
-    globe_tex[is_land, 2] = 51
     save_rgba_uint8_as_png(globe_tex, GLOBE_TEX_PATH)
 
     # --- (C) ボディ輪郭LUTの構築 ---
@@ -303,10 +394,10 @@ class IINetSurfaceModel:
         z_t = self.z_top_of_x(abs_x)
         z_b_egg = self.z_bot_egg_of_x(abs_x)
 
-        # 胴体下部（お腹・股下・お尻）を Z ≈ +0.185m で丸く収め、そこから2本の可愛い脚＋ぷっくりした足先を下へ伸ばす
-        z_floor = 0.185 - 0.012 * np.clip(abs_x / 0.54, 0.0, 1.0) ** 2
+        # 股下・お腹・お尻中央は Z ≈ +0.175m に持ち上げつつ、外側は原画の滑らかなボディ曲線 z_b_egg に段差ゼロで合流させる
+        z_floor = 0.175 - 0.072 * (np.clip(abs_x / 0.46, 0.0, 1.0) ** 2)
         diff_z = z_b_egg - z_floor
-        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.022 ** 2))
+        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.032 ** 2))
 
         Z_torso = np.where(
             st >= 0.0,
@@ -315,52 +406,33 @@ class IINetSurfaceModel:
         )
         Y_torso = self.D_max * r_yz * ct * f_yz
 
-        # 左右の足ディスク (中心: |nx|=0.305, ny=-0.020, 半径: Rx_u=0.245, Ry_u=0.310)
+        # 左右の足ディスク: 中心(|nx|=0.2816 -> |X|=0.258m, ny=0.0 -> Y=0.0m)で胴体と C1 連続のまま
+        # 原画・両腕と同様に「下に向かってぷっくり丸くすぼまり、先端が丸く尖った」造形として滑らかに突き出させる
         sign_x = np.where(nx >= 0.0, 1.0, -1.0)
-        ux_rel = (np.abs(nx) - 0.305) / 0.245
-        uy_rel = (ny + 0.020) / 0.310
+        dx_nx = np.abs(nx) - 0.2816
+        rx_u = np.where(dx_nx >= 0.0, 0.275, 0.268)
+        ux_rel = dx_nx / rx_u
+        uy_rel = ny / 0.295
         r_u = np.sqrt(ux_rel * ux_rel + uy_rel * uy_rel)
 
         t = np.where(nz < 0.0, np.clip(1.0 - r_u, 0.0, 1.0), 0.0)
-        cos_phi = ux_rel / np.maximum(r_u, 1e-8)
-        sin_phi = uy_rel / np.maximum(r_u, 1e-8)
+        s = 1.0 - t  # s = r_u in [0, 1]
 
-        t_rim = 0.64
-        u_sh = np.clip(t / t_rim, 0.0, 1.0)
-        u_so = np.clip((t - t_rim) / (1.0 - t_rim), 0.0, 1.0)
+        # s=1 (付け根) では scale=1, 勾配=0 で胴体へ段差ゼロで接続し、
+        # s->0 (先端) では半径が s^0.50 で丸く膨らみながら収束する「両腕と同じ丸く尖ったパドル/しずく先端」プロファイル
+        s_safe = np.maximum(s, 1e-8)
+        target_rad_ratio = ((s_safe ** 0.50) * (0.68 + 0.32 * s_safe)) / s_safe
+        blend_t = (t ** 1.60) * (1.60 - 0.60 * t)
+        rad_mult = 1.0 + (target_rad_ratio - 1.0) * blend_t
 
-        # 太もも(u_sh=0) ➔ 足首のくびれ(u_sh=0.52) ➔ ぷっくり丸い足先・甲(u_sh=0.86) の断面プロファイル
-        ankle_dip = np.sin(math.pi * np.clip(u_sh / 0.92, 0.0, 1.0)) ** 1.2
-        foot_flare = np.sin(0.5 * math.pi * np.clip((u_sh - 0.42) / 0.58, 0.0, 1.0)) ** 1.6
-        sole_cap = (1.0 - u_so ** 1.45) * (np.sqrt(np.maximum(1.0 - u_so * u_so, 0.0)) ** 0.32)
+        x_center = sign_x * 0.258
+        X = x_center + (X_torso - x_center) * rad_mult
+        Y = Y_torso * rad_mult
 
-        rx_sh = 0.222 - 0.044 * ankle_dip + 0.020 * foot_flare
-        rx_prof = np.where(t <= t_rim, rx_sh, rx_sh * sole_cap)
-
-        # 前方(-Y: sin_phi < 0)へしっかりぷっくり張り出す可愛い足先(つま先・甲)と丸いかかと
-        front_weight = np.maximum(-sin_phi, 0.0) ** 1.15
-        back_weight = np.maximum(sin_phi, 0.0) ** 1.15
-        ry_base = 0.205 - 0.040 * ankle_dip
-        ry_toe_bulge = (0.105 * front_weight + 0.018 * back_weight) * foot_flare
-        ry_sh = ry_base + ry_toe_bulge
-        ry_prof = np.where(t <= t_rim, ry_sh, ry_sh * sole_cap)
-
-        y_center_shift = -0.042 * foot_flare * (1.0 - 0.15 * u_so)
-
-        X_leg = sign_x * ((0.278 - 0.008 * u_sh) + rx_prof * cos_phi)
-        Y_leg = (-0.018 + y_center_shift) + ry_prof * sin_phi
-
-        # 脚の垂直プロファイル: 股関節(Z_torso)から足首・足の甲を経て接地底面(Z=-0.275m)へ延ばす
-        w_z = (u_sh ** 1.28) * (1.28 - 0.28 * u_sh)
-        instep_arch = 0.046 * front_weight * np.sin(math.pi * np.clip((u_sh - 0.44) / 0.56, 0.0, 1.0)) ** 1.15 * (1.0 - u_so)
-        Z_leg = (1.0 - w_z) * Z_torso + w_z * (-0.242) + instep_arch - 0.033 * (1.0 - (1.0 - u_so) ** 2.2)
-
-        w_leg = np.clip(t / 0.24, 0.0, 1.0)
-        w_leg = w_leg * w_leg * (3.0 - 2.0 * w_leg)
-
-        X = (1.0 - w_leg) * X_torso + w_leg * X_leg
-        Y = (1.0 - w_leg) * Y_torso + w_leg * Y_leg
-        Z = (1.0 - w_leg) * Z_torso + w_leg * Z_leg
+        # 付け根(s=1)で勾配ゼロ(C1連続)、先端(s=0)までぷっくり伸びる高さプロファイル
+        phi_leg = np.where(nz < 0.0, ((1.0 - (s ** 1.52)) ** 1.85), 0.0)
+        z_tip_target = -0.110
+        Z = Z_torso - (Z_torso - z_tip_target) * phi_leg
         return X, Y, Z
 
     def front_surface_y_and_normal(self, X, Z):
@@ -382,9 +454,9 @@ class IINetSurfaceModel:
         r_yz = np.sqrt(np.maximum(1.0 - nx * nx, 1e-8))
         z_t = self.z_top_of_x(abs_x)
         z_b_egg = self.z_bot_egg_of_x(abs_x)
-        z_floor = 0.185 - 0.012 * np.clip(abs_x / 0.54, 0.0, 1.0) ** 2
+        z_floor = 0.175 - 0.072 * (np.clip(abs_x / 0.46, 0.0, 1.0) ** 2)
         diff_z = z_b_egg - z_floor
-        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.022 ** 2))
+        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.032 ** 2))
 
         u = np.where(
             Z >= self.Z_eq,
@@ -467,7 +539,7 @@ def create_logo_3d_mesh(surf_model):
             ):
                 x_px = 192.0 + float(c)
                 y_px = 815.0 + float(r)
-                v_grid[(r, c)] = bm.verts.new(((x_px - 393.5) / 400.0, (1022.0 - y_px) / 400.0, 0.0))
+                v_grid[(r, c)] = bm.verts.new(((x_px - 393.5) / 400.0, (1022.0 - y_px) / 400.0 - 0.014, 0.0))
 
     for r in range(H - 1):
         for c in range(W - 1):
@@ -501,7 +573,7 @@ def create_logo_3d_mesh(surf_model):
     top_faces = [ele for ele in ret["geom"] if isinstance(ele, bmesh.types.BMFace)]
     extruded_set = set(extruded_verts)
 
-    # マテリアル割り当て: 0 = 前面マットイエロー, 1 = 立体側面ゴールドウォール
+    # マテリアル割り当て: 0 = 前面マットイエロー, 1 = 立体側面ウォール
     top_face_set = set(top_faces)
     base_face_set = set(base_faces)
     for f in list(bm.faces):
@@ -514,6 +586,20 @@ def create_logo_3d_mesh(surf_model):
             f.material_index = 1
             f.smooth = True
 
+    # 前面キャップ縁をごくわずかに内側へインセット(ベベル傾斜)させ、正面からも3D立体側面が自然に見えるようにする
+    bevel_updates = {}
+    for v in extruded_verts:
+        if any(f.material_index == 1 for f in v.link_faces):
+            in_nbs = [
+                e.other_vert(v) for e in v.link_edges
+                if (e.other_vert(v) in extruded_set) and not any(f.material_index == 1 for f in e.other_vert(v).link_faces)
+            ]
+            if in_nbs:
+                avg_in = sum((n.co for n in in_nbs), Vector((0.0, 0.0, 0.0))) / len(in_nbs)
+                bevel_updates[v] = v.co + 0.28 * (avg_in - v.co)
+    for v, co in bevel_updates.items():
+        v.co = co
+
     # すべての頂点をボディ前面曲面 (X, Y_surf, Z) + 法線方向オフセット h へ投影
     all_verts = list(bm.verts)
     xs = np.array([v.co.x for v in all_verts], dtype=np.float64)
@@ -521,7 +607,7 @@ def create_logo_3d_mesh(surf_model):
     ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
     for idx, v in enumerate(all_verts):
-        h_off = 0.023 if (v in extruded_set) else -0.005
+        h_off = 0.024 if (v in extruded_set) else -0.005
         v.co = Vector((
             float(xs[idx] + h_off * nxs[idx]),
             float(ys[idx] + h_off * nys[idx]),
@@ -542,18 +628,18 @@ def create_logo_3d_mesh(surf_model):
 
 def _compute_scaled_face_radii(data, ang_grid):
     """
-    TV画面モチーフの青枠と画面のサイズをひと回り小さく(0.84倍)し、
-    さらに青枠自体の太さ(r_out - r_in)を約26%スリム化(0.74倍)した半径を算出
+    Rev.3: TV画面モチーフの青枠と画面のサイズをRev.2より少し大きく(0.905倍)し、
+    青枠自体の太さ(r_out - r_in)をさらに細くスリム化(0.54倍)した半径を算出
     """
     thetas = data["thetas"]
     r_in_orig = np.interp(ang_grid, thetas, data["r_in_lut"])
     r_out_orig = np.interp(ang_grid, thetas, data["r_out_lut"])
-    frame_scale = 0.84
-    thickness_slim = 0.74
+    frame_scale = 0.905
+    thickness_slim = 0.54
     r_out = r_out_orig * frame_scale
     w_frame = (r_out_orig - r_in_orig) * frame_scale * thickness_slim
     r_in = r_out - w_frame
-    zc = data["face_center_Z"] + 0.025
+    zc = data["face_center_Z"] + 0.018
     return r_in, r_out, zc
 
 
@@ -909,26 +995,53 @@ def create_antenna_and_globe(data):
     raw_z = data["stem_Z"][::-1]
     raw_y = data["stem_Y"][::-1]
 
-    # 尻尾の根元をお尻内部(Y=0.35m, Z=0.49m)から20点の密な制御点でスタートさせ、ボディと100%密着接続
-    root_z = np.linspace(0.490, float(raw_z[0]) - 0.008, 20)
-    root_y = np.linspace(0.350, float(raw_y[0]) - 0.015, 20)
-    tip_z = np.linspace(float(raw_z[-1]) + 0.002, 2.370, 6)
-    tip_y = np.linspace(float(raw_y[-1]) + 0.010, 1.140, 6)
+    globe_y = 1.190
+    globe_z = 2.3725
+    globe_radius = 0.180
 
-    ctrl_z = np.concatenate([root_z, raw_z, tip_z])
-    ctrl_y = np.concatenate([root_y, raw_y, tip_y])
+    # 1) 根元: お尻内部(Y=0.35m, Z=0.49m)からお尻表面を貫通する密な制御点
+    root_z = np.linspace(0.490, float(raw_z[0]) - 0.008, 22)
+    root_y = np.linspace(0.350, float(raw_y[0]) - 0.015, 22)
 
-    n_pts = 150
+    # 2) 下部膨らみ: お尻表面から背中下部の最大後方突出点 (Z=1.060m, Y=1.101m, dY/dZ=0) まで
+    low_mask = raw_z <= 1.060
+    low_z = raw_z[low_mask]
+    low_y = raw_y[low_mask]
+    z_peak = float(low_z[-1])
+    y_peak = float(low_y[-1])
+
+    # 3) 中間インフレクション: 最大突出点(Z=1.06m, dY/dZ=0) ➔ 背中上部の谷部(Z=1.64m, Y=0.975m, dY/dZ=0) へ滑らかな余弦補間
+    z_valley = 1.640
+    y_valley = 0.975
+    u_mid = np.linspace(0.02, 1.0, 40)
+    mid_z = z_peak + (z_valley - z_peak) * u_mid
+    mid_y = y_peak - (y_peak - y_valley) * 0.5 * (1.0 - np.cos(math.pi * u_mid))
+
+    # 4) 上部カーブ: 谷部(Z=1.64m, dY/dZ=0) ➔ 地球儀真下の直前(Z=2.155m, Y=globe_y, dY/dZ=0) へ滑らかな余弦補間
+    u_arc = np.linspace(0.02, 1.0, 42)
+    arc_z = z_valley + (2.155 - z_valley) * u_arc
+    arc_y = y_valley + (globe_y - y_valley) * 0.5 * (1.0 - np.cos(math.pi * u_arc))
+
+    # 5) 地球儀の真下(南極 Z=2.1925m)へ下から垂直(+Z方向)に刺さる直線部
+    vert_z = np.linspace(2.160, 2.255, 16)
+    vert_y = np.full_like(vert_z, globe_y)
+
+    ctrl_z = np.concatenate([root_z, low_z, mid_z, arc_z, vert_z])
+    ctrl_y = np.concatenate([root_y, low_y, mid_y, arc_y, vert_y])
+
+    n_pts = 160
     t_raw = np.linspace(0.0, 1.0, len(ctrl_z))
     t_fine = np.linspace(0.0, 1.0, n_pts)
     z_fine = np.interp(t_fine, t_raw, ctrl_z)
     y_fine = np.interp(t_fine, t_raw, ctrl_y)
 
-    k_sm = np.exp(-0.5 * (np.arange(-6, 7) / 3.0) ** 2)
+    k_sm = np.exp(-0.5 * (np.arange(-8, 9) / 3.5) ** 2)
     k_sm /= k_sm.sum()
-    z_fine = np.convolve(np.pad(z_fine, 6, mode='edge'), k_sm, mode='valid')
-    y_fine = np.convolve(np.pad(y_fine, 6, mode='edge'), k_sm, mode='valid')
+    z_fine = np.convolve(np.pad(z_fine, 8, mode='edge'), k_sm, mode='valid')
+    y_fine = np.convolve(np.pad(y_fine, 8, mode='edge'), k_sm, mode='valid')
     z_fine[0], y_fine[0] = 0.490, 0.350
+    y_fine[-6:] = globe_y
+    z_fine[-6:] = np.linspace(float(z_fine[-7]), 2.255, 6)
 
     r_pipe = 20.5 / 400.0
     n_ring = 36
@@ -977,8 +1090,7 @@ def create_antenna_and_globe(data):
     for poly in ant_mesh.polygons:
         poly.use_smooth = True
 
-    globe_center = Vector((0.0, 1.265, 2.3725))
-    globe_radius = 0.180
+    globe_center = Vector((0.0, globe_y, globe_z))
 
     bm_g = bmesh.new()
     bmesh.ops.create_uvsphere(bm_g, u_segments=64, v_segments=32, radius=globe_radius)
@@ -986,14 +1098,30 @@ def create_antenna_and_globe(data):
 
     for face in bm_g.faces:
         face.smooth = True
+        non_pole_us = []
+        loop_uvs = []
         for loop in face.loops:
             co = loop.vert.co.normalized()
             nx, ny, nz = float(co.x), float(co.y), float(co.z)
-            lon = math.atan2(nx, -ny)
             lat = math.asin(max(-1.0, min(1.0, nz)))
-            u = 0.5 + lon / (2.0 * math.pi)
             v = 0.5 + lat / math.pi
-            loop[uv_layer].uv = (u, v)
+            if math.hypot(nx, ny) < 1e-5:
+                loop_uvs.append([None, v])
+            else:
+                lon = math.atan2(nx, -ny)
+                u = 0.5 + lon / (2.0 * math.pi)
+                non_pole_us.append(u)
+                loop_uvs.append([u, v])
+
+        if non_pole_us and (max(non_pole_us) - min(non_pole_us) > 0.5):
+            for item in loop_uvs:
+                if item[0] is not None and item[0] < 0.5:
+                    item[0] += 1.0
+            non_pole_us = [item[0] for item in loop_uvs if item[0] is not None]
+
+        avg_u = (sum(non_pole_us) / len(non_pole_us)) if non_pole_us else 0.5
+        for loop, (u, v) in zip(face.loops, loop_uvs):
+            loop[uv_layer].uv = (avg_u if u is None else u, v)
 
     for v in bm_g.verts:
         v.co += globe_center
@@ -1021,7 +1149,7 @@ def create_armature_and_bind(all_mesh_objs):
     eb = arm_data.edit_bones
 
     b_root = eb.new("Root")
-    b_root.head = (0.0, 0.0, -0.245)
+    b_root.head = (0.0, 0.0, -0.105)
     b_root.tail = (0.0, 0.0, 0.18)
 
     b_body = eb.new("Body")
@@ -1030,13 +1158,13 @@ def create_armature_and_bind(all_mesh_objs):
     b_body.parent = b_root
 
     b_leg_l = eb.new("Leg.L")
-    b_leg_l.head = (0.275, -0.02, 0.18)
-    b_leg_l.tail = (0.270, -0.05, -0.245)
+    b_leg_l.head = (0.275, 0.0, 0.18)
+    b_leg_l.tail = (0.258, 0.0, -0.105)
     b_leg_l.parent = b_body
 
     b_leg_r = eb.new("Leg.R")
-    b_leg_r.head = (-0.275, -0.02, 0.18)
-    b_leg_r.tail = (-0.270, -0.05, -0.245)
+    b_leg_r.head = (-0.275, 0.0, 0.18)
+    b_leg_r.tail = (-0.258, 0.0, -0.105)
     b_leg_r.parent = b_body
 
     b_arm_l = eb.new("Arm.L")
@@ -1056,19 +1184,19 @@ def create_armature_and_bind(all_mesh_objs):
 
     b_ant2 = eb.new("Antenna_2")
     b_ant2.head = (0.0, 1.09, 1.20)
-    b_ant2.tail = (0.0, 0.95, 1.85)
+    b_ant2.tail = (0.0, 0.96, 1.65)
     b_ant2.parent = b_ant1
     b_ant2.use_connect = True
 
     b_ant3 = eb.new("Antenna_3")
-    b_ant3.head = (0.0, 0.95, 1.85)
-    b_ant3.tail = (0.0, 1.12, 2.37)
+    b_ant3.head = (0.0, 0.96, 1.65)
+    b_ant3.tail = (0.0, 1.205, 2.20)
     b_ant3.parent = b_ant2
     b_ant3.use_connect = True
 
     b_globe = eb.new("Globe")
-    b_globe.head = (0.0, 1.265, 2.37)
-    b_globe.tail = (0.0, 1.265, 2.55)
+    b_globe.head = (0.0, 1.205, 2.20)
+    b_globe.tail = (0.0, 1.205, 2.55)
     b_globe.parent = b_ant3
 
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -1086,8 +1214,8 @@ def create_armature_and_bind(all_mesh_objs):
             for v in obj.data.vertices:
                 z = v.co.z
                 x = v.co.x
-                if z < 0.22:
-                    w_leg = float(np.clip((0.22 - z) / 0.18, 0.0, 1.0))
+                if z < 0.20:
+                    w_leg = float(np.clip((0.20 - z) / 0.16, 0.0, 1.0))
                     if x >= 0:
                         vg_leg_l.add([v.index], w_leg, 'REPLACE')
                     else:
@@ -1115,7 +1243,7 @@ def create_armature_and_bind(all_mesh_objs):
                 z = v.co.z
                 if z < 1.20:
                     vg1.add([v.index], 1.0, 'REPLACE')
-                elif z < 1.85:
+                elif z < 1.65:
                     vg2.add([v.index], 1.0, 'REPLACE')
                 else:
                     vg3.add([v.index], 1.0, 'REPLACE')
@@ -1124,7 +1252,7 @@ def create_armature_and_bind(all_mesh_objs):
 
 
 # ==========================================
-# 5. マテリアル設定（完全無反射マット質感）
+# 5. マテリアル設定（アニメ調廃止 ➔ 本格3Dマット質感・自然陰影）
 # ==========================================
 def srgb_to_linear(c):
     c = c / 255.0
@@ -1135,34 +1263,34 @@ def rgb255_to_linear_rgba(r, g, b, a=1.0):
     return (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a)
 
 
-def set_bsdf_matte_params(bsdf, rgba, emission_strength=0.22):
+def set_bsdf_matte_params(bsdf, rgba):
     """
-    鏡面ハイライト・白いテカリを100%排除した完全無反射マット（つや消し）質感を設定
+    Rev.3: フラットな自己発光(Emission)を完全ゼロにし、
+    テカリを抑えたしっとりした3Dマット質感(Roughness=0.94, Specular=0.08)で自然な立体陰影を表現
     """
     bsdf.inputs["Base Color"].default_value = rgba
-    bsdf.inputs["Roughness"].default_value = 1.0
+    bsdf.inputs["Roughness"].default_value = 0.94
     if "Metallic" in bsdf.inputs:
         bsdf.inputs["Metallic"].default_value = 0.0
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.0
+        bsdf.inputs["Specular IOR Level"].default_value = 0.08
     if "Coat Weight" in bsdf.inputs:
         bsdf.inputs["Coat Weight"].default_value = 0.0
         bsdf.inputs["Coat Roughness"].default_value = 1.0
     if "Subsurface Weight" in bsdf.inputs:
         bsdf.inputs["Subsurface Weight"].default_value = 0.0
     if "Sheen Weight" in bsdf.inputs:
-        bsdf.inputs["Sheen Weight"].default_value = 0.0
-    if "Emission Color" in bsdf.inputs:
-        bsdf.inputs["Emission Color"].default_value = rgba
-        bsdf.inputs["Emission Strength"].default_value = emission_strength
+        bsdf.inputs["Sheen Weight"].default_value = 0.04
+    if "Emission Strength" in bsdf.inputs:
+        bsdf.inputs["Emission Strength"].default_value = 0.0
 
 
-def create_matte_material(name, rgb255, emission=0.22):
+def create_matte_material(name, rgb255, emission=0.0):
     mat = bpy.data.materials.new(name=name)
     nodes = mat.node_tree.nodes
     bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
     rgba = rgb255_to_linear_rgba(*rgb255)
-    set_bsdf_matte_params(bsdf, rgba, emission_strength=emission)
+    set_bsdf_matte_params(bsdf, rgba)
     mat.diffuse_color = rgba
     return mat
 
@@ -1177,53 +1305,65 @@ def create_globe_material():
     tex_node.image = bpy.data.images.load(GLOBE_TEX_PATH, check_existing=True)
     tex_node.interpolation = 'Linear'
 
-    set_bsdf_matte_params(bsdf, (0.05, 0.76, 0.93, 1.0), emission_strength=0.26)
+    set_bsdf_matte_params(bsdf, (0.05, 0.76, 0.93, 1.0))
     links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
-    if "Emission Color" in bsdf.inputs:
-        links.new(tex_node.outputs["Color"], bsdf.inputs["Emission Color"])
     return mat
 
 
 # ==========================================
 # 6. ライティング・カメラ・レンダリング・比較シート合成
 # ==========================================
+STUDIO_RIG_LIGHTS = {}
+
+
 def setup_lighting_and_world():
     scene = bpy.context.scene
     scene.view_settings.view_transform = 'Standard'
     scene.view_settings.look = 'None'
-    scene.view_settings.exposure = 0.0
+    scene.view_settings.exposure = 0.05
 
     world = bpy.data.worlds.new("StudioWorld")
     scene.world = world
     bg_node = next(n for n in world.node_tree.nodes if n.type == 'BACKGROUND')
-    bg_node.inputs[0].default_value = (0.95, 0.96, 0.98, 1.0)
-    bg_node.inputs[1].default_value = 0.70
+    bg_node.inputs[0].default_value = (0.98, 0.98, 1.00, 1.0)
+    bg_node.inputs[1].default_value = 0.44
 
-    lights_spec = [
-        ("Key_FrontLeft", 'AREA', (-2.8, -3.8, 2.8), 140.0, 3.2, (1.0, 0.99, 0.98)),
-        ("Fill_FrontRight", 'AREA', (3.0, -3.2, 1.8), 90.0, 3.5, (0.97, 0.99, 1.0)),
-        ("Rim_TopBack", 'AREA', (0.0, 3.4, 3.8), 135.0, 3.2, (0.96, 0.98, 1.0)),
-        ("Back_Key", 'AREA', (1.8, 3.8, 1.8), 110.0, 3.2, (1.0, 0.99, 0.98)),
-        ("Side_Highlight", 'AREA', (3.8, 0.4, 2.0), 105.0, 3.0, (1.0, 0.99, 0.99)),
-        ("Bottom_Bounce", 'AREA', (0.0, -0.6, -2.8), 85.0, 3.8, (1.0, 0.99, 1.0)),
+    STUDIO_RIG_LIGHTS.clear()
+    rig_defs = [
+        ("Key_Cam", 215.0, 3.4, (1.00, 0.99, 0.98), True),
+        ("Fill_Cam", 105.0, 4.4, (0.97, 0.99, 1.00), False),
+        ("Rim_Cam", 95.0, 3.8, (0.98, 0.99, 1.00), False),
+        ("Bounce_Cam", 70.0, 4.5, (1.00, 0.99, 1.00), False),
     ]
-    target = Vector((0.0, 0.15, 1.05))
-    for name, ltype, pos, energy, size, col in lights_spec:
-        ldata = bpy.data.lights.new(name=name, type=ltype)
+    for name, energy, size, col, cast_sh in rig_defs:
+        ldata = bpy.data.lights.new(name=name, type='AREA')
         ldata.energy = energy
         ldata.color = col
+        ldata.size = size
         if hasattr(ldata, "use_shadow"):
-            ldata.use_shadow = False
-        if hasattr(ldata, "size"):
-            ldata.size = size
+            ldata.use_shadow = cast_sh
         lobj = bpy.data.objects.new(name=name, object_data=ldata)
         bpy.context.collection.objects.link(lobj)
-        lobj.location = Vector(pos)
-        direction = (target - Vector(pos)).normalized()
-        lobj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
+        STUDIO_RIG_LIGHTS[name] = lobj
 
 
-def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=3.16, lens=85.0):
+def update_camera_studio_lights(forward, right, up):
+    target = Vector((0.0, 0.12, 1.08))
+    placements = {
+        "Key_Cam": target - 4.7 * forward - 2.6 * right + 2.5 * up,
+        "Fill_Cam": target - 4.8 * forward + 3.1 * right + 0.6 * up,
+        "Rim_Cam": target + 3.4 * forward + 0.8 * right + 3.6 * up,
+        "Bounce_Cam": target - 3.6 * forward - 3.4 * up,
+    }
+    for name, lpos in placements.items():
+        if name in STUDIO_RIG_LIGHTS:
+            lobj = STUDIO_RIG_LIGHTS[name]
+            lobj.location = lpos
+            direction = (target - lpos).normalized()
+            lobj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
+
+
+def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=3.02, lens=85.0):
     forward = Vector(forward).normalized()
     up_hint = Vector(up_hint).normalized()
     right = forward.cross(up_hint).normalized()
@@ -1243,31 +1383,15 @@ def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=3.1
         cam_obj.data.type = 'PERSP'
         cam_obj.data.lens = lens
 
+    update_camera_studio_lights(forward, right, up)
 
-def enable_freestyle_outline():
-    """アニメ調 × マット質感のクリーンな輪郭線 (Freestyle) を設定"""
+
+def disable_freestyle_outline():
+    """Rev.3: アニメ調の黒い輪郭線(Freestyle)を完全OFFにし、純粋な3Dマット陰影で表現"""
     scene = bpy.context.scene
-    scene.render.use_freestyle = True
-    scene.render.line_thickness_mode = 'ABSOLUTE'
-    scene.render.line_thickness = 1.6
-
+    scene.render.use_freestyle = False
     view_layer = bpy.context.view_layer
-    view_layer.use_freestyle = True
-    freestyle = view_layer.freestyle_settings
-    while freestyle.linesets:
-        freestyle.linesets.remove(freestyle.linesets[0])
-
-    lineset = freestyle.linesets.new("AnimeOutline")
-    lineset.select_silhouette = True
-    lineset.select_border = False
-    lineset.select_contour = True
-    lineset.select_crease = False
-    lineset.select_external_contour = True
-    lineset.select_material_boundary = False
-
-    linestyle = lineset.linestyle
-    linestyle.color = (0.07, 0.05, 0.10)
-    linestyle.thickness = 1.6
+    view_layer.use_freestyle = False
 
 
 def render_view_to_array(cam_obj, width, height, filepath, transparent=False):
@@ -1282,7 +1406,7 @@ def render_view_to_array(cam_obj, width, height, filepath, transparent=False):
     return load_image_rgba_uint8(filepath)
 
 
-def composite_on_card(rgba_arr, has_floor_shadow=True, bg_top=(248, 250, 255), bg_bot=(232, 238, 248), border_col=(205, 215, 232)):
+def composite_on_card(rgba_arr, has_floor_shadow=True, bg_top=(246, 249, 254), bg_bot=(230, 236, 246), border_col=(205, 215, 232)):
     h, w, _ = rgba_arr.shape
     t = np.linspace(0.0, 1.0, h)[:, None, None]
     bg = np.array(bg_top, dtype=np.float32)[None, None, :] * (1.0 - t) + np.array(bg_bot, dtype=np.float32)[None, None, :] * t
@@ -1295,14 +1419,14 @@ def composite_on_card(rgba_arr, has_floor_shadow=True, bg_top=(248, 250, 255), b
             y_foot_max = float(np.percentile(ys_op, 99.6))
             low_band = ys_op >= (y_foot_max - h * 0.045)
             shadow_cx = float(np.mean(xs_op[low_band])) if np.any(low_band) else (w * 0.50)
-            shadow_cy = min(h * 0.965, y_foot_max - h * 0.004)
+            shadow_cy = min(h * 0.965, y_foot_max - h * 0.003)
         else:
             shadow_cx = w * 0.50
-            shadow_cy = h * 0.935
+            shadow_cy = h * 0.925
         shadow_rx = w * 0.25
         shadow_ry = h * 0.028
         r2 = ((xx - shadow_cx) / shadow_rx) ** 2 + ((yy - shadow_cy) / shadow_ry) ** 2
-        shadow = 0.14 * np.exp(-1.8 * r2)[:, :, None]
+        shadow = 0.16 * np.exp(-1.8 * r2)[:, :, None]
         bg = bg * (1.0 - shadow)
 
     alpha = (rgba_arr[:, :, 3:4].astype(np.float32)) / 255.0
@@ -1319,25 +1443,47 @@ def composite_on_card(rgba_arr, has_floor_shadow=True, bg_top=(248, 250, 255), b
     return out
 
 
+def configure_cycles_gpu(scene):
+    scene.render.engine = 'CYCLES'
+    try:
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        for dev_type in ('OPTIX', 'CUDA'):
+            try:
+                prefs.compute_device_type = dev_type
+                prefs.get_devices()
+                gpu_devs = [d for d in prefs.devices if d.type == dev_type]
+                if gpu_devs:
+                    for d in prefs.devices:
+                        d.use = (d.type == dev_type)
+                    scene.cycles.device = 'GPU'
+                    break
+            except Exception:
+                pass
+    except Exception:
+        pass
+    scene.cycles.samples = 64
+    scene.cycles.use_denoising = True
+    if hasattr(scene.cycles, "denoiser"):
+        scene.cycles.denoiser = 'OPENIMAGEDENOISE'
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
 
-    scene.render.engine = 'BLENDER_EEVEE'
-    if hasattr(scene.eevee, "taa_render_samples"):
-        scene.eevee.taa_render_samples = 64
+    configure_cycles_gpu(scene)
 
     # 1. 参照5面図からプロファイル＆テクスチャ抽出
     data = extract_textures_and_profiles()
     surf_model = IINetSurfaceModel(data)
 
     # 2. 全3Dパーツ生成
-    body_obj = create_body_mesh(surf_model, res=120)
+    body_obj = create_body_mesh(surf_model, res=136)
     logo_obj = create_logo_3d_mesh(surf_model)
     screen_obj = create_face_screen_mesh(surf_model, data)
     frame_obj = create_face_frame_mesh(surf_model, data)
-    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.268, cz_eye=1.265, radius=0.080)
-    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.268, cz_eye=1.265, radius=0.080)
+    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.272, cz_eye=1.265, radius=0.080)
+    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.272, cz_eye=1.265, radius=0.080)
     mouth_obj = create_mouth_mesh(surf_model)
     arm_l_obj, arm_r_obj = create_arm_meshes(data)
     ant_obj, globe_obj = create_antenna_and_globe(data)
@@ -1349,15 +1495,15 @@ def main():
         ant_obj, globe_obj,
     ]
 
-    # 3. マテリアル作成（完全無反射マット）＆割り当て
-    mat_body_pink = create_matte_material("Mat_Body_Pink", (242, 78, 160), emission=0.22)
-    mat_arm_pink = create_matte_material("Mat_Arm_Pink", (232, 63, 150), emission=0.22)
-    mat_frame_blue = create_matte_material("Mat_Frame_Blue", (56, 86, 168), emission=0.20)
-    mat_feature_blue = create_matte_material("Mat_Feature_Blue", (46, 75, 166), emission=0.18)
-    mat_stem_blue = create_matte_material("Mat_Stem_Blue", (56, 89, 166), emission=0.20)
-    mat_screen_cream = create_matte_material("Mat_Screen_Cream", (248, 222, 148), emission=0.25)
-    mat_logo_yellow = create_matte_material("Mat_Logo_Yellow", (255, 240, 10), emission=0.28)
-    mat_logo_side = create_matte_material("Mat_Logo_Side", (215, 155, 0), emission=0.16)
+    # 3. マテリアル作成（本格3Dマット質感・自然陰影）＆割り当て
+    mat_body_pink = create_matte_material("Mat_Body_Pink", (245, 82, 164))
+    mat_arm_pink = create_matte_material("Mat_Arm_Pink", (236, 66, 154))
+    mat_frame_blue = create_matte_material("Mat_Frame_Blue", (58, 90, 174))
+    mat_feature_blue = create_matte_material("Mat_Feature_Blue", (46, 76, 168))
+    mat_stem_blue = create_matte_material("Mat_Stem_Blue", (58, 92, 172))
+    mat_screen_cream = create_matte_material("Mat_Screen_Cream", (250, 228, 156))
+    mat_logo_yellow = create_matte_material("Mat_Logo_Yellow", (255, 242, 15))
+    mat_logo_side = create_matte_material("Mat_Logo_Side", (185, 125, 0))
     mat_globe = create_globe_material()
 
     body_obj.data.materials.append(mat_body_pink)
@@ -1376,16 +1522,16 @@ def main():
     # 4. アーマチュア構築＆スキニング
     create_armature_and_bind(all_meshes)
 
-    # 5. ライティング・Freestyle・カメラ設定
+    # 5. ライティング・Freestyle OFF・カメラ設定
     setup_lighting_and_world()
-    enable_freestyle_outline()
+    disable_freestyle_outline()
 
     cam_data = bpy.data.cameras.new("RenderCam")
     cam_obj = bpy.data.objects.new("RenderCam", cam_data)
     bpy.context.collection.objects.link(cam_obj)
 
-    hero_target = Vector((0.02, 0.12, 1.11))
-    hero_pos = Vector((3.60, -6.20, 1.73))
+    hero_target = Vector((0.02, 0.12, 1.18))
+    hero_pos = Vector((3.55, -6.10, 1.78))
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
     scene.camera = cam_obj
 
@@ -1404,19 +1550,19 @@ def main():
 
     # (B) 5面図＋斜めビューの個別レンダリング (各 800 x 960)
     pw, ph = 800, 960
-    set_camera_pose(cam_obj, (0.0, -6.0, 1.13), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    set_camera_pose(cam_obj, (0.0, -6.0, 1.20), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.02)
     img_front = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (6.0, 0.28, 1.13), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    set_camera_pose(cam_obj, (6.0, 0.25, 1.20), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.02)
     img_side = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (0.0, 6.0, 1.13), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    set_camera_pose(cam_obj, (0.0, 6.0, 1.20), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.02)
     img_back = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (0.0, 0.28, 6.0), (0.0, 0.0, -1.0), (-1.0, 0.0, 0.0), ortho=True, ortho_scale=3.16)
+    set_camera_pose(cam_obj, (0.0, 0.25, 6.0), (0.0, 0.0, -1.0), (-1.0, 0.0, 0.0), ortho=True, ortho_scale=3.02)
     img_top = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=False)
 
-    set_camera_pose(cam_obj, (0.0, 0.28, -6.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0), ortho=True, ortho_scale=3.16)
+    set_camera_pose(cam_obj, (0.0, 0.25, -6.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0), ortho=True, ortho_scale=3.02)
     img_bottom = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=False)
 
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
@@ -1453,7 +1599,7 @@ def main():
         sheet[y0:y0 + ph, x0:x0 + pw] = panel
     save_rgba_uint8_as_png(sheet, SHEET_IMG_PATH)
 
-    print("ALL RENDERS AND EXPORTS (REV.2) COMPLETED SUCCESSFULLY.")
+    print("ALL RENDERS AND EXPORTS (REV.3) COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":
