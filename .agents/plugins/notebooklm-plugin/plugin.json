@@ -1,0 +1,11 @@
+{
+  "name": "notebooklm-research-plugin",
+  "displayName": "NotebookLM Research Integration",
+  "version": "1.0.0",
+  "description": "Google NotebookLM MCP integration for 01_Research_Dept: query notebooks, extract grounded citations, and ingest research sources.",
+  "suggestedPrompts": [
+    "ジン、NotebookLMのノートブック一覧を確認して",
+    "ジン、NotebookLMの資料と最新Web情報を合わせて〇〇を調査して",
+    "ジン、今回の調査結果をNotebookLMにもソース追加して"
+  ]
+}
