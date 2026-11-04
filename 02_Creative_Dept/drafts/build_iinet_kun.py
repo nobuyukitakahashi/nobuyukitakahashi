@@ -291,8 +291,8 @@ class IINetSurfaceModel:
         return np.interp(np.clip(abs_x, 0.0, self.W_max), self.X_lut, self.Z_bot_crotch_lut)
 
     def map_unit_sphere_to_body(self, nx, ny, nz):
-        X = self.W_max * nx
-        abs_x = np.abs(X)
+        X_torso = self.W_max * nx
+        abs_x = np.abs(X_torso)
         r_yz = np.sqrt(np.maximum(ny * ny + nz * nz, 1e-12))
         ct = ny / r_yz
         st = nz / r_yz
@@ -302,23 +302,65 @@ class IINetSurfaceModel:
 
         z_t = self.z_top_of_x(abs_x)
         z_b_egg = self.z_bot_egg_of_x(abs_x)
-        z_b_crotch = self.z_bot_crotch_of_x(abs_x)
 
-        Z_egg = np.where(
+        # 胴体下部（お腹・股下・お尻）を Z ≈ +0.185m で丸く収め、そこから2本の可愛い脚＋ぷっくりした足先を下へ伸ばす
+        z_floor = 0.185 - 0.012 * np.clip(abs_x / 0.54, 0.0, 1.0) ** 2
+        diff_z = z_b_egg - z_floor
+        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.022 ** 2))
+
+        Z_torso = np.where(
             st >= 0.0,
             self.Z_eq + (z_t - self.Z_eq) * st * f_yz,
-            self.Z_eq - (self.Z_eq - z_b_egg) * (-st) * f_yz,
+            self.Z_eq - (self.Z_eq - z_b_torso) * (-st) * f_yz,
         )
+        Y_torso = self.D_max * r_yz * ct * f_yz
 
-        crotch_lift = np.maximum(0.0, z_b_crotch - z_b_egg)
-        w_st = np.clip((-st - 0.68) / 0.32, 0.0, 1.0) ** 2.2
-        w_ct = np.clip(1.0 - (ct / 0.65) ** 2, 0.0, 1.0) ** 1.2
-        Z = Z_egg + crotch_lift * w_st * w_ct
+        # 左右の足ディスク (中心: |nx|=0.305, ny=-0.020, 半径: Rx_u=0.245, Ry_u=0.310)
+        sign_x = np.where(nx >= 0.0, 1.0, -1.0)
+        ux_rel = (np.abs(nx) - 0.305) / 0.245
+        uy_rel = (ny + 0.020) / 0.310
+        r_u = np.sqrt(ux_rel * ux_rel + uy_rel * uy_rel)
 
-        base_d = self.D_max * r_yz
-        leg_plump = 1.0 + 0.05 * np.exp(-((abs_x - 0.258) / 0.15) ** 2) * np.clip(-st, 0.0, 1.0) ** 2
-        crotch_groove = 1.0 - 0.18 * np.exp(-(abs_x / 0.10) ** 2) * np.clip((-st - 0.78) / 0.22, 0.0, 1.0) ** 1.5
-        Y = base_d * ct * f_yz * leg_plump * crotch_groove
+        t = np.where(nz < 0.0, np.clip(1.0 - r_u, 0.0, 1.0), 0.0)
+        cos_phi = ux_rel / np.maximum(r_u, 1e-8)
+        sin_phi = uy_rel / np.maximum(r_u, 1e-8)
+
+        t_rim = 0.64
+        u_sh = np.clip(t / t_rim, 0.0, 1.0)
+        u_so = np.clip((t - t_rim) / (1.0 - t_rim), 0.0, 1.0)
+
+        # 太もも(u_sh=0) ➔ 足首のくびれ(u_sh=0.52) ➔ ぷっくり丸い足先・甲(u_sh=0.86) の断面プロファイル
+        ankle_dip = np.sin(math.pi * np.clip(u_sh / 0.92, 0.0, 1.0)) ** 1.2
+        foot_flare = np.sin(0.5 * math.pi * np.clip((u_sh - 0.42) / 0.58, 0.0, 1.0)) ** 1.6
+        sole_cap = (1.0 - u_so ** 1.45) * (np.sqrt(np.maximum(1.0 - u_so * u_so, 0.0)) ** 0.32)
+
+        rx_sh = 0.222 - 0.044 * ankle_dip + 0.020 * foot_flare
+        rx_prof = np.where(t <= t_rim, rx_sh, rx_sh * sole_cap)
+
+        # 前方(-Y: sin_phi < 0)へしっかりぷっくり張り出す可愛い足先(つま先・甲)と丸いかかと
+        front_weight = np.maximum(-sin_phi, 0.0) ** 1.15
+        back_weight = np.maximum(sin_phi, 0.0) ** 1.15
+        ry_base = 0.205 - 0.040 * ankle_dip
+        ry_toe_bulge = (0.105 * front_weight + 0.018 * back_weight) * foot_flare
+        ry_sh = ry_base + ry_toe_bulge
+        ry_prof = np.where(t <= t_rim, ry_sh, ry_sh * sole_cap)
+
+        y_center_shift = -0.042 * foot_flare * (1.0 - 0.15 * u_so)
+
+        X_leg = sign_x * ((0.278 - 0.008 * u_sh) + rx_prof * cos_phi)
+        Y_leg = (-0.018 + y_center_shift) + ry_prof * sin_phi
+
+        # 脚の垂直プロファイル: 股関節(Z_torso)から足首・足の甲を経て接地底面(Z=-0.275m)へ延ばす
+        w_z = (u_sh ** 1.28) * (1.28 - 0.28 * u_sh)
+        instep_arch = 0.046 * front_weight * np.sin(math.pi * np.clip((u_sh - 0.44) / 0.56, 0.0, 1.0)) ** 1.15 * (1.0 - u_so)
+        Z_leg = (1.0 - w_z) * Z_torso + w_z * (-0.242) + instep_arch - 0.033 * (1.0 - (1.0 - u_so) ** 2.2)
+
+        w_leg = np.clip(t / 0.24, 0.0, 1.0)
+        w_leg = w_leg * w_leg * (3.0 - 2.0 * w_leg)
+
+        X = (1.0 - w_leg) * X_torso + w_leg * X_leg
+        Y = (1.0 - w_leg) * Y_torso + w_leg * Y_leg
+        Z = (1.0 - w_leg) * Z_torso + w_leg * Z_leg
         return X, Y, Z
 
     def front_surface_y_and_normal(self, X, Z):
@@ -340,24 +382,25 @@ class IINetSurfaceModel:
         r_yz = np.sqrt(np.maximum(1.0 - nx * nx, 1e-8))
         z_t = self.z_top_of_x(abs_x)
         z_b_egg = self.z_bot_egg_of_x(abs_x)
+        z_floor = 0.185 - 0.012 * np.clip(abs_x / 0.54, 0.0, 1.0) ** 2
+        diff_z = z_b_egg - z_floor
+        z_b_torso = 0.5 * (z_b_egg + z_floor + np.sqrt(diff_z * diff_z + 0.022 ** 2))
 
         u = np.where(
             Z >= self.Z_eq,
             (Z - self.Z_eq) / np.maximum(z_t - self.Z_eq, 1e-5),
-            (Z - self.Z_eq) / np.maximum(self.Z_eq - z_b_egg, 1e-5),
+            (Z - self.Z_eq) / np.maximum(self.Z_eq - z_b_torso, 1e-5),
         )
         u = np.clip(u, -0.999, 0.999)
         p = 2.12
         v = -((1.0 - np.abs(u) ** p) ** (1.0 / p))
-        st_approx = np.clip(u, -1.0, 1.0)
-        leg_plump = 1.0 + 0.05 * np.exp(-((abs_x - 0.258) / 0.15) ** 2) * np.clip(-st_approx, 0.0, 1.0) ** 2
-        return self.D_max * r_yz * v * leg_plump
+        return self.D_max * r_yz * v
 
 
 # ==========================================
 # 3. 各パーツのメッシュ生成関数
 # ==========================================
-def create_body_mesh(surf_model, res=88):
+def create_body_mesh(surf_model, res=120):
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=2.0)
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=res - 1, use_grid_fill=True)
@@ -373,26 +416,7 @@ def create_body_mesh(surf_model, res=88):
     for i, v in enumerate(verts):
         v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
 
-    x_logo_min = (192.0 - 393.5) / 400.0
-    x_logo_max = (628.0 - 393.5) / 400.0
-    z_logo_min = (1022.0 - 915.0) / 400.0
-    z_logo_max = (1022.0 - 815.0) / 400.0
-
-    uv_layer = bm.loops.layers.uv.new("UVMap")
-    for face in bm.faces:
-        face.smooth = True
-        all_front = all(loop.vert.co.y < -0.02 for loop in face.loops)
-        for loop in face.loops:
-            if all_front:
-                vx, vz = loop.vert.co.x, loop.vert.co.z
-                u_norm = (vx - x_logo_min) / (x_logo_max - x_logo_min)
-                v_norm = (vz - z_logo_min) / (z_logo_max - z_logo_min)
-                u_tex = float(np.clip(0.15 + 0.70 * u_norm, 0.02, 0.98))
-                v_tex = float(np.clip(0.25 + 0.50 * v_norm, 0.02, 0.98))
-                loop[uv_layer].uv = (u_tex, v_tex)
-            else:
-                loop[uv_layer].uv = (0.02, 0.02)
-
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     mesh = bpy.data.meshes.new("Body_Mesh")
     bm.to_mesh(mesh)
     bm.free()
@@ -404,15 +428,141 @@ def create_body_mesh(surf_model, res=88):
     return obj
 
 
-def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
-    thetas = data["thetas"]
-    r_in_lut = data["r_in_lut"]
-    zc = data["face_center_Z"]
+def create_logo_3d_mesh(surf_model):
+    """
+    胸元の「LILI-net」ロゴを独立した高精細3D立体メッシュとして生成し、
+    ボディ前面曲面に沿って法線方向へ +0.024m ぷっくり張り出させる
+    """
+    im_f = load_image_rgba_uint8(FRONT_REF_PATH)
+    crop = im_f[815:915, 192:628].astype(np.float32)
+    R, G, B = crop[:, :, 0], crop[:, :, 1], crop[:, :, 2]
+    y_raw = np.clip((0.5 * (R + G) - B) / 190.0, 0.0, 1.0)
+
+    # 2Dガウシアンスムージングでピクセル階段を滑らかな連続スカラー場へ変換
+    k1d = np.array([0.12, 0.23, 0.30, 0.23, 0.12], dtype=np.float32)
+    y_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 0, y_raw)
+    y_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 1, y_smooth)
+
+    H, W = y_smooth.shape
+    cell_mask = (0.25 * (y_smooth[:-1, :-1] + y_smooth[1:, :-1] + y_smooth[:-1, 1:] + y_smooth[1:, 1:]) > 0.36).copy()
+
+    # 対角チェッカーボードの非多様体頂点を解消
+    for _ in range(2):
+        for r in range(H - 2):
+            for c in range(W - 2):
+                if cell_mask[r, c] and cell_mask[r + 1, c + 1] and not cell_mask[r + 1, c] and not cell_mask[r, c + 1]:
+                    cell_mask[r + 1, c] = True
+                elif cell_mask[r + 1, c] and cell_mask[r, c + 1] and not cell_mask[r, c] and not cell_mask[r + 1, c + 1]:
+                    cell_mask[r, c] = True
 
     bm = bmesh.new()
-    ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
-    r_max_ang = np.interp(ang_grid, thetas, r_in_lut) + 0.015
+    v_grid = {}
+    for r in range(H):
+        for c in range(W):
+            if (
+                (r < H - 1 and c < W - 1 and cell_mask[r, c])
+                or (r > 0 and c < W - 1 and cell_mask[r - 1, c])
+                or (r < H - 1 and c > 0 and cell_mask[r, c - 1])
+                or (r > 0 and c > 0 and cell_mask[r - 1, c - 1])
+            ):
+                x_px = 192.0 + float(c)
+                y_px = 815.0 + float(r)
+                v_grid[(r, c)] = bm.verts.new(((x_px - 393.5) / 400.0, (1022.0 - y_px) / 400.0, 0.0))
 
+    for r in range(H - 1):
+        for c in range(W - 1):
+            if cell_mask[r, c]:
+                bm.faces.new((v_grid[(r + 1, c)], v_grid[(r + 1, c + 1)], v_grid[(r, c + 1)], v_grid[(r, c)]))
+
+    # 文字境界ループのTaubinスムージング（収縮を防ぎつつ階段状ジャギーを完全に排除）
+    for step_idx in range(12):
+        lam = 0.48 if (step_idx % 2 == 0) else -0.50
+        updates = {}
+        for v in bm.verts:
+            if v.is_boundary:
+                nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+                if len(nb) == 2:
+                    avg = 0.5 * (nb[0].co + nb[1].co)
+                    updates[v] = v.co + lam * (avg - v.co)
+            else:
+                nb = [e.other_vert(v) for e in v.link_edges]
+                if nb:
+                    avg = sum((n.co for n in nb), Vector((0.0, 0.0, 0.0))) / len(nb)
+                    updates[v] = v.co + 0.45 * (avg - v.co)
+        for v, co in updates.items():
+            v.co = co
+
+    bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    base_faces = bm.faces[:]
+
+    ret = bmesh.ops.extrude_face_region(bm, geom=base_faces)
+    extruded_verts = [ele for ele in ret["geom"] if isinstance(ele, bmesh.types.BMVert)]
+    top_faces = [ele for ele in ret["geom"] if isinstance(ele, bmesh.types.BMFace)]
+    extruded_set = set(extruded_verts)
+
+    # マテリアル割り当て: 0 = 前面マットイエロー, 1 = 立体側面ゴールドウォール
+    top_face_set = set(top_faces)
+    base_face_set = set(base_faces)
+    for f in list(bm.faces):
+        if f in top_face_set:
+            f.material_index = 0
+            f.smooth = True
+        elif f in base_face_set:
+            bm.faces.remove(f)
+        else:
+            f.material_index = 1
+            f.smooth = True
+
+    # すべての頂点をボディ前面曲面 (X, Y_surf, Z) + 法線方向オフセット h へ投影
+    all_verts = list(bm.verts)
+    xs = np.array([v.co.x for v in all_verts], dtype=np.float64)
+    zs = np.array([v.co.y for v in all_verts], dtype=np.float64)
+    ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
+
+    for idx, v in enumerate(all_verts):
+        h_off = 0.023 if (v in extruded_set) else -0.005
+        v.co = Vector((
+            float(xs[idx] + h_off * nxs[idx]),
+            float(ys[idx] + h_off * nys[idx]),
+            float(zs[idx] + h_off * nzs[idx]),
+        ))
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    mesh = bpy.data.meshes.new("Logo_LILI_net_Mesh")
+    bm.to_mesh(mesh)
+    bm.free()
+
+    obj = bpy.data.objects.new("Logo_LILI_net", mesh)
+    bpy.context.collection.objects.link(obj)
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    return obj
+
+
+def _compute_scaled_face_radii(data, ang_grid):
+    """
+    TV画面モチーフの青枠と画面のサイズをひと回り小さく(0.84倍)し、
+    さらに青枠自体の太さ(r_out - r_in)を約26%スリム化(0.74倍)した半径を算出
+    """
+    thetas = data["thetas"]
+    r_in_orig = np.interp(ang_grid, thetas, data["r_in_lut"])
+    r_out_orig = np.interp(ang_grid, thetas, data["r_out_lut"])
+    frame_scale = 0.84
+    thickness_slim = 0.74
+    r_out = r_out_orig * frame_scale
+    w_frame = (r_out_orig - r_in_orig) * frame_scale * thickness_slim
+    r_in = r_out - w_frame
+    zc = data["face_center_Z"] + 0.025
+    return r_in, r_out, zc
+
+
+def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
+    ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
+    r_in, _, zc = _compute_scaled_face_radii(data, ang_grid)
+    r_max_ang = r_in + 0.012
+
+    bm = bmesh.new()
     y_c, nx_c, ny_c, nz_c = surf_model.front_surface_y_and_normal(np.array([0.0]), np.array([zc]))
     center_v = bm.verts.new((0.0, float(y_c[0] + 0.003 * ny_c[0]), zc))
 
@@ -452,15 +602,9 @@ def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
     return obj
 
 
-def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=24):
-    thetas = data["thetas"]
-    r_in_lut = data["r_in_lut"]
-    r_out_lut = data["r_out_lut"]
-    zc = data["face_center_Z"]
-
+def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28):
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
-    r_in = np.interp(ang_grid, thetas, r_in_lut)
-    r_out = np.interp(ang_grid, thetas, r_out_lut)
+    r_in, r_out, zc = _compute_scaled_face_radii(data, ang_grid)
 
     bm = bmesh.new()
     s_vals = np.linspace(0.0, 1.0, n_prof)
@@ -472,8 +616,9 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=24):
         zs = zc + rs * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
-        arch = math.sin(math.pi * s) ** 0.65
-        h_off = -0.003 + 0.017 * arch
+        # TVモニターベゼルとしてしっかり立体的に盛り上げる (最大 +0.056m)
+        arch = math.sin(math.pi * s) ** 0.44
+        h_off = -0.005 + 0.061 * arch
 
         ring_v = []
         for ia in range(n_ang):
@@ -500,14 +645,17 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=24):
     return obj
 
 
-def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.251, radius=0.0625):
-    n_ang = 48
-    n_rad = 12
+def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.080):
+    """
+    目をひと回り大きく(radius=0.080m)、かつぷっくり立体的なドーム状(h_center=0.035m)に生成
+    """
+    n_ang = 56
+    n_rad = 16
     bm = bmesh.new()
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
 
     y_c, nx_c, ny_c, nz_c = surf_model.front_surface_y_and_normal(np.array([cx_eye]), np.array([cz_eye]))
-    h_center = 0.012
+    h_center = 0.035
     center_v = bm.verts.new((
         float(cx_eye + h_center * nx_c[0]),
         float(y_c[0] + h_center * ny_c[0]),
@@ -521,8 +669,8 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.251, radius=0.0625):
         xs = cx_eye + r * np.cos(ang_grid)
         zs = cz_eye + r * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
-        dome = math.cos(0.5 * math.pi * (ir / n_rad)) ** 0.75
-        h_off = 0.001 + 0.011 * dome
+        dome = math.cos(0.5 * math.pi * (ir / n_rad)) ** 0.56
+        h_off = 0.002 + 0.033 * dome
         ring_v = []
         for ia in range(n_ang):
             ring_v.append(bm.verts.new((
@@ -553,10 +701,10 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.251, radius=0.0625):
 
 
 def create_mouth_mesh(surf_model):
-    z_arc_center = (1022.0 - 481.5) / 400.0
-    r_arc = 185.0 / 400.0
-    r_tube = 12.8 / 400.0
-    max_ang = math.radians(39.2)
+    z_arc_center = 1.335
+    r_arc = 0.395
+    r_tube = 0.030
+    max_ang = math.radians(38.0)
 
     n_spine = 64
     n_cap = 10
@@ -616,8 +764,8 @@ def create_mouth_mesh(surf_model):
         zs = cz + nz_2d * rad * s_vals
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
-        arch = np.sqrt(np.maximum(1.0 - s_vals * s_vals, 0.0)) * spine_r_scale[i]
-        h_off = 0.001 + 0.011 * arch
+        arch = (np.sqrt(np.maximum(1.0 - s_vals * s_vals, 0.0)) ** 0.70) * spine_r_scale[i]
+        h_off = 0.002 + 0.020 * arch
 
         ring_v = []
         for ip in range(n_prof):
@@ -730,6 +878,17 @@ def create_arm_meshes(data):
         for i, v in enumerate(verts):
             v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
 
+        # アーム下端極付近(Z < 0.308)の法線特異点を滑らかに緩和
+        for _ in range(3):
+            tip_updates = {}
+            for v in verts:
+                if v.co.z < 0.308:
+                    nb = [e.other_vert(v) for e in v.link_edges]
+                    if nb:
+                        tip_updates[v] = 0.55 * v.co + 0.45 * (sum((n.co for n in nb), Vector((0.0, 0.0, 0.0))) / len(nb))
+            for v, co in tip_updates.items():
+                v.co = co
+
         if side_sign < 0:
             bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
@@ -750,10 +909,16 @@ def create_antenna_and_globe(data):
     raw_z = data["stem_Z"][::-1]
     raw_y = data["stem_Y"][::-1]
 
-    ctrl_z = np.concatenate([[0.605, 0.625], raw_z, [2.365, 2.370]])
-    ctrl_y = np.concatenate([[0.740, 0.805], raw_y, [1.060, 1.135]])
+    # 尻尾の根元をお尻内部(Y=0.35m, Z=0.49m)から20点の密な制御点でスタートさせ、ボディと100%密着接続
+    root_z = np.linspace(0.490, float(raw_z[0]) - 0.008, 20)
+    root_y = np.linspace(0.350, float(raw_y[0]) - 0.015, 20)
+    tip_z = np.linspace(float(raw_z[-1]) + 0.002, 2.370, 6)
+    tip_y = np.linspace(float(raw_y[-1]) + 0.010, 1.140, 6)
 
-    n_pts = 120
+    ctrl_z = np.concatenate([root_z, raw_z, tip_z])
+    ctrl_y = np.concatenate([root_y, raw_y, tip_y])
+
+    n_pts = 150
     t_raw = np.linspace(0.0, 1.0, len(ctrl_z))
     t_fine = np.linspace(0.0, 1.0, n_pts)
     z_fine = np.interp(t_fine, t_raw, ctrl_z)
@@ -763,6 +928,7 @@ def create_antenna_and_globe(data):
     k_sm /= k_sm.sum()
     z_fine = np.convolve(np.pad(z_fine, 6, mode='edge'), k_sm, mode='valid')
     y_fine = np.convolve(np.pad(y_fine, 6, mode='edge'), k_sm, mode='valid')
+    z_fine[0], y_fine[0] = 0.490, 0.350
 
     r_pipe = 20.5 / 400.0
     n_ring = 36
@@ -855,22 +1021,22 @@ def create_armature_and_bind(all_mesh_objs):
     eb = arm_data.edit_bones
 
     b_root = eb.new("Root")
-    b_root.head = (0.0, 0.0, 0.0)
-    b_root.tail = (0.0, 0.0, 0.25)
+    b_root.head = (0.0, 0.0, -0.245)
+    b_root.tail = (0.0, 0.0, 0.18)
 
     b_body = eb.new("Body")
-    b_body.head = (0.0, 0.0, 0.25)
+    b_body.head = (0.0, 0.0, 0.18)
     b_body.tail = (0.0, 0.0, 1.90)
     b_body.parent = b_root
 
     b_leg_l = eb.new("Leg.L")
-    b_leg_l.head = (0.258, 0.0, 0.32)
-    b_leg_l.tail = (0.258, 0.0, 0.0)
+    b_leg_l.head = (0.275, -0.02, 0.18)
+    b_leg_l.tail = (0.270, -0.05, -0.245)
     b_leg_l.parent = b_body
 
     b_leg_r = eb.new("Leg.R")
-    b_leg_r.head = (-0.258, 0.0, 0.32)
-    b_leg_r.tail = (-0.258, 0.0, 0.0)
+    b_leg_r.head = (-0.275, -0.02, 0.18)
+    b_leg_r.tail = (-0.270, -0.05, -0.245)
     b_leg_r.parent = b_body
 
     b_arm_l = eb.new("Arm.L")
@@ -884,7 +1050,7 @@ def create_armature_and_bind(all_mesh_objs):
     b_arm_r.parent = b_body
 
     b_ant1 = eb.new("Antenna_1")
-    b_ant1.head = (0.0, 0.78, 0.62)
+    b_ant1.head = (0.0, 0.65, 0.56)
     b_ant1.tail = (0.0, 1.09, 1.20)
     b_ant1.parent = b_body
 
@@ -920,8 +1086,8 @@ def create_armature_and_bind(all_mesh_objs):
             for v in obj.data.vertices:
                 z = v.co.z
                 x = v.co.x
-                if z < 0.36:
-                    w_leg = float(np.clip((0.36 - z) / 0.28, 0.0, 1.0))
+                if z < 0.22:
+                    w_leg = float(np.clip((0.22 - z) / 0.18, 0.0, 1.0))
                     if x >= 0:
                         vg_leg_l.add([v.index], w_leg, 'REPLACE')
                     else:
@@ -929,7 +1095,7 @@ def create_armature_and_bind(all_mesh_objs):
                     vg_body.add([v.index], 1.0 - w_leg, 'REPLACE')
                 else:
                     vg_body.add([v.index], 1.0, 'REPLACE')
-        elif name in ("Face_Screen", "Face_Frame", "Eye.L", "Eye.R", "Mouth"):
+        elif name in ("Face_Screen", "Face_Frame", "Eye.L", "Eye.R", "Mouth", "Logo_LILI_net"):
             vg = obj.vertex_groups.new(name="Body")
             vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
         elif name == "Arm.L":
@@ -958,7 +1124,7 @@ def create_armature_and_bind(all_mesh_objs):
 
 
 # ==========================================
-# 5. マテリアル設定（アニメ調 × 弾性ラバー／ソフビ質感）
+# 5. マテリアル設定（完全無反射マット質感）
 # ==========================================
 def srgb_to_linear(c):
     c = c / 255.0
@@ -969,47 +1135,34 @@ def rgb255_to_linear_rgba(r, g, b, a=1.0):
     return (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a)
 
 
-def set_bsdf_rubber_params(bsdf, rgba, roughness=0.25, coat=0.40, sss=0.06, emission_strength=0.10):
+def set_bsdf_matte_params(bsdf, rgba, emission_strength=0.22):
+    """
+    鏡面ハイライト・白いテカリを100%排除した完全無反射マット（つや消し）質感を設定
+    """
     bsdf.inputs["Base Color"].default_value = rgba
-    bsdf.inputs["Roughness"].default_value = roughness
+    bsdf.inputs["Roughness"].default_value = 1.0
+    if "Metallic" in bsdf.inputs:
+        bsdf.inputs["Metallic"].default_value = 0.0
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.52
+        bsdf.inputs["Specular IOR Level"].default_value = 0.0
     if "Coat Weight" in bsdf.inputs:
-        bsdf.inputs["Coat Weight"].default_value = coat
-        bsdf.inputs["Coat Roughness"].default_value = 0.14
+        bsdf.inputs["Coat Weight"].default_value = 0.0
+        bsdf.inputs["Coat Roughness"].default_value = 1.0
     if "Subsurface Weight" in bsdf.inputs:
-        bsdf.inputs["Subsurface Weight"].default_value = sss
+        bsdf.inputs["Subsurface Weight"].default_value = 0.0
+    if "Sheen Weight" in bsdf.inputs:
+        bsdf.inputs["Sheen Weight"].default_value = 0.0
     if "Emission Color" in bsdf.inputs:
         bsdf.inputs["Emission Color"].default_value = rgba
         bsdf.inputs["Emission Strength"].default_value = emission_strength
 
 
-def create_rubber_material(name, rgb255, roughness=0.25, coat=0.40, sss=0.06, emission=0.10):
+def create_matte_material(name, rgb255, emission=0.22):
     mat = bpy.data.materials.new(name=name)
     nodes = mat.node_tree.nodes
     bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
     rgba = rgb255_to_linear_rgba(*rgb255)
-    set_bsdf_rubber_params(bsdf, rgba, roughness=roughness, coat=coat, sss=sss, emission_strength=emission)
-    mat.diffuse_color = rgba
-    return mat
-
-
-def create_body_with_logo_material():
-    mat = bpy.data.materials.new(name="Mat_Body_Pink")
-    nodes = mat.node_tree.nodes
-    links = mat.node_tree.links
-    bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
-
-    tex_node = nodes.new(type='ShaderNodeTexImage')
-    tex_node.image = bpy.data.images.load(BODY_TEX_PATH, check_existing=True)
-    tex_node.extension = 'EXTEND'
-    tex_node.interpolation = 'Cubic'
-
-    rgba = rgb255_to_linear_rgba(242, 78, 160)
-    set_bsdf_rubber_params(bsdf, rgba, roughness=0.25, coat=0.42, sss=0.07, emission_strength=0.12)
-    links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
-    if "Emission Color" in bsdf.inputs:
-        links.new(tex_node.outputs["Color"], bsdf.inputs["Emission Color"])
+    set_bsdf_matte_params(bsdf, rgba, emission_strength=emission)
     mat.diffuse_color = rgba
     return mat
 
@@ -1024,7 +1177,7 @@ def create_globe_material():
     tex_node.image = bpy.data.images.load(GLOBE_TEX_PATH, check_existing=True)
     tex_node.interpolation = 'Linear'
 
-    set_bsdf_rubber_params(bsdf, (0.05, 0.76, 0.93, 1.0), roughness=0.28, coat=0.28, sss=0.03, emission_strength=0.18)
+    set_bsdf_matte_params(bsdf, (0.05, 0.76, 0.93, 1.0), emission_strength=0.26)
     links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
     if "Emission Color" in bsdf.inputs:
         links.new(tex_node.outputs["Color"], bsdf.inputs["Emission Color"])
@@ -1043,22 +1196,24 @@ def setup_lighting_and_world():
     world = bpy.data.worlds.new("StudioWorld")
     scene.world = world
     bg_node = next(n for n in world.node_tree.nodes if n.type == 'BACKGROUND')
-    bg_node.inputs[0].default_value = (0.94, 0.95, 0.97, 1.0)
-    bg_node.inputs[1].default_value = 0.65
+    bg_node.inputs[0].default_value = (0.95, 0.96, 0.98, 1.0)
+    bg_node.inputs[1].default_value = 0.70
 
     lights_spec = [
-        ("Key_FrontLeft", 'AREA', (-2.6, -3.5, 2.9), 155.0, 2.4, (1.0, 0.99, 0.98)),
-        ("Fill_FrontRight", 'AREA', (2.8, -2.9, 1.8), 80.0, 2.8, (0.96, 0.98, 1.0)),
-        ("Rim_TopBack", 'AREA', (0.0, 3.2, 3.6), 165.0, 2.4, (0.95, 0.98, 1.0)),
-        ("Back_Key", 'AREA', (1.8, 3.6, 1.8), 115.0, 2.4, (1.0, 0.99, 0.98)),
-        ("Side_Highlight", 'AREA', (3.6, 0.4, 2.2), 115.0, 2.2, (1.0, 0.99, 0.99)),
-        ("Bottom_Bounce", 'AREA', (0.0, -0.4, -2.5), 75.0, 3.0, (1.0, 0.98, 0.99)),
+        ("Key_FrontLeft", 'AREA', (-2.8, -3.8, 2.8), 140.0, 3.2, (1.0, 0.99, 0.98)),
+        ("Fill_FrontRight", 'AREA', (3.0, -3.2, 1.8), 90.0, 3.5, (0.97, 0.99, 1.0)),
+        ("Rim_TopBack", 'AREA', (0.0, 3.4, 3.8), 135.0, 3.2, (0.96, 0.98, 1.0)),
+        ("Back_Key", 'AREA', (1.8, 3.8, 1.8), 110.0, 3.2, (1.0, 0.99, 0.98)),
+        ("Side_Highlight", 'AREA', (3.8, 0.4, 2.0), 105.0, 3.0, (1.0, 0.99, 0.99)),
+        ("Bottom_Bounce", 'AREA', (0.0, -0.6, -2.8), 85.0, 3.8, (1.0, 0.99, 1.0)),
     ]
-    target = Vector((0.0, 0.2, 1.2))
+    target = Vector((0.0, 0.15, 1.05))
     for name, ltype, pos, energy, size, col in lights_spec:
         ldata = bpy.data.lights.new(name=name, type=ltype)
         ldata.energy = energy
         ldata.color = col
+        if hasattr(ldata, "use_shadow"):
+            ldata.use_shadow = False
         if hasattr(ldata, "size"):
             ldata.size = size
         lobj = bpy.data.objects.new(name=name, object_data=ldata)
@@ -1068,7 +1223,7 @@ def setup_lighting_and_world():
         lobj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
 
 
-def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=2.85, lens=85.0):
+def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=3.16, lens=85.0):
     forward = Vector(forward).normalized()
     up_hint = Vector(up_hint).normalized()
     right = forward.cross(up_hint).normalized()
@@ -1090,7 +1245,7 @@ def set_camera_pose(cam_obj, pos, forward, up_hint, ortho=False, ortho_scale=2.8
 
 
 def enable_freestyle_outline():
-    """アニメ調 × 弾性ラバーのクリーンな輪郭線 (Freestyle) を設定"""
+    """アニメ調 × マット質感のクリーンな輪郭線 (Freestyle) を設定"""
     scene = bpy.context.scene
     scene.render.use_freestyle = True
     scene.render.line_thickness_mode = 'ABSOLUTE'
@@ -1108,7 +1263,7 @@ def enable_freestyle_outline():
     lineset.select_contour = True
     lineset.select_crease = False
     lineset.select_external_contour = True
-    lineset.select_material_boundary = True
+    lineset.select_material_boundary = False
 
     linestyle = lineset.linestyle
     linestyle.color = (0.07, 0.05, 0.10)
@@ -1127,19 +1282,28 @@ def render_view_to_array(cam_obj, width, height, filepath, transparent=False):
     return load_image_rgba_uint8(filepath)
 
 
-def composite_on_card(rgba_arr, bg_top=(248, 250, 255), bg_bot=(232, 238, 248), border_col=(205, 215, 232)):
+def composite_on_card(rgba_arr, has_floor_shadow=True, bg_top=(248, 250, 255), bg_bot=(232, 238, 248), border_col=(205, 215, 232)):
     h, w, _ = rgba_arr.shape
     t = np.linspace(0.0, 1.0, h)[:, None, None]
     bg = np.array(bg_top, dtype=np.float32)[None, None, :] * (1.0 - t) + np.array(bg_bot, dtype=np.float32)[None, None, :] * t
 
-    yy, xx = np.mgrid[0:h, 0:w]
-    shadow_rx = w * 0.26
-    shadow_ry = h * 0.032
-    shadow_cy = h * 0.905
-    shadow_cx = w * 0.50
-    r2 = ((xx - shadow_cx) / shadow_rx) ** 2 + ((yy - shadow_cy) / shadow_ry) ** 2
-    shadow = 0.14 * np.exp(-1.8 * r2)[:, :, None]
-    bg = bg * (1.0 - shadow)
+    if has_floor_shadow:
+        yy, xx = np.mgrid[0:h, 0:w]
+        mask = rgba_arr[:, :, 3] > 32
+        ys_op, xs_op = np.where(mask)
+        if len(ys_op) > 0:
+            y_foot_max = float(np.percentile(ys_op, 99.6))
+            low_band = ys_op >= (y_foot_max - h * 0.045)
+            shadow_cx = float(np.mean(xs_op[low_band])) if np.any(low_band) else (w * 0.50)
+            shadow_cy = min(h * 0.965, y_foot_max - h * 0.004)
+        else:
+            shadow_cx = w * 0.50
+            shadow_cy = h * 0.935
+        shadow_rx = w * 0.25
+        shadow_ry = h * 0.028
+        r2 = ((xx - shadow_cx) / shadow_rx) ** 2 + ((yy - shadow_cy) / shadow_ry) ** 2
+        shadow = 0.14 * np.exp(-1.8 * r2)[:, :, None]
+        bg = bg * (1.0 - shadow)
 
     alpha = (rgba_arr[:, :, 3:4].astype(np.float32)) / 255.0
     rgb = rgba_arr[:, :, :3].astype(np.float32)
@@ -1155,29 +1319,6 @@ def composite_on_card(rgba_arr, bg_top=(248, 250, 255), bg_bot=(232, 238, 248), 
     return out
 
 
-def draw_bottom_foot_ovals(img_bottom):
-    """底面図(02_bottom.png)の2つの丸足オーバル輪郭線をアンチエイリアス付きで鮮明に描画"""
-    h, w, _ = img_bottom.shape
-    yy, xx = np.mgrid[0:h, 0:w]
-    px_per_m = w / 2.84
-    cx = w * 0.50 - 0.31 * px_per_m
-    rx = 0.235 * px_per_m
-    ry = 0.275 * px_per_m
-    cy_top = h * 0.50 - ry
-    cy_bot = h * 0.50 + ry
-
-    line_col = np.array([25.0, 15.0, 30.0], dtype=np.float32)
-    for cy in (cy_top, cy_bot):
-        dist = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
-        px_dist = np.abs(dist - 1.0) * (0.5 * (rx + ry))
-        w_line = np.clip(1.8 - px_dist, 0.0, 1.0)[..., None]
-        img_bottom[:, :, :3] = np.clip(
-            img_bottom[:, :, :3].astype(np.float32) * (1.0 - w_line) + line_col * w_line,
-            0, 255
-        ).astype(np.uint8)
-    return img_bottom
-
-
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
@@ -1191,32 +1332,37 @@ def main():
     surf_model = IINetSurfaceModel(data)
 
     # 2. 全3Dパーツ生成
-    body_obj = create_body_mesh(surf_model, res=88)
+    body_obj = create_body_mesh(surf_model, res=120)
+    logo_obj = create_logo_3d_mesh(surf_model)
     screen_obj = create_face_screen_mesh(surf_model, data)
     frame_obj = create_face_frame_mesh(surf_model, data)
-    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.310, cz_eye=1.251, radius=0.0625)
-    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.310, cz_eye=1.251, radius=0.0625)
+    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.268, cz_eye=1.265, radius=0.080)
+    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.268, cz_eye=1.265, radius=0.080)
     mouth_obj = create_mouth_mesh(surf_model)
     arm_l_obj, arm_r_obj = create_arm_meshes(data)
     ant_obj, globe_obj = create_antenna_and_globe(data)
 
     all_meshes = [
-        body_obj, screen_obj, frame_obj,
+        body_obj, logo_obj, screen_obj, frame_obj,
         eye_l_obj, eye_r_obj, mouth_obj,
         arm_l_obj, arm_r_obj,
         ant_obj, globe_obj,
     ]
 
-    # 3. マテリアル作成＆割り当て
-    mat_body_pink = create_body_with_logo_material()
-    mat_arm_pink = create_rubber_material("Mat_Arm_Pink", (232, 63, 150), roughness=0.25, coat=0.40, sss=0.07, emission=0.11)
-    mat_frame_blue = create_rubber_material("Mat_Frame_Blue", (56, 86, 168), roughness=0.24, coat=0.42, sss=0.03, emission=0.10)
-    mat_feature_blue = create_rubber_material("Mat_Feature_Blue", (46, 75, 166), roughness=0.22, coat=0.42, sss=0.02, emission=0.08)
-    mat_stem_blue = create_rubber_material("Mat_Stem_Blue", (56, 89, 166), roughness=0.24, coat=0.42, sss=0.03, emission=0.10)
-    mat_screen_cream = create_rubber_material("Mat_Screen_Cream", (248, 222, 148), roughness=0.32, coat=0.22, sss=0.03, emission=0.12)
+    # 3. マテリアル作成（完全無反射マット）＆割り当て
+    mat_body_pink = create_matte_material("Mat_Body_Pink", (242, 78, 160), emission=0.22)
+    mat_arm_pink = create_matte_material("Mat_Arm_Pink", (232, 63, 150), emission=0.22)
+    mat_frame_blue = create_matte_material("Mat_Frame_Blue", (56, 86, 168), emission=0.20)
+    mat_feature_blue = create_matte_material("Mat_Feature_Blue", (46, 75, 166), emission=0.18)
+    mat_stem_blue = create_matte_material("Mat_Stem_Blue", (56, 89, 166), emission=0.20)
+    mat_screen_cream = create_matte_material("Mat_Screen_Cream", (248, 222, 148), emission=0.25)
+    mat_logo_yellow = create_matte_material("Mat_Logo_Yellow", (255, 240, 10), emission=0.28)
+    mat_logo_side = create_matte_material("Mat_Logo_Side", (215, 155, 0), emission=0.16)
     mat_globe = create_globe_material()
 
     body_obj.data.materials.append(mat_body_pink)
+    logo_obj.data.materials.append(mat_logo_yellow)
+    logo_obj.data.materials.append(mat_logo_side)
     arm_l_obj.data.materials.append(mat_arm_pink)
     arm_r_obj.data.materials.append(mat_arm_pink)
     frame_obj.data.materials.append(mat_frame_blue)
@@ -1238,8 +1384,8 @@ def main():
     cam_obj = bpy.data.objects.new("RenderCam", cam_data)
     bpy.context.collection.objects.link(cam_obj)
 
-    hero_target = Vector((0.02, 0.14, 1.24))
-    hero_pos = Vector((3.35, -5.75, 1.88))
+    hero_target = Vector((0.02, 0.12, 1.11))
+    hero_pos = Vector((3.60, -6.20, 1.73))
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
     scene.camera = cam_obj
 
@@ -1253,29 +1399,28 @@ def main():
 
     # (A) ヒーローカット (1400 x 1680)
     hero_raw = render_view_to_array(cam_obj, 1400, 1680, tmp_render, transparent=True)
-    hero_card = composite_on_card(hero_raw)
+    hero_card = composite_on_card(hero_raw, has_floor_shadow=True)
     save_rgba_uint8_as_png(hero_card, HERO_IMG_PATH)
 
     # (B) 5面図＋斜めビューの個別レンダリング (各 800 x 960)
     pw, ph = 800, 960
-    set_camera_pose(cam_obj, (0.0, -6.0, 1.28), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=2.84)
-    img_front = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
+    set_camera_pose(cam_obj, (0.0, -6.0, 1.13), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    img_front = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (6.0, 0.31, 1.28), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=2.84)
-    img_side = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
+    set_camera_pose(cam_obj, (6.0, 0.28, 1.13), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    img_side = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (0.0, 6.0, 1.28), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=2.84)
-    img_back = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
+    set_camera_pose(cam_obj, (0.0, 6.0, 1.13), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.16)
+    img_back = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
-    set_camera_pose(cam_obj, (0.0, 0.31, 6.0), (0.0, 0.0, -1.0), (-1.0, 0.0, 0.0), ortho=True, ortho_scale=2.84)
-    img_top = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
+    set_camera_pose(cam_obj, (0.0, 0.28, 6.0), (0.0, 0.0, -1.0), (-1.0, 0.0, 0.0), ortho=True, ortho_scale=3.16)
+    img_top = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=False)
 
-    set_camera_pose(cam_obj, (0.0, 0.31, -6.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0), ortho=True, ortho_scale=2.84)
-    img_bottom = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
-    img_bottom = draw_bottom_foot_ovals(img_bottom)
+    set_camera_pose(cam_obj, (0.0, 0.28, -6.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0), ortho=True, ortho_scale=3.16)
+    img_bottom = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=False)
 
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
-    img_persp = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True))
+    img_persp = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
 
     if os.path.exists(tmp_render):
         os.remove(tmp_render)
@@ -1308,7 +1453,7 @@ def main():
         sheet[y0:y0 + ph, x0:x0 + pw] = panel
     save_rgba_uint8_as_png(sheet, SHEET_IMG_PATH)
 
-    print("ALL RENDERS AND EXPORTS (V3) COMPLETED SUCCESSFULLY.")
+    print("ALL RENDERS AND EXPORTS (REV.2) COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,24 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v7): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.2改修（2本脚延長・完全無反射マット質感・TV青枠の縮小/スリム化/立体化・目の拡大/立体化・お尻からの尻尾接続・胸元ロゴの3D立体メッシュ化）
+
+### 変更理由
+ユーザーからの追加デザイン指示（①足を延ばして足らしい2本脚に、②反射しない無反射マット質感に、③TV画面モチーフの青枠をもう少し立体的に・サイズを小さく、④青枠の太さを若干細く、⑤目をもう少し大きく・立体的に、⑥尻尾がお尻からしっかり出ているように、⑦胸元の `LILI-net` ロゴも立体的に）をすべて反映し、全アングルで破綻のない3Dキャラクターモデルおよびレンダリング成果物を納品するため。
+
+### Before / After
+- **Before (v1)**:
+  - 5面図に忠実な短い二股突起の足、光沢のあるラバー質感（`Coat Weight = 0.40`）、平面UVテクスチャによる `LILI-net` ロゴ、大きめのTV青枠、浅い尻尾始点。
+- **After (Rev.2)**:
+  - **2本脚（`Leg.L` / `Leg.R`）の延長と立体造形**: 胴体下部（$Z \approx +0.185\text{ m}$）から接地底面（$Z = -0.275\text{ m}$）まで脚を延長し、「太もも ➔ 足首のくびれ ➔ 前方へぷっくり張り出した丸い足先」を造形。
+  - **完全無反射マット質感**: 全マテリアルの `Roughness = 1.0`, `Specular IOR Level = 0.0`, `Coat Weight = 0.0` により鏡面ハイライトを完全排除。
+  - **TV青枠・画面・目の立体改修**: 青枠＆画面を `0.84倍` に縮小、枠幅を `0.74倍` にスリム化、青枠の法線方向厚みを `+0.056m` へ増強。目の半径を `0.080m`（約1.28倍）・ドーム厚みを `+0.035m` に拡大。
+  - **尻尾の内部貫通接続と `LILI-net` ロゴの3D立体メッシュ化**: 尻尾始点をお尻内部（$Y=0.35\text{ m}, Z=0.49\text{ m}$）から貫通させ、胸元ロゴを独立した3D立体メッシュ（`Logo_LILI_net`、押し出し厚 `+0.023m`）として造形。
+
+### 影響範囲
+- 更新: [`02_Creative_Dept/drafts/build_iinet_kun.py`](02_Creative_Dept/drafts/build_iinet_kun.py), [`02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md`](02_Creative_Dept/final_outputs/content_cvn_iinet_3d_modeling.md), [`04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md`](04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md), [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) および全レンダリング画像・`.blend` / `.glb` ファイル
+
+---
+
 ## 2026-11-04 (v6): 制作部門（02_Creative_Dept）における Blender 5.2 Headless CLI フォールバック手順と複数面図（5面図）3Dモデリング＆視覚監査ベストプラクティスの標準化
 
 ### 変更理由

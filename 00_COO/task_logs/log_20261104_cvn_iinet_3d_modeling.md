@@ -16,8 +16,9 @@
 
 ## パイプライン進捗チェックリスト
 - [x] Step 1: 5面図の立体的整合性解析・モデリング仕様策定 (`01_Research_Dept/inputs/task_20261104_cvn_iinet_3d_modeling.md`)
-- [x] Step 2: Blender 3Dモデリング・マテリアル構築・マルチアングルレンダリング (`02_Creative_Dept`)
-- [x] Step 3: Marketing (`03_Marketing_Dept` - ※今回は3Dモデリング・レンダリング単体依頼のためSKIPPED)
+- [x] Step 2: Blender 3Dモデリング・マテリアル構築・マルチアングルレンダリング (v1完了)
+- [x] Step 2-Rev2: ユーザーフィードバック全7項目反映（①足の延長・2本脚造形、②完全無反射マット質感、③TV青枠のサイズ縮小＆立体化、④青枠スリム化、⑤目の拡大＆立体化、⑥お尻からの尻尾接続、⑦胸元ロゴ `LILI-net` 3D立体メッシュ化） (`02_Creative_Dept`)
+- [x] Step 3: Marketing (`03_Marketing_Dept` - SKIPPED)
 - [x] Step 3.5: [Conditional] Legal & Compliance Review (`06_Legal_Dept` - SKIPPED)
-- [x] Step 4: Final Delivery to `04_Delivery_Dept/outputs/` (`04_Delivery_Dept`)
+- [x] Step 4: Final Delivery Rev.2更新 to `04_Delivery_Dept/outputs/` (`04_Delivery_Dept`)
 - [x] Step 5: Autonomous System Evolution (`05_System_Evolution_Dept`)
