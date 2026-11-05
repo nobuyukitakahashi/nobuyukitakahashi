@@ -17,7 +17,7 @@
 - **法務審査要否（Conditional Legal Gate判定）**: `SKIPPED`（自社/依頼元キャラクターの3Dモデリング制作であり、5大法務リスクトリガー非該当）
 
 ## パイプライン進捗チェックリスト
-- [x] Step 1: 3面図（`iich_3views.jpg`）のピクセル実測（Ground Truth解析）とモデリング仕様策定
-- [x] Step 2: Blender 5.2 による「いい-ch（`LILI-ch`）」3Dモデリング＆全アングルレンダリング (`02_Creative_Dept`)
-- [x] Step 3: `view_file` による原画照合・視覚監査（Visual Audit：地球儀南極へのC字尻尾接続・上面/底面整合性も完全確認済）
+- [x] Step 1: 3面図（`iich_3views.jpg`）および高解像度正面原画（`iich_05_front.png`）のピクセル実測（Ground Truth解析）とモデリング仕様策定
+- [x] Step 2: Blender 5.2 による「いい-ch（`LILI-ch`）」3Dモデリング＆全アングルレンダリング（Rev.2：高精細 `LILI-ch` 3Dロゴ、縦長オーバル目・スマイル口の忠実化、ボディ・腕接合部・底面・顔枠の波打ち完全解消、お尻下部からの尻尾付け根高さ統一） (`02_Creative_Dept`)
+- [x] Step 3: `view_file` による原画照合・視覚監査（Visual Audit：全6ビューの波打ち解消・ロゴ品質・尻尾付け根高さを完全確認済）
 - [x] Step 4: 最終納品フォルダ `04_Delivery_Dept/outputs/` への格納・`INDEX.md` 更新 (`04_Delivery_Dept`)

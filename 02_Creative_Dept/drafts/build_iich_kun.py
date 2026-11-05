@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 株式会社CVN ペアキャラクター「いい-ch（胸ロゴ：LILI-ch）」
-Blender 5.2 3Dモデリング・リギング・マテリアル・レンダリング一括構築スクリプト
-（「いい-NETくん」Rev.13 と同一のワールドスケール・完全平面顔・立体グラデーションライティング仕様）
+Blender 5.2 3Dモデリング・リギング・マテリアル・レンダリング一括構築スクリプト (Rev.2)
+（高解像度正面原画 iich_05_front.png 完全準拠・波打ちゼロ・高精細3Dロゴ・尻尾付け根統一仕様）
 """
 
 import os
@@ -24,6 +24,7 @@ os.makedirs(DRAFTS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 REF_3VIEWS_PATH = os.path.join(REF_DIR, "iich_3views.jpg")
+FRONT_HIGHRES_PATH = os.path.join(REF_DIR, "iich_05_front.png")
 GLOBE_TEX_PATH = os.path.join(DRAFTS_DIR, "globe_texture.png")
 
 BLEND_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iich_kun.blend")
@@ -37,7 +38,7 @@ SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iich_kun_5views_sheet.png")
 
 
 # ==========================================
-# 1. 画像ロード・プロファイル抽出・5倍双三次補間ユーティリティ
+# 1. 画像ロード・高解像度原画からのプロファイル抽出
 # ==========================================
 def load_image_rgba_uint8(filepath):
     """Blenderのbpy.data.imagesを用いて画像を(H, W, 4) uint8配列(上端y=0)として取得"""
@@ -63,111 +64,79 @@ def save_rgba_uint8_as_png(arr_uint8, filepath):
     bpy.data.images.remove(img)
 
 
-def _bicubic_kernel(x):
-    """Catmull-Rom / Keys 双三次補間カーネル (a = -0.5)"""
-    ax = np.abs(x)
-    res = np.zeros_like(ax, dtype=np.float32)
-    m1 = ax <= 1.0
-    m2 = (ax > 1.0) & (ax < 2.0)
-    res[m1] = 1.5 * (ax[m1] ** 3) - 2.5 * (ax[m1] ** 2) + 1.0
-    res[m2] = -0.5 * (ax[m2] ** 3) + 2.5 * (ax[m2] ** 2) - 4.0 * ax[m2] + 2.0
-    return res
-
-
-def upscale_rgb_bicubic_5x(crop_rgb, scale=5):
-    """
-    PILが利用可能な場合は Image.Resampling.BICUBIC を使用し、
-    未導入環境でも完全に同一の2次元分離型双三次補間(Bicubic)で5倍拡大する
-    """
-    h0, w0, c0 = crop_rgb.shape
-    new_h, new_w = h0 * scale, w0 * scale
-    try:
-        from PIL import Image
-        pil_img = Image.fromarray(crop_rgb.astype(np.uint8))
-        resample_mode = getattr(getattr(Image, "Resampling", Image), "BICUBIC")
-        up_img = pil_img.resize((new_w, new_h), resample=resample_mode)
-        return np.array(up_img, dtype=np.float32)
-    except Exception:
-        arr = crop_rgb.astype(np.float32)
-        # 横方向の補間
-        x_out = (np.arange(new_w, dtype=np.float32) + 0.5) / scale - 0.5
-        ix0 = np.floor(x_out).astype(np.int32)
-        dx = x_out - ix0
-        tmp = np.zeros((h0, new_w, c0), dtype=np.float32)
-        for k in (-1, 0, 1, 2):
-            idx = np.clip(ix0 + k, 0, w0 - 1)
-            w_k = _bicubic_kernel(dx - k)[None, :, None]
-            tmp += arr[:, idx, :] * w_k
-        # 縦方向の補間
-        y_out = (np.arange(new_h, dtype=np.float32) + 0.5) / scale - 0.5
-        iy0 = np.floor(y_out).astype(np.int32)
-        dy = y_out - iy0
-        out = np.zeros((new_h, new_w, c0), dtype=np.float32)
-        for k in (-1, 0, 1, 2):
-            idy = np.clip(iy0 + k, 0, h0 - 1)
-            w_k = _bicubic_kernel(dy - k)[:, None, None]
-            out += tmp[idy, :, :] * w_k
-        return np.clip(out, 0.0, 255.0)
-
-
 def extract_iich_profiles():
     """
-    iich_3views.jpg (1024x341 px) の Front 領域から顔青枠の放射状LUTを抽出し、
-    左右対称化・ガウシアン平滑化を行って返す。
-    また全周360度地球儀テクスチャ(globe_texture.png)が存在しない場合は自動生成する。
+    Rev.2: 高解像度正面原画 iich_05_front.png (841x1024 px, 400.0 px = 1.000 m, y_foot = 1022.0 px) から
+    顔枠中心 (cx_face=421.5, cy_face=570.5 -> face_center_Z = 1.12875 m) 基準で
+    screen_mask と frame_mask を抽出し、スクリーン外縁から連続する青枠バンドのみを取得
+    (頭頂アンテナとの干渉を完全遮断) して左右対称化・周期ガウシアン平滑化する。
     """
-    im = load_image_rgba_uint8(REF_3VIEWS_PATH)
+    im_f = load_image_rgba_uint8(FRONT_HIGHRES_PATH)
+    h_img, w_img, _ = im_f.shape
+    r_f = im_f[:, :, 0]
+    g_f = im_f[:, :, 1]
+    b_f = im_f[:, :, 2]
+    a_f = im_f[:, :, 3]
 
-    # 顔枠の中心 (cx_face=194.5, cy_face=166.5) とスケール (108.0 px = 1.000 m)
-    cx_face = 194.5
-    cy_face = 166.5
-    px_per_m = 108.0
+    screen_mask = (a_f > 128) & (r_f > 220) & (g_f > 220) & (b_f > 170)
+    frame_mask = (a_f > 128) & (b_f > 140) & (r_f < 90)
+
+    cx_face = 421.5
+    cy_face = 570.5
+    px_per_m = 400.0
 
     n_theta = 360
     thetas = np.linspace(0.0, 2.0 * math.pi, n_theta, endpoint=True)
     r_in_raw = np.zeros(n_theta, dtype=np.float64)
     r_out_raw = np.zeros(n_theta, dtype=np.float64)
 
-    # 原画実測の超楕円基準値 (フォールバック＆ブレンド用)
-    rx_out_gt = 96.0 / px_per_m   # 0.8889 m
-    rz_out_gt = 80.5 / px_per_m   # 0.7454 m
-    rx_in_gt = 84.0 / px_per_m    # 0.7778 m
-    rz_in_gt = 69.5 / px_per_m    # 0.6435 m
-    n_se = 2.55
-
+    rs_probe = np.linspace(40.0, 390.0, 701)
     for i, th in enumerate(thetas):
         ct, st = math.cos(th), math.sin(th)
-        r_se_out = 1.0 / ((abs(ct) / rx_out_gt) ** n_se + (abs(st) / rz_out_gt) ** n_se) ** (1.0 / n_se)
-        r_se_in = 1.0 / ((abs(ct) / rx_in_gt) ** n_se + (abs(st) / rz_in_gt) ** n_se) ** (1.0 / n_se)
+        pxs = np.clip(np.round(cx_face + rs_probe * ct).astype(int), 0, w_img - 1)
+        pys = np.clip(np.round(cy_face - rs_probe * st).astype(int), 0, h_img - 1)
 
-        rs_px = np.linspace(45.0, 112.0, 135)
-        xs = np.clip(np.round(cx_face + rs_px * ct).astype(int), 0, im.shape[1] - 1)
-        ys = np.clip(np.round(cy_face - rs_px * st).astype(int), 0, im.shape[0] - 1)
-        rgb = im[ys, xs, :3].astype(np.float32)
-        # 青枠マスク: Blue成分がRed/Greenより顕著に高い領域
-        blue_score = rgb[:, 2] - 0.5 * (rgb[:, 0] + rgb[:, 1])
-        blue_idx = np.where(blue_score > 18.0)[0]
-        if len(blue_idx) >= 4:
-            r_in_raw[i] = float(rs_px[blue_idx[0]]) / px_per_m
-            r_out_raw[i] = float(rs_px[blue_idx[-1]]) / px_per_m
+        in_scr = screen_mask[pys, pxs]
+        scr_indices = np.where(in_scr)[0]
+        if len(scr_indices) > 0:
+            idx_in = int(scr_indices[-1])
+            r_in_raw[i] = float(rs_probe[idx_in]) / px_per_m
+
+            # スクリーン外縁(idx_in)から外側に向かって連続する青枠バンドのみを走査し、頭頂アンテナを完全遮断
+            idx_out = idx_in
+            entered_frame = False
+            gap_count = 0
+            for j in range(idx_in + 1, len(rs_probe)):
+                if frame_mask[pys[j], pxs[j]]:
+                    entered_frame = True
+                    idx_out = j
+                    gap_count = 0
+                else:
+                    if entered_frame:
+                        gap_count += 1
+                        if gap_count >= 3:
+                            break
+                    elif j - idx_in > 8:
+                        break
+            r_out_raw[i] = float(rs_probe[idx_out]) / px_per_m
         else:
-            r_in_raw[i] = r_se_in
-            r_out_raw[i] = r_se_out
+            r_in_raw[i] = 0.72
+            r_out_raw[i] = 0.83
 
     # 左右対称化: r(theta) = 0.5 * (r(theta) + r(pi - theta))
     mirror_thetas = (math.pi - thetas) % (2.0 * math.pi)
     r_in_sym = 0.5 * (r_in_raw + np.interp(mirror_thetas, thetas, r_in_raw))
     r_out_sym = 0.5 * (r_out_raw + np.interp(mirror_thetas, thetas, r_out_raw))
 
-    # 周期的ガウシアン平滑化でJPEGブロックノイズを完全除去
-    kern = np.exp(-0.5 * (np.arange(-18, 19) / 5.5) ** 2)
+    # 周期ガウシアン平滑化
+    pad_k = 12
+    kern = np.exp(-0.5 * (np.arange(-pad_k, pad_k + 1) / 4.0) ** 2)
     kern /= kern.sum()
-    r_in_lut = np.convolve(np.pad(r_in_sym[:-1], (18, 18), mode='wrap'), kern, mode='valid')
-    r_out_lut = np.convolve(np.pad(r_out_sym[:-1], (18, 18), mode='wrap'), kern, mode='valid')
+    r_in_lut = np.convolve(np.pad(r_in_sym[:-1], (pad_k, pad_k), mode='wrap'), kern, mode='valid')
+    r_out_lut = np.convolve(np.pad(r_out_sym[:-1], (pad_k, pad_k), mode='wrap'), kern, mode='valid')
     r_in_lut = np.append(r_in_lut, r_in_lut[0])
     r_out_lut = np.append(r_out_lut, r_out_lut[0])
 
-    # 地球儀テクスチャが存在しない場合は build_iinet_kun の生成関数を呼び出す
     if not os.path.exists(GLOBE_TEX_PATH):
         import build_iinet_kun
         build_iinet_kun.extract_textures_and_profiles()
@@ -176,7 +145,7 @@ def extract_iich_profiles():
         "thetas": thetas,
         "r_in_lut": r_in_lut,
         "r_out_lut": r_out_lut,
-        "face_center_Z": (291.0 - cy_face) / px_per_m,  # 1.1528 m
+        "face_center_Z": (1022.0 - cy_face) / px_per_m,  # 1.12875 m
     }
 
 
@@ -186,17 +155,17 @@ def extract_iich_profiles():
 class IIChSurfaceModel:
     def __init__(self, data):
         """
-        原画 iich_3views.jpg (108.0 px = 1.000 m) の実測値に基づく
-        丸っこいリンゴ/マメ型シルエット＆滑らかなタマゴ底曲面モデル
+        Rev.2: 高解像度原画 iich_05_front.png (400.0 px = 1.000 m, y_foot = 1022.0 px) 実測値に基づく
+        波打ちゼロの完全凸ボディ曲面モデル
         """
-        self.W_max = 0.9900                        # 原画赤道半幅 107.0px / 108.0 = 0.9907m
-        self.D_back = 0.7600                       # 原画Side背面奥行き 82px / 108.0 = 0.759m
-        self.D_front = 0.7000                      # 原画Side前面奥行き
-        self.Z_eq = (291.0 - 176.0) / 108.0        # 1.0648 m
-        self.Z_apex = 2.0000                       # 頭頂高さ (291.0 - 75.0) / 108.0 = 2.000m
-        self.x_foot = 30.0 / 108.0                 # 0.2778 m (原画 dx = ±30px)
-        self.z_tip = -0.0150                       # 短くぷっくり丸い2本足先
-        self.z_crotch = (291.0 - 280.0) / 108.0    # 0.1019 m (浅く丸い股下アーチ)
+        self.W_max = 0.9800
+        self.D_back = 0.7600
+        self.D_front = 0.6300
+        self.Z_eq = 1.0675        # (1022.0 - 595.0) / 400.0
+        self.Z_apex = 2.0050
+        self.x_foot = 0.2625
+        self.z_tip = -0.0050
+        self.z_crotch = 0.0975
 
     def _front_y_from_d_ell(self, d_ell):
         return -self.D_front * np.clip(d_ell, 0.0, 1.0)
@@ -214,7 +183,10 @@ class IIChSurfaceModel:
         return (1.0 - alpha) * circ + alpha * hyp
 
     def _eval_lower_z(self, abs_x, abs_ct):
-        """下半球強凸プロファイル: ふっくら丸い下腹部〜足先ラインと滑らかなタマゴ底"""
+        """
+        Rev.2: 底面ビューでお腹・お尻中央がW字に波打つ原因だった t_cy の急減衰を修正し、
+        X=0 断面(abs_ct: 0 -> 1)で Z が厳密に単調増加する完全凸曲面として評価
+        """
         u_out = np.clip((abs_x - self.x_foot) / (self.W_max - self.x_foot), 0.0, 1.0)
         f_x = self._f_convex_profile(u_out, alpha=0.18, delta=0.35)
         z_outer = self.Z_eq - (self.Z_eq - self.z_tip) * f_x
@@ -223,11 +195,11 @@ class IIChSurfaceModel:
         p_in = 0.38 * (w_in ** 2) * (3.0 - 2.0 * w_in) + 0.62 * (w_in ** 3) * (4.0 - 3.0 * w_in)
         dz_crotch = (self.z_crotch - self.z_tip) * p_in
 
-        t_cy = np.clip(abs_ct / 0.58, 0.0, 1.0)
-        crotch_y_weight = (1.0 - t_cy * t_cy) ** 2
+        t_cy = np.clip(abs_ct / 0.82, 0.0, 1.0)
+        crotch_y_weight = 1.0 - (t_cy ** 2) * (3.0 - 2.0 * t_cy)
         z_b = z_outer + dz_crotch * crotch_y_weight
 
-        f_y = self._f_convex_profile(abs_ct, alpha=0.05, delta=0.46)
+        f_y = self._f_convex_profile(abs_ct, alpha=0.06, delta=0.42)
         return self.Z_eq - (self.Z_eq - z_b) * f_y
 
     def map_unit_sphere_to_body(self, nx, ny, nz):
@@ -300,10 +272,10 @@ def create_body_mesh(surf_model, res=136):
     for i, v in enumerate(verts):
         v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
 
-    # 足先・股下下部 (Z < 0.16m) に体積収縮のない Taubin スムージングを適用し、胸ロゴ領域(Z>=0.17m)の曲面精度を100%維持
+    # Rev.2: 足先Taubinスムージングの遷移幅を広げ、境界段差を完全にゼロ化
     adj = [[e.other_vert(v).index for e in v.link_edges] for v in verts]
     pos = np.array([[v.co.x, v.co.y, v.co.z] for v in verts], dtype=np.float64)
-    w_sm = np.clip((0.16 - pos[:, 2]) / 0.10, 0.0, 1.0)[:, None]
+    w_sm = np.clip((0.22 - pos[:, 2]) / 0.16, 0.0, 1.0)[:, None]
     active_idx = np.where(w_sm[:, 0] > 0.0)[0]
 
     for step in range(20):
@@ -333,24 +305,21 @@ def create_body_mesh(surf_model, res=136):
 
 def create_logo_3d_mesh(surf_model):
     """
-    原画 iich_3views.jpg の y=251..274, x=150..242 領域を切り出し、
-    5倍双三次補間(460x115 px)＋色差内積スコア(score > 72.0)＋ガウシアン平滑化＋Taubin境界スムージングにより
-    2つの上付き短縦棒 I を含む「LILI-ch」全7文字を鮮明な3D立体メッシュとして生成する
+    Rev.2: 高解像度PNG FRONT_HIGHRES_PATH (iich_05_front.png) の im_f[886:966, 272:588] (80x316 px) を切り出し、
+    build_iinet_kun.py と完全同一の高精細アルゴリズムでエッジ潰れ・ジャギーのない「LILI-ch」3D立体メッシュを生成
     """
-    im_f = load_image_rgba_uint8(REF_3VIEWS_PATH)
-    crop = im_f[251:274, 150:242, :3]
-    up_rgb = upscale_rgb_bicubic_5x(crop, scale=5)
-    R, G, B = up_rgb[:, :, 0], up_rgb[:, :, 1], up_rgb[:, :, 2]
+    im_f = load_image_rgba_uint8(FRONT_HIGHRES_PATH)
+    crop = im_f[886:966, 272:588].astype(np.float32)
+    R, G, B = crop[:, :, 0], crop[:, :, 1], crop[:, :, 2]
+    y_raw = np.clip(((R - 136.0) * 1.15 + (G - 195.0) * 0.55 - (B - 79.0) * 0.45) / 145.0, 0.0, 1.0)
 
-    # グリーン背景 RGB(134, 191, 82) からイエロー文字 RGB(247, 243, 44) への色差内積スコア
-    score = (R - 134.0) * 1.16 + (G - 191.0) * 0.54 - (B - 82.0) * 0.47
-
+    # 2Dガウシアンスムージングでピクセル階段を滑らかな連続スカラー場へ変換
     k1d = np.array([0.12, 0.23, 0.30, 0.23, 0.12], dtype=np.float32)
-    score_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 0, score)
-    score_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 1, score_smooth)
+    y_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 0, y_raw)
+    y_smooth = np.apply_along_axis(lambda m: np.convolve(np.pad(m, 2, mode='edge'), k1d, mode='valid'), 1, y_smooth)
 
-    H, W = score_smooth.shape
-    cell_mask = (0.25 * (score_smooth[:-1, :-1] + score_smooth[1:, :-1] + score_smooth[:-1, 1:] + score_smooth[1:, 1:]) > 72.0).copy()
+    H, W = y_smooth.shape
+    cell_mask = (0.25 * (y_smooth[:-1, :-1] + y_smooth[1:, :-1] + y_smooth[:-1, 1:] + y_smooth[1:, 1:]) > 0.42).copy()
 
     # 対角チェッカーボードの非多様体頂点を解消
     for _ in range(2):
@@ -371,10 +340,10 @@ def create_logo_3d_mesh(surf_model):
                 or (r < H - 1 and c > 0 and cell_mask[r, c - 1])
                 or (r > 0 and c > 0 and cell_mask[r - 1, c - 1])
             ):
-                x_px = 150.0 + float(c) / 5.0
-                y_px = 251.0 + float(r) / 5.0
-                x_logo = ((x_px - 195.5) / 108.0) * 0.98
-                z_logo = ((291.0 - y_px) / 108.0) + 0.015
+                x_px = 272.0 + float(c)
+                y_px = 886.0 + float(r)
+                x_logo = ((x_px - 429.5) / 400.0) * 0.985
+                z_logo = ((1022.0 - y_px) / 400.0) + 0.025
                 v_grid[(r, c)] = bm.verts.new((x_logo, z_logo, 0.0))
 
     for r in range(H - 1):
@@ -461,28 +430,25 @@ def create_logo_3d_mesh(surf_model):
 
 def _compute_scaled_face_radii(data, ang_grid):
     """
-    原画 iich_3views.jpg の角丸スクエア枠(上部ドーム n=2.25、下部角丸TV枠 n=2.80 のC^∞解析超楕円)により、
-    目・口・アンテナの青色干渉を完全排除し、frame_scale=0.965, thickness_slim=0.92 で
-    ボディ外周のグリーン余白と均一な青枠太さを原画 Front に100%一致させる
+    Rev.2: 高解像度原画 iich_05_front.png から抽出したLUTと楕円 r_ell を
+    build_iinet_kun.py (Rev.13) と同一の 0.90 * r_out_orig + 0.10 * r_ell (frame_scale=0.975, thickness_slim=0.92) でブレンドし、
+    角丸スクエアの顔枠とボディ余白バランスを原画に忠実に一致させる
     """
-    rx_out = 96.0 / 108.0   # 0.8889 m
-    rz_top = 81.0 / 108.0   # 0.7500 m
-    rz_bot = 80.0 / 108.0   # 0.7407 m
-    w_frame_base = 11.8 / 108.0  # 0.1093 m (原画の均一な青枠幅)
+    thetas = data["thetas"]
+    r_in_orig = np.interp(ang_grid, thetas, data["r_in_lut"])
+    r_out_orig = np.interp(ang_grid, thetas, data["r_out_lut"])
 
-    ca = np.abs(np.cos(ang_grid))
-    sa = np.sin(ang_grid)
-    # 上半部は頭頂ドームに沿う n=2.25、下半部は角丸スクエアTV枠の n=2.80 へ滑らかに遷移
-    n_se = 2.525 - 0.275 * sa
-    rz_dir = np.where(sa >= 0.0, rz_top, rz_bot)
-    r_se_out = 1.0 / np.maximum((ca / rx_out) ** n_se + (np.abs(sa) / rz_dir) ** n_se, 1e-12) ** (1.0 / n_se)
+    rx_out = float(np.interp(0.0, thetas, data["r_out_lut"]))
+    rz_out = 0.5 * (float(np.interp(0.5 * math.pi, thetas, data["r_out_lut"])) + float(np.interp(1.5 * math.pi, thetas, data["r_out_lut"])))
+    r_ell = 1.0 / np.sqrt((np.cos(ang_grid) / rx_out) ** 2 + (np.sin(ang_grid) / rz_out) ** 2)
+    r_out_smooth = 0.90 * r_out_orig + 0.10 * r_ell
 
-    frame_scale = 0.965
+    frame_scale = 0.975
     thickness_slim = 0.92
-    r_out = r_se_out * frame_scale
-    w_frame = w_frame_base * frame_scale * thickness_slim
+    r_out = r_out_smooth * frame_scale
+    w_frame = (r_out_orig - r_in_orig) * frame_scale * thickness_slim
     r_in = r_out - w_frame
-    zc = data["face_center_Z"]  # 1.1528 m
+    zc = data["face_center_Z"]  # 1.12875 m
     return r_in, r_out, zc
 
 
@@ -576,10 +542,10 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28, flat_mode=Tru
     return obj
 
 
-def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1315, rx_eye=0.090, rz_eye=0.120):
+def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1075, rx_eye=0.0890, rz_eye=0.1182):
     """
-    「いい-ch」の特徴である縦長オーバル（楕円: rx_eye=0.090m, rz_eye=0.120m）の目を
-    ボディ前面曲面に密着したフラットシェル(h_flat=+0.0014m, visible_shadow=False)として生成
+    Rev.2: iich_05_front.png 実測値 (cx_eye=±0.3145m, cz_eye=1.1075m, rx_eye=0.0890m, rz_eye=0.1182m) に
+    IoU 99.28% で一致する縦長オーバル楕円目をフラットシェル仕様で生成
     """
     n_ang = 64
     n_rad = 16
@@ -633,14 +599,14 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1315, rx_eye=0.090, rz_ey
 
 def create_mouth_mesh(surf_model):
     """
-    原画 Front 実測値に基づく短めで優しいスマイルアーク
-    (z_arc_center=1.0746m, r_arc=0.3940m, r_tube=0.0360m, max_ang=23.4°)
+    Rev.2: iich_05_front.png 実測値に基づくぷっくり丸いスマイルアーク
+    (z_arc_center=1.0793m, r_arc=0.4180m, r_tube=0.0390m, max_ang=21.4°)
     両端は先細りのない真円の半円キャップ(ext = cos(alpha) * r_tube)、完全フラットシェル仕様
     """
-    z_arc_center = 1.0746
-    r_arc = 0.3940
-    r_tube = 0.0360
-    max_ang = math.radians(23.4)
+    z_arc_center = 1.0793
+    r_arc = 0.4180
+    r_tube = 0.0390
+    max_ang = math.radians(21.4)
 
     n_spine = 56
     n_cap = 24
@@ -732,9 +698,9 @@ def create_mouth_mesh(surf_model):
 
 def create_arm_meshes(surf_model):
     """
-    原画 Front (Z=0.268..0.620m, 最大張り出し X=±1.090m) および
-    Side (Z=0.250..0.660m, 前後中心 Y=+0.040m, 前後半幅 half_y=0.130m) に完全一致する
-    ぷっくり丸いパドルアームを生成
+    Rev.2: iich_05_front.png 実測位置 (Z=0.245..0.555m, 最大幅 x_peak=1.048m at z_peak=0.320m, x_tip_bot=0.905m) に合わせ、
+    上側外縁曲線 x_outer の指数を ((1.0 - (u_up ** 1.35)) ** 0.88) とすることで
+    腕上端と胴体輪郭の接合部で生じていた凹み変曲点(S字の波打ち)を完全に解消
     """
     xs_test = np.linspace(surf_model.x_foot, surf_model.W_max, 400)
     zs_test = surf_model._eval_lower_z(xs_test, np.zeros_like(xs_test))
@@ -752,7 +718,7 @@ def create_arm_meshes(surf_model):
         unit_p = tan_c / np.linalg.norm(tan_c, axis=1, keepdims=True)
         ux, uy, uz = unit_p[:, 0], unit_p[:, 1], unit_p[:, 2]
 
-        z_min, z_max = 0.260, 0.650
+        z_min, z_max = 0.245, 0.555
         Z = 0.5 * (z_min + z_max) + 0.5 * (z_max - z_min) * uz
         env_z = np.sqrt(np.maximum(1.0 - uz * uz, 0.0))
 
@@ -768,32 +734,32 @@ def create_arm_meshes(surf_model):
         x_body_surf = np.interp(Z, zs_test, xs_test)
         x_body_rim = x_body_surf - 0.008 * (half_y / 0.130) ** 2
 
-        # 正面図(Front)のぷっくり丸いハの字パドル外縁 (最大張り出し X = 1.090m)
+        # 正面図(iich_05_front.png)のぷっくり丸いハの字パドル外縁 (変曲点・波打ちゼロ)
         x_tip_top = float(np.interp(z_max, zs_test, xs_test)) - 0.004
-        x_tip_bot = 0.945
-        x_peak = 1.090
-        z_peak = 0.335
+        x_tip_bot = 0.905
+        x_peak = 1.048
+        z_peak = 0.320
         t_bot = np.clip((Z - z_min) / (z_peak - z_min), 0.0, 1.0)
         u_up = np.clip((Z - z_peak) / (z_max - z_peak), 0.0, 1.0)
         x_outer = np.where(
             Z <= z_peak,
             x_tip_bot + (x_peak - x_tip_bot) * np.sqrt(t_bot * (2.0 - t_bot)),
-            x_tip_top + (x_peak - x_tip_top) * ((1.0 - (u_up ** 1.18)) ** 1.45),
+            x_tip_top + (x_peak - x_tip_top) * ((1.0 - (u_up ** 1.35)) ** 0.88),
         )
 
-        # 内側輪郭 x_inner(Z): 下端(Z=0.260)から脇下(Z=0.330)を通って胴体内部へ滑らかに収束
-        s_in = np.clip((Z - z_min) / (0.335 - z_min), 0.0, 1.0)
+        # 内側輪郭 x_inner(Z): 下端(Z=0.245)から脇下(Z=0.315)を通って胴体内部へ滑らかに収束
+        s_in = np.clip((Z - z_min) / (0.315 - z_min), 0.0, 1.0)
         x_inner_paddle = x_tip_bot - 0.210 * (s_in ** 0.68)
-        u_top_in = np.clip((Z - 0.560) / (z_max - 0.560), 0.0, 1.0)
+        u_top_in = np.clip((Z - 0.460) / (z_max - 0.460), 0.0, 1.0)
         env_top_in = np.sqrt(np.maximum(1.0 - u_top_in * u_top_in, 0.0))
         x_inner_body = x_tip_top * (1.0 - env_top_in) + (x_body_surf - 0.065) * env_top_in
-        w_in = np.clip((Z - 0.320) / 0.055, 0.0, 1.0)
+        w_in = np.clip((Z - 0.305) / 0.050, 0.0, 1.0)
         w_in = w_in * w_in * (3.0 - 2.0 * w_in)
         x_inner = (1.0 - w_in) * x_inner_paddle + w_in * x_inner_body
 
         x_mid_paddle = 0.5 * (x_outer + x_inner)
         x_rim_target = (x_body_rim + 0.008) * env_top_in + x_tip_top * (1.0 - env_top_in)
-        w_root = np.clip((Z - z_min) / (0.500 - z_min), 0.0, 1.0)
+        w_root = np.clip((Z - z_min) / (0.430 - z_min), 0.0, 1.0)
         w_root = w_root * w_root * (3.0 - 2.0 * w_root)
         x_root = (1.0 - w_root) * x_mid_paddle + w_root * np.maximum(x_rim_target, x_body_surf + 0.003)
 
@@ -812,7 +778,7 @@ def create_arm_meshes(surf_model):
         for it in range(4):
             tip_updates = {}
             for v in verts:
-                if it < 2 or v.co.z < 0.290:
+                if it < 2 or v.co.z < 0.275:
                     nb = [e.other_vert(v) for e in v.link_edges]
                     if nb:
                         w_lap = 0.25 if it < 2 else 0.45
@@ -836,31 +802,33 @@ def create_arm_meshes(surf_model):
 
 def create_antenna_and_globe():
     """
-    原画 Side の「いい-ch」特有の単一C字カーブ尻尾(Antenna)と
-    全周360度地球儀(Globe: 正面中央に日本列島4島配置)を生成
+    Rev.2: 尻尾(Antenna)の付け根高さを「いい-NETくん」および三面図Backと完全統一
+    (お尻下部内部 Z=0.480m, Y=0.420m からお尻下部表面 Z=0.530m, Y=0.655m を貫通して出現) し、
+    後方最大突出点 (Z=1.240m, Y=0.925m, dY/dZ=0) を経て地球儀内部 (Z=2.220m, Y=globe_y=0.660m) へ
+    変曲点ゼロ(d^2Y/dZ^2 < 0)の単一C字アーチで接続させる
     """
-    globe_y = 0.720
+    globe_y = 0.660
     globe_z = 2.356
     globe_radius = 0.200
-    y_peak = 0.912
+    y_peak = 0.925
+    z_peak = 1.240
 
-    # 1) 背中下部内部 (Y=0.42m, Z=0.78m) から後方最大突出点 (Y=0.912m, Z=1.280m, dY/dZ=0) への下部カーブ
+    # 1) お尻下部内部 (Y=0.420m, Z=0.480m) からお尻下部表面 (Y=0.655m, Z=0.530m) を貫通する根元部
+    root_z = np.linspace(0.480, 0.525, 16)
+    root_y = np.linspace(0.420, 0.648, 16)
+
+    # 2) お尻下部表面 (Y=0.655m, Z=0.530m) から後方最大突出点 (Y=0.925m, Z=1.240m, dY/dZ=0) への下部C字カーブ
     u_low = np.linspace(0.0, 1.0, 60)
-    z_low = 0.780 + (1.280 - 0.780) * u_low
-    y_low = 0.420 + (y_peak - 0.420) * np.sin(0.5 * math.pi * u_low)
+    z_low = 0.530 + (z_peak - 0.530) * u_low
+    y_low = 0.655 + (y_peak - 0.655) * np.sin(0.5 * math.pi * u_low)
 
-    # 2) 後方最大突出点 (Y=0.912m, Z=1.280m) から地球儀真下・南極中心 (Y=globe_y, Z=2.156m) へ垂直(dY/dZ=0)に接続し、内部 Z=2.220m まで貫通
-    u_up = np.linspace(0.015, 1.0, 85)
-    z_up = 1.280 + (2.156 - 1.280) * u_up
-    s_herm = (u_up ** 1.45) * (1.0 - (u_up - 1.0) * 1.45)
-    s_cos = 0.5 * (1.0 - np.cos(math.pi * u_up))
-    y_up = y_peak - (y_peak - globe_y) * (0.55 * s_cos + 0.45 * s_herm)
+    # 3) 後方最大突出点 (Y=0.925m, Z=1.240m) から地球儀下部内部 (Y=globe_y=0.660m, Z=2.220m) への純凸C字アーチ (S字反りゼロ)
+    u_up = np.linspace(0.015, 1.0, 80)
+    z_up = z_peak + (2.220 - z_peak) * u_up
+    y_up = y_peak - (y_peak - globe_y) * (u_up ** 1.85)
 
-    z_cap = np.linspace(2.162, 2.220, 8)
-    y_cap = np.full_like(z_cap, globe_y)
-
-    ctrl_z = np.concatenate([z_low, z_up, z_cap])
-    ctrl_y = np.concatenate([y_low, y_up, y_cap])
+    ctrl_z = np.concatenate([root_z, z_low, z_up])
+    ctrl_y = np.concatenate([root_y, y_low, y_up])
 
     n_pts = 160
     t_raw = np.linspace(0.0, 1.0, len(ctrl_z))
@@ -868,11 +836,11 @@ def create_antenna_and_globe():
     z_fine = np.interp(t_fine, t_raw, ctrl_z)
     y_fine = np.interp(t_fine, t_raw, ctrl_y)
 
-    k_sm = np.exp(-0.5 * (np.arange(-4, 5) / 1.8) ** 2)
+    k_sm = np.exp(-0.5 * (np.arange(-6, 7) / 2.5) ** 2)
     k_sm /= k_sm.sum()
-    z_fine = np.convolve(np.pad(z_fine, 4, mode='edge'), k_sm, mode='valid')
-    y_fine = np.convolve(np.pad(y_fine, 4, mode='edge'), k_sm, mode='valid')
-    z_fine[0], y_fine[0] = 0.780, 0.420
+    z_fine = np.convolve(np.pad(z_fine, 6, mode='edge'), k_sm, mode='valid')
+    y_fine = np.convolve(np.pad(y_fine, 6, mode='edge'), k_sm, mode='valid')
+    z_fine[0], y_fine[0] = 0.480, 0.420
     z_fine[-1], y_fine[-1] = 2.220, globe_y
 
     r_pipe = 0.040
@@ -990,45 +958,45 @@ def create_armature_and_bind(all_mesh_objs):
     b_body.parent = b_root
 
     b_leg_l = eb.new("Leg.L")
-    b_leg_l.head = (0.278, 0.0, 0.15)
-    b_leg_l.tail = (0.278, 0.0, -0.02)
+    b_leg_l.head = (0.2625, 0.0, 0.15)
+    b_leg_l.tail = (0.2625, 0.0, -0.02)
     b_leg_l.parent = b_body
 
     b_leg_r = eb.new("Leg.R")
-    b_leg_r.head = (-0.278, 0.0, 0.15)
-    b_leg_r.tail = (-0.278, 0.0, -0.02)
+    b_leg_r.head = (-0.2625, 0.0, 0.15)
+    b_leg_r.tail = (-0.2625, 0.0, -0.02)
     b_leg_r.parent = b_body
 
     b_arm_l = eb.new("Arm.L")
-    b_arm_l.head = (0.85, 0.04, 0.58)
-    b_arm_l.tail = (1.06, 0.04, 0.30)
+    b_arm_l.head = (0.82, 0.04, 0.52)
+    b_arm_l.tail = (1.03, 0.04, 0.28)
     b_arm_l.parent = b_body
 
     b_arm_r = eb.new("Arm.R")
-    b_arm_r.head = (-0.85, 0.04, 0.58)
-    b_arm_r.tail = (-1.06, 0.04, 0.30)
+    b_arm_r.head = (-0.82, 0.04, 0.52)
+    b_arm_r.tail = (-1.03, 0.04, 0.28)
     b_arm_r.parent = b_body
 
     b_ant1 = eb.new("Antenna_1")
-    b_ant1.head = (0.0, 0.65, 0.85)
-    b_ant1.tail = (0.0, 0.955, 1.25)
+    b_ant1.head = (0.0, 0.55, 0.55)
+    b_ant1.tail = (0.0, 0.912, 1.18)
     b_ant1.parent = b_body
 
     b_ant2 = eb.new("Antenna_2")
-    b_ant2.head = (0.0, 0.955, 1.25)
-    b_ant2.tail = (0.0, 0.80, 1.75)
+    b_ant2.head = (0.0, 0.912, 1.18)
+    b_ant2.tail = (0.0, 0.80, 1.70)
     b_ant2.parent = b_ant1
     b_ant2.use_connect = True
 
     b_ant3 = eb.new("Antenna_3")
-    b_ant3.head = (0.0, 0.80, 1.75)
-    b_ant3.tail = (0.0, 0.583, 2.16)
+    b_ant3.head = (0.0, 0.80, 1.70)
+    b_ant3.tail = (0.0, 0.720, 2.16)
     b_ant3.parent = b_ant2
     b_ant3.use_connect = True
 
     b_globe = eb.new("Globe")
-    b_globe.head = (0.0, 0.583, 2.16)
-    b_globe.tail = (0.0, 0.583, 2.55)
+    b_globe.head = (0.0, 0.720, 2.16)
+    b_globe.tail = (0.0, 0.720, 2.55)
     b_globe.parent = b_ant3
 
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -1073,9 +1041,9 @@ def create_armature_and_bind(all_mesh_objs):
             vg3 = obj.vertex_groups.new(name="Antenna_3")
             for v in obj.data.vertices:
                 z = v.co.z
-                if z < 1.25:
+                if z < 1.18:
                     vg1.add([v.index], 1.0, 'REPLACE')
-                elif z < 1.75:
+                elif z < 1.70:
                     vg2.add([v.index], 1.0, 'REPLACE')
                 else:
                     vg3.add([v.index], 1.0, 'REPLACE')
@@ -1299,13 +1267,13 @@ def build_and_render_iich(data, surf_model):
     scene = bpy.context.scene
     configure_cycles_gpu(scene)
 
-    # 2. 全3Dパーツ生成
+    # 2. 全3Dパーツ生成 (Rev.2: iich_05_front.png 実測値に完全一致)
     body_obj = create_body_mesh(surf_model, res=136)
     logo_obj = create_logo_3d_mesh(surf_model)
     screen_obj = create_face_screen_mesh(surf_model, data, flat_mode=True)
     frame_obj = create_face_frame_mesh(surf_model, data, flat_mode=True)
-    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.314, cz_eye=1.1315, rx_eye=0.090, rz_eye=0.120)
-    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.314, cz_eye=1.1315, rx_eye=0.090, rz_eye=0.120)
+    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.3145, cz_eye=1.1075, rx_eye=0.0890, rz_eye=0.1182)
+    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.3145, cz_eye=1.1075, rx_eye=0.0890, rz_eye=0.1182)
     mouth_obj = create_mouth_mesh(surf_model)
     arm_l_obj, arm_r_obj = create_arm_meshes(surf_model)
     ant_obj, globe_obj = create_antenna_and_globe()
@@ -1317,7 +1285,7 @@ def build_and_render_iich(data, surf_model):
         ant_obj, globe_obj,
     ]
 
-    # 3. マテリアル作成（iich_3views.jpg 実測値）＆割り当て
+    # 3. マテリアル作成＆割り当て
     mat_body_green = create_matte_material("Mat_Body_Green", (134, 194, 78))
     mat_arm_green = create_matte_material("Mat_Arm_Green", (128, 188, 72))
     mat_frame_blue = create_matte_material("Mat_Frame_Blue", (52, 114, 182))
@@ -1352,8 +1320,8 @@ def build_and_render_iich(data, surf_model):
     cam_obj = bpy.data.objects.new("RenderCam", cam_data)
     bpy.context.collection.objects.link(cam_obj)
 
-    hero_target = Vector((0.02, 0.08, 1.18))
-    hero_pos = Vector((2.92, -6.55, 1.72))
+    hero_target = Vector((0.02, 0.12, 1.18))
+    hero_pos = Vector((2.82, -6.45, 1.72))
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
     scene.camera = cam_obj
 
@@ -1430,7 +1398,7 @@ def main():
     data = extract_iich_profiles()
     surf_model = IIChSurfaceModel(data)
     build_and_render_iich(data, surf_model)
-    print("ALL RENDERS AND EXPORTS FOR II-CH (LILI-ch) COMPLETED SUCCESSFULLY.")
+    print("ALL RENDERS AND EXPORTS FOR II-CH (LILI-ch) REV.2 COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":

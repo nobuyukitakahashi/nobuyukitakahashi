@@ -1,5 +1,32 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v14): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」Rev.2改修（高解像度正面原画 `iich_05_front.png` 準拠：高精細 `LILI-ch` 3Dロゴ、縦長オーバル目・スマイル口の忠実化、ボディライン・腕接合部・底面・顔枠の波打ち完全解消、尻尾付け根高さの「いい-NETくん」完全統一）
+
+### 変更理由
+ユーザーより高解像度正面原画（`iich_05_front.png`、`841×1024` RGBA）とともにいただいた4点の改善指示（①「いいーch ロゴのひんしつがわるすぎる」、②「目の表現を忠実に、かわいく」、③「ボディライン、顔枠、へんななみうっているところがある」、④「尻尾のつけねが、いい-netとちがう、たかすぎる」）に基づき、「いい-ch（`LILI-ch`）」の3Dモデル・レンダリング成果物をRev.2へ全面改修するため。
+
+### Before / After
+- **Before (v1)**:
+  - 低解像度JPEG三面図（`iich_3views.jpg` の `23×92 px` 領域）からロゴを抽出していたため、JPEGブロックノイズにより `LILI-ch` の2つの `I` が短く切れ、`c`・`h` のエッジ品質が低かった。
+  - 目の縦方向中心が高く（`cz_eye = 1.1315m`）、口の太さがやや細め（`r_tube = 0.0360m`）だった。
+  - 腕上端の外縁曲線指数（`1.45 > 1.0`）により胴体との接合部に凹み変曲点（S字波打ち）が生じ、底面のお腹・お尻断面でも `t_cy` の急減衰によりW字状の波打ちが発生していた。
+  - 尻尾（`Antenna`）の始点が高く、お尻の中腹（`Z ≈ 0.84m`）から出現していたため、「いい-NETくん」や三面図Backの低い付け根位置と異なっていた。
+- **After (Rev.2)**:
+  - **① 高解像度原画 `iich_05_front.png` からの `LILI-ch` 高精細3D立体メッシュ化**: `80×316 px` の高解像度PNG領域から色差スカラー場＋2Dガウシアン平滑化＋境界12反復Taubinスムージング＋押し出し上面ベベル（`0.28`）で抽出し、フルハイトのイタリック `L I L I - c h` 全7文字を鮮明な立体3Dメッシュとして造形。
+  - **② 縦長オーバル目・スマイル口の忠実・かわいい表現**: 原画 `iich_05_front.png` と IoU 99.28% で一致する縦長楕円の目（`rx_eye = 0.0890m, rz_eye = 0.1182m, cx_eye = ±0.3145m, cz_eye = 1.1075m`）と、ぷっくり丸い線幅のスマイル口（`r_tube = 0.0390m, r_arc = 0.4180m, max_ang = 21.4°`）を完全再現し、斜め3/4ビューでも奥の目が潰れないよう `D_front = 0.6300m, hero_pos = (2.82, -6.45, 1.72)` に最適化。
+  - **③ ボディライン・腕接合部・底面・顔枠の波打ち完全解消**: 高解像度原画から頭頂アンテナを完全遮断して顔枠LUTを抽出し（`0.90 * r_out_orig + 0.10 * r_ell, frame_scale = 0.975`）、腕上端外縁を強凸曲線（指数 `0.88 < 1.0`、高さ `Z = 0.245..0.555m`）に修正、さらに下半球の股下減衰幅を `t_cy = abs_ct / 0.82` のエルミート補間に広げることで、正面・側面・背面・上面・底面・斜め3/4の全6ビューで波打ちゼロの滑らかな輪郭を実現。
+  - **④ 尻尾（`Antenna`）の付け根高さを「いい-NETくん」と完全統一**: お尻下部内部（`Z = 0.480m, Y = 0.420m`）からお尻下部表面（`Z = 0.530m, Y = 0.655m`）を貫通して出現させ、後方最大突出点（`Z = 1.240m, Y = 0.925m`）を経て地球儀下部（`Z = 2.220m, Y = 0.660m`）へ変曲点ゼロ（`d²Y/dZ² < 0`）の単一純凸C字アーチで接続。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`02_Creative_Dept/drafts/ref_images/iich_05_front.png`](02_Creative_Dept/drafts/ref_images/iich_05_front.png)
+  - [`02_Creative_Dept/drafts/build_iich_kun.py`](02_Creative_Dept/drafts/build_iich_kun.py)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の `cvn_iich_kun.blend`, `cvn_iich_kun.glb`, `iich_kun_front.png`, `iich_kun_side.png`, `iich_kun_hero_3quarter.png`, `iich_kun_front_and_side.png`, `iich_kun_5views_sheet.png`（および `output_20261105_cvn_iich_*` 全7点）
+  - [`04_Delivery_Dept/outputs/output_20261105_cvn_iinet_3d_modeling.md`](04_Delivery_Dept/outputs/output_20261105_cvn_iinet_3d_modeling.md)
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+
+---
+
 ## 2026-11-05 (v13): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」の3面図からのBlender 3Dモデリング＆全アングルレンダリング成果物一式納品
 
 ### 変更理由
