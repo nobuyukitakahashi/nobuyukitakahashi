@@ -1,5 +1,25 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v15): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」Rev.3〜Rev.4改修（同心円の二重オーバル目：内側の濃い青オーバルをふっくら拡大＆上下左右均一幅の外周青リング化）
+
+### 変更理由
+ユーザーからの追加指示（「いい-chの目は二重になっているはず」「もうすこし、目かわいくして。内側の濃い青のまるをおおきくして」）に基づき、「いい-ch（`LILI-ch`）」の目を同心円の二重オーバル構造とし、さらに内側の濃い青のオーバルを大きくふっくらさせ、外周の青リングを上下左右均一幅の可愛い二重フチへ調整するため。
+
+### Before / After
+- **Before (Rev.2 / Rev.3)**:
+  - Rev.2では単一色の縦長オーバル目であり、Rev.3では同心二重オーバル化したものの `pupil_ratio = 0.67`（面積比約45%）で内側の瞳がやや小さく、上下の外枠リング幅が左右より太くなっていた。
+- **After (Rev.4)**:
+  - 外形サイズ（`rx_eye = 0.0890m, rz_eye = 0.1182m`）を維持したまま、外周リング幅を上下左右すべて均一な `w_ring = 0.0155m`（`15.5mm`）に設定し、内側の濃い青のオーバルを **`rx_inner = 0.0735m`（横幅比 82.6%）、`rz_inner = 0.1027m`（縦幅比 86.9%）** へ大きくふっくら拡大。
+  - 外周リングに `Mat_Eye_Outer_Blue (64, 134, 204)`、内側の瞳に黒っぽすぎず可愛い深みのある濃青 `Mat_Eye_Inner_Navy (10, 68, 142)` を割り当て、ジャギーの一切ない同心楕円トポロジ（`n_ang = 80, n_rad_inner = 14, n_rad_outer = 6`）で造形。
+
+### 影響範囲
+- 更新:
+  - [`02_Creative_Dept/drafts/build_iich_kun.py`](02_Creative_Dept/drafts/build_iich_kun.py)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の `cvn_iich_kun.blend`, `cvn_iich_kun.glb`, `iich_kun_front.png`, `iich_kun_side.png`, `iich_kun_hero_3quarter.png`, `iich_kun_front_and_side.png`, `iich_kun_5views_sheet.png`（および `output_20261105_cvn_iich_*` 全7点）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+
+---
+
 ## 2026-11-05 (v14): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」Rev.2改修（高解像度正面原画 `iich_05_front.png` 準拠：高精細 `LILI-ch` 3Dロゴ、縦長オーバル目・スマイル口の忠実化、ボディライン・腕接合部・底面・顔枠の波打ち完全解消、尻尾付け根高さの「いい-NETくん」完全統一）
 
 ### 変更理由

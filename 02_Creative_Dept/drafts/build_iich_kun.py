@@ -542,29 +542,46 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28, flat_mode=Tru
     return obj
 
 
-def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1075, rx_eye=0.0890, rz_eye=0.1182):
+def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1075, rx_eye=0.0890, rz_eye=0.1182, w_ring=0.0155):
     """
-    Rev.2: iich_05_front.png 実測値 (cx_eye=±0.3145m, cz_eye=1.1075m, rx_eye=0.0890m, rz_eye=0.1182m) に
-    IoU 99.28% で一致する縦長オーバル楕円目をフラットシェル仕様で生成
+    Rev.4: 内側の濃い青のまるを大きく＆外周リングを均一幅(w_ring=0.0155m)の可愛いフチにした二重オーバル目
+    rx_inner = 0.0735m (82.6%), rz_inner = 0.1027m (86.9%), n_ang=80, n_rad_inner=14, n_rad_outer=6
     """
-    n_ang = 64
-    n_rad = 16
+    n_ang = 80
+    n_rad_inner = 14
+    n_rad_outer = 6
+    n_rad_total = n_rad_inner + n_rad_outer
+    h_outer = 0.0013
+    h_inner = 0.0017
+
+    rx_inner = rx_eye - w_ring
+    rz_inner = rz_eye - w_ring
+
     bm = bmesh.new()
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
 
     y_c, nx_c, ny_c, nz_c = surf_model.front_surface_y_and_normal(np.array([cx_eye]), np.array([cz_eye]))
-    h_flat = 0.0014
     center_v = bm.verts.new((
-        float(cx_eye + h_flat * nx_c[0]),
-        float(y_c[0] + h_flat * ny_c[0]),
-        float(cz_eye + h_flat * nz_c[0]),
+        float(cx_eye + h_inner * nx_c[0]),
+        float(y_c[0] + h_inner * ny_c[0]),
+        float(cz_eye + h_inner * nz_c[0]),
     ))
 
     rings = []
-    for ir in range(1, n_rad + 1):
-        frac = ir / n_rad
-        xs = cx_eye + (rx_eye * frac) * np.cos(ang_grid)
-        zs = cz_eye + (rz_eye * frac) * np.sin(ang_grid)
+    for ir in range(1, n_rad_total + 1):
+        if ir <= n_rad_inner:
+            u = ir / n_rad_inner
+            rx_cur = rx_inner * u
+            rz_cur = rz_inner * u
+            h_flat = h_inner
+        else:
+            v = (ir - n_rad_inner) / n_rad_outer
+            rx_cur = rx_inner + (rx_eye - rx_inner) * v
+            rz_cur = rz_inner + (rz_eye - rz_inner) * v
+            h_flat = h_outer
+
+        xs = cx_eye + rx_cur * np.cos(ang_grid)
+        zs = cz_eye + rz_cur * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
         ring_v = []
         for ia in range(n_ang):
@@ -575,13 +592,15 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.1075, rx_eye=0.0890, rz_e
             )))
         rings.append(ring_v)
 
-    for ia in range(n_ang):
-        ia_next = (ia + 1) % n_ang
-        bm.faces.new((center_v, rings[0][ia], rings[0][ia_next]))
-    for ir in range(n_rad - 1):
+    for ir in range(n_rad_total):
+        mat_idx = 1 if (ir < n_rad_inner) else 0
         for ia in range(n_ang):
             ia_next = (ia + 1) % n_ang
-            bm.faces.new((rings[ir][ia], rings[ir + 1][ia], rings[ir + 1][ia_next], rings[ir][ia_next]))
+            if ir == 0:
+                f = bm.faces.new((center_v, rings[0][ia], rings[0][ia_next]))
+            else:
+                f = bm.faces.new((rings[ir - 1][ia], rings[ir][ia], rings[ir][ia_next], rings[ir - 1][ia_next]))
+            f.material_index = mat_idx
 
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     mesh = bpy.data.meshes.new(name + "_Mesh")
@@ -1285,11 +1304,13 @@ def build_and_render_iich(data, surf_model):
         ant_obj, globe_obj,
     ]
 
-    # 3. マテリアル作成＆割り当て
+    # 3. マテリアル作成＆割り当て (Rev.3: 目の二重同心オーバルマテリアル Mat_Eye_Outer_Blue + Mat_Eye_Inner_Navy)
     mat_body_green = create_matte_material("Mat_Body_Green", (134, 194, 78))
     mat_arm_green = create_matte_material("Mat_Arm_Green", (128, 188, 72))
     mat_frame_blue = create_matte_material("Mat_Frame_Blue", (52, 114, 182))
     mat_feature_blue = create_matte_material("Mat_Feature_Blue", (22, 96, 172))
+    mat_eye_outer_blue = create_matte_material("Mat_Eye_Outer_Blue", (64, 134, 204))
+    mat_eye_inner_navy = create_matte_material("Mat_Eye_Inner_Navy", (10, 68, 142))
     mat_stem_blue = create_matte_material("Mat_Stem_Blue", (52, 114, 182))
     mat_screen_cream = create_matte_material("Mat_Screen_Cream", (253, 250, 210))
     mat_logo_yellow = create_matte_material("Mat_Logo_Yellow", (252, 242, 20))
@@ -1303,8 +1324,10 @@ def build_and_render_iich(data, surf_model):
     arm_r_obj.data.materials.append(mat_arm_green)
     frame_obj.data.materials.append(mat_frame_blue)
     screen_obj.data.materials.append(mat_screen_cream)
-    eye_l_obj.data.materials.append(mat_feature_blue)
-    eye_r_obj.data.materials.append(mat_feature_blue)
+    eye_l_obj.data.materials.append(mat_eye_outer_blue)
+    eye_l_obj.data.materials.append(mat_eye_inner_navy)
+    eye_r_obj.data.materials.append(mat_eye_outer_blue)
+    eye_r_obj.data.materials.append(mat_eye_inner_navy)
     mouth_obj.data.materials.append(mat_feature_blue)
     ant_obj.data.materials.append(mat_stem_blue)
     globe_obj.data.materials.append(mat_globe)

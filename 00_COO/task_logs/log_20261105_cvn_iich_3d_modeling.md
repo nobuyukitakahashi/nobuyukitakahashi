@@ -18,6 +18,6 @@
 
 ## パイプライン進捗チェックリスト
 - [x] Step 1: 3面図（`iich_3views.jpg`）および高解像度正面原画（`iich_05_front.png`）のピクセル実測（Ground Truth解析）とモデリング仕様策定
-- [x] Step 2: Blender 5.2 による「いい-ch（`LILI-ch`）」3Dモデリング＆全アングルレンダリング（Rev.2：高精細 `LILI-ch` 3Dロゴ、縦長オーバル目・スマイル口の忠実化、ボディ・腕接合部・底面・顔枠の波打ち完全解消、お尻下部からの尻尾付け根高さ統一） (`02_Creative_Dept`)
-- [x] Step 3: `view_file` による原画照合・視覚監査（Visual Audit：全6ビューの波打ち解消・ロゴ品質・尻尾付け根高さを完全確認済）
+- [x] Step 2: Blender 5.2 による「いい-ch（`LILI-ch`）」3Dモデリング＆全アングルレンダリング（Rev.4：高精細 `LILI-ch` 3Dロゴ、可愛い同心二重オーバル目［内側濃青 `rx=82.6%, rz=86.9%`・均一外周青フチ `15.5mm`］、ボディ・腕接合部・底面・顔枠の波打ち完全解消、お尻下部からの尻尾付け根高さ統一） (`02_Creative_Dept`)
+- [x] Step 3: `view_file` による原画照合・視覚監査（Visual Audit：全6ビューの二重オーバル目・波打ち解消・ロゴ品質・尻尾付け根高さを完全確認済）
 - [x] Step 4: 最終納品フォルダ `04_Delivery_Dept/outputs/` への格納・`INDEX.md` 更新 (`04_Delivery_Dept`)
