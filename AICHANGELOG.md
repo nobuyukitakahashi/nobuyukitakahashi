@@ -1,5 +1,27 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v16): 株式会社CVN 2体ペア並びシーン（「いい-ch」左・「いい-NETくん」右）別Blenderファイル構築＆ペアレンダリング一式納品
+
+### 変更理由
+ユーザーからの追加依頼（「別blenderふぁいるをつくって、2つのキャラクターをアップしたバランスで並べて」）に基づき、既存の単体ファイル（`cvn_iinet_kun.blend`, `cvn_iich_kun.blend`）を保持したまま、アップロードされたペア画像（`pair_balance_ref.png`、`1024×680` px）のサイズ比・接地ライン・間隔バランスを厳密に再現した別Blenderファイル（`cvn_iich_and_iinet_pair.blend` / `.glb`）およびペアレンダリング画像を制作・納品するため。
+
+### Before / After
+- **Before**:
+  - 「いい-NETくん（`LILI-net`）」と「いい-ch（`LILI-ch`）」はそれぞれ独立した単体 `.blend` / `.glb` ファイルとして存在しており、2体を原画バランスで並べた統合シーンファイルは未作成だった。
+- **After**:
+  - 新規スクリプト [`02_Creative_Dept/drafts/build_pair_scene.py`](02_Creative_Dept/drafts/build_pair_scene.py) を構築し、`Collection_IICh`（左：`X = -0.955m, Y = -0.025m`、ボディスケール `(sx=0.842, sy=0.835, sz=0.829)`＝身長比 `83.1%`、地球儀半径 `0.196m`＝地球儀比 `98%`）と `Collection_IINet`（右：`X = +0.885m, Y = +0.025m`、スケール `1.000`）の2コレクション・2アーマチュア構成で同一接地ライン（`Z = 0.000m`）上に配置。
+  - 中央（`X ≈ -0.075m`）で互いの内側の手先が原画通りに軽く触れ合いつつ、前後微小オフセットにより3Dメッシュ干渉を完全に回避。
+  - ペア正面図（`pair_iich_and_iinet_front.png`）、ペア斜め3/4ヒーローカット（`pair_iich_and_iinet_hero_3quarter.png`）、正面・斜め3/4・背面3面比較ボード（`pair_iich_and_iinet_board.png`）をレンダリングし、`04_Delivery_Dept/outputs/` に格納。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`02_Creative_Dept/drafts/ref_images/pair_balance_ref.png`](02_Creative_Dept/drafts/ref_images/pair_balance_ref.png)
+  - [`02_Creative_Dept/drafts/build_pair_scene.py`](02_Creative_Dept/drafts/build_pair_scene.py)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の `cvn_iich_and_iinet_pair.blend`, `cvn_iich_and_iinet_pair.glb`, `pair_iich_and_iinet_front.png`, `pair_iich_and_iinet_hero_3quarter.png`, `pair_iich_and_iinet_board.png`（および `output_20261105_cvn_pair_iich_and_iinet*` 全5点）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+
+---
+
 ## 2026-11-05 (v15): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」Rev.3〜Rev.4改修（同心円の二重オーバル目：内側の濃い青オーバルをふっくら拡大＆上下左右均一幅の外周青リング化）
 
 ### 変更理由
