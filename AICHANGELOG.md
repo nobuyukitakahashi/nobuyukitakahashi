@@ -1,5 +1,37 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v10): 株式会社cvn モバイル事業新ブランド「cvn プラスモバイル / cvn plus mobile / cvn + mobile」ロゴデザイン全6案の設計およびデザイン提案書パッケージ納品
+
+### 変更理由
+株式会社cvn（旧・株式会社飯田ケーブルテレビ、2026年5月1日社名変更・創立40周年）のモバイル事業新ブランド「cvn プラスモバイル」について、メインロゴ `cvn` の造形・雰囲気および指定プライマリーカラー **CMYK `C:90% M:0% Y:70% K:0%`（Web HEX `#00a273`）** を踏襲し、「現代的でモダン、シンプル」な方針のもと3表記パターン（「プラスモバイル」「plus mobile」「+mobile」）×各2案＝計6案のロゴデザインおよびデザイン提案書一式を作成・納品するため。
+
+### Before / After
+- **Before**: 新ブランド「cvn プラスモバイル」のロゴデザイン案およびデザイン提案書が未作成。
+- **After**:
+  - **親ロゴ `cvn` の実ピクセル輪郭抽出と造形DNA継承**: 原画左部（`X: 0..659`）から Marching Squares サブピクセル輪郭抽出により `cvn` ベクターパスを抽出し、「極太ラウンドジオメトリック」「完全半円カプセル端子（Round Cap）」「`n` の左上突起（スパール）を排した滑らかな `∩` アーチ」を新設カタカナ・欧文（`u`, `m` 等の突起なしアーチ）・正十字 `+` に完全継承。
+  - **CMYK `C:90% M:0% Y:70% K:0%`（`#00a273`）単色統一の6案設計**:
+    - パターン①（日本語）：**案1-A**（1行横並び `cvn プラスモバイル`）、**案1-B**（2段スタック `cvn | プラス / モバイル`）
+    - パターン②（英語フル）：**案2-A**（原画タグライン2段グリッド継承 `cvn plus / mobile`）、**案2-B**（1行ウェイトコントラスト `cvn plus mobile`）
+    - パターン③（記号＋英語）：**案3-A**（カプセル正十字ロックアップ `cvn + mobile`）、**案3-B**（カプセルピルバッジ＋下部カナ併記 `cvn [+mobile] プラスモバイル`）
+  - **マルチフォーマット最終納品＆3デバイス実機検証**: 固定出力フォルダ `04_Delivery_Dept/outputs/` にスタンドアロンHTMLデザイン提案書（PC `1920px` / Tablet `768px` / Mobile `375px` 深層ジオメトリ＆スクリーンショット目視監査合格）、Markdown統合提案書、6案一覧比較ボードPNG、個別SVG/PNG（計12ファイル）を格納し、`INDEX.md` を更新。
+
+### 影響範囲
+- 新規作成・更新:
+  - [`00_COO/task_logs/log_20261105_cvn_plus_mobile_logo.md`](00_COO/task_logs/log_20261105_cvn_plus_mobile_logo.md)
+  - [`01_Research_Dept/inputs/task_20261105_cvn_plus_mobile_logo.md`](01_Research_Dept/inputs/task_20261105_cvn_plus_mobile_logo.md)
+  - [`01_Research_Dept/reports/report_cvn_plus_mobile_logo.md`](01_Research_Dept/reports/report_cvn_plus_mobile_logo.md)
+  - [`02_Creative_Dept/drafts/draft_cvn_plus_mobile_logo.md`](02_Creative_Dept/drafts/draft_cvn_plus_mobile_logo.md)
+  - [`02_Creative_Dept/final_outputs/content_cvn_plus_mobile_logo.md`](02_Creative_Dept/final_outputs/content_cvn_plus_mobile_logo.md) および `logo_1A.svg/.png` 〜 `logo_3B.svg/.png`, `logo_6proposals_board.png`
+  - [`03_Marketing_Dept/promos/promo_cvn_plus_mobile_logo.md`](03_Marketing_Dept/promos/promo_cvn_plus_mobile_logo.md)
+  - [`06_Legal_Dept/reviews/review_cvn_plus_mobile_logo.md`](06_Legal_Dept/reviews/review_cvn_plus_mobile_logo.md)
+  - [`04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_proposal.html`](04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_proposal.html)
+  - [`04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_full.md`](04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_full.md)
+  - [`04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_board.png`](04_Delivery_Dept/outputs/output_20261105_cvn_plus_mobile_logo_board.png) および `1A`〜`3B` の `.svg` / `.png`
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261105.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261105.md)
+
+---
+
 ## 2026-11-05 (v9): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.4改修（ボディ〜足付け根のへこみ解消・単一強凸曲面化、および頭頂ラインのC∞解析的ドーム曲線化）
 
 ### 変更理由
