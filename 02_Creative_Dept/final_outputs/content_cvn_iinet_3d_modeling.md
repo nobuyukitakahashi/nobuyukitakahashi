@@ -63,3 +63,28 @@
   全方位の環境光（`World Background = 0.20`）と下からのバウンス光（`Bounce_Cam = 18W`）および右フィルライト（`Fill_Cam = 44W`）を適切に抑え、左上45度方向からのメイン指向性ソフトボックス（`Key_Cam = 335W`）と右上奥からのリムライト（`Rim_Cam = 88W`）によって、ボディおよび画面の左上（ハイライト領域）から右下・下部（シェード領域）へ向かって滑らかで立体感のある光のグラデーションが美しく浮かび上がるよう刷新しました。
 - **ソフトビニール・マット質感の微調整**:
   Principled BSDFの `Roughness = 0.84`、`Specular IOR Level = 0.14` に設定し、強いテカリ（白飛び）を抑えつつも曲面の丸みに沿って柔らかい光のロールオフ（明暗グラデーション）が自然に表現される質感に仕上げました。
+
+---
+
+## 3. ペアキャラクター「いい-ch（胸ロゴ：`LILI-ch`）」3Dモデリング＆レンダリング制作仕様（`build_iich_kun.py`）
+
+### (1) 「いい-ch」最終成果物一覧（`02_Creative_Dept/final_outputs/` 計7ファイル）
+| 種別 | ファイルパス | 仕様・解像度 |
+| :--- | :--- | :--- |
+| **Blenderマスターファイル** | `02_Creative_Dept/final_outputs/cvn_iich_kun.blend` | Blender 5.2形式（全11メッシュパーツ＋リグ＋Cycles 3Dソフトビニール・マットマテリアル設定済） |
+| **Web / AR用 3Dモデル** | `02_Creative_Dept/final_outputs/cvn_iich_kun.glb` | glTF 2.0 Binary形式（11パーツ＋アーマチュア同梱） |
+| **単体正面レンダリング（Front View）** | `02_Creative_Dept/final_outputs/iich_kun_front.png` | `800 × 960 px`（原画Front完全一致：縦長オーバル目・優しいスマイル・LILI-ch立体ロゴ・地球儀中央に日本列島表示） |
+| **単体左側面レンダリング（Side View）** | `02_Creative_Dept/final_outputs/iich_kun_side.png` | `800 × 960 px`（原画Side完全一致：単一C字カーブ尻尾・楕円パドル腕・滑らかなタマゴ底） |
+| **斜め3/4 ヒーローレンダリング** | `02_Creative_Dept/final_outputs/iich_kun_hero_3quarter.png` | `1400 × 1680 px`（立体グラデーションライティング・接地シャドウ付） |
+| **正面・側面・斜め・背面 4面比較ボード** | `02_Creative_Dept/final_outputs/iich_kun_front_and_side.png` | `3320 × 1008 px`（4パネル並列高解像度ボード） |
+| **全6アングル統合シート（5面図＋斜め）** | `02_Creative_Dept/final_outputs/iich_kun_5views_sheet.png` | `2496 × 1992 px`（正面/左側面/背面/上面/底面/斜め3/4） |
+
+### (2) 「いい-ch」Ground Truth 造形仕様
+- **「いい-NETくん」と完全同一のワールドスケール（`108.0 px = 1.000 m`, 頭頂 `Z_apex = 2.000 m`）**:
+  `W_max = 0.990 m`（丸っこいリンゴ/マメ型シルエット）、`D_back = 0.760 m`、`D_front = 0.700 m`、`x_foot = 0.2778 m`、`z_tip = -0.015 m`、`z_crotch = 0.1019 m`。
+- **縦長オーバル（楕円）の目（`Eye.L` / `Eye.R`）と優しいスマイルの口（`Mouth`）**:
+  目は `cx_eye = ±0.314 m, cz_eye = 1.1315 m, rx_eye = 0.090 m, rz_eye = 0.120 m` の縦長楕円フラットシェル、口は `z_arc_center = 1.0746 m, r_arc = 0.394 m, r_tube = 0.036 m, max_ang = 23.4°`＋真円半円キャップのフラットシェルとして造形。
+- **胸元立体3Dロゴメッシュ `LILI-ch`（`Logo_LILI_ch`）**:
+  原画の `LILI-ch` 領域を5倍双三次補間（`460×115 px`）＋色差内積スコア閾値処理＋Taubin境界スムージングにより、2つの上付き短縦棒 `I` を含む全7文字を鮮明な立体3Dメッシュとして青枠下端のすぐ下（隙間約 `0.055 m`）に配置。
+- **背面単一C字カーブ尻尾（`Antenna`）＆ 地球儀（`Globe`）**:
+  原画 `Side` 特有の背中から後方へ大きく弧を描く単一C字カーブ（最大後方突出 `Y = +0.955 m, Z = 1.250 m`、パイプ半径 `r_pipe = 0.040 m`）で地球儀（中心 `Y = +0.583 m, Z = 2.356 m, r = 0.200 m`）へ接続。

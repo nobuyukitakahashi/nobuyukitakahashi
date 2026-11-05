@@ -1,5 +1,28 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v13): 株式会社CVNペアキャラクター「いい-ch（LILI-ch）」の3面図からのBlender 3Dモデリング＆全アングルレンダリング成果物一式納品
+
+### 変更理由
+ユーザーからの追加依頼（「もう一体のキャラクター いい-ch を 同じ条件でモデリングして」）に基づき、添付3面図（`Front` / `Side` / `Back`）のピクセル実測値（Ground Truth）をもとに、「いい-NETくん（Rev.13）」と完全同一の条件（非立体フラット顔・左上45°立体グラデーションライティング・正面日本列島360度地球儀・地球儀真下への尻尾接続）で「いい-ch（胸ロゴ：`LILI-ch`）」のBlender 3Dモデルおよび全アングルレンダリング画像を制作・納品するため。
+
+### Before / After
+- **Before**: ペアキャラクター「いい-ch（`LILI-ch`）」の3Dモデル・レンダリング成果物が未作成。
+- **After**:
+  - **「いい-NETくん」と完全同一のワールドスケール＆丸っこいリンゴ/マメ型グリーンボディ（`IIChSurfaceModel`）**: 原画換算スケール `108.0 px = 1.000 m` により頭頂 `Z_apex = 2.000 m`、赤道半幅 `W_max = 0.990 m`、リーフグリーン `RGB(134, 194, 78)` の滑らかな単一強凸曲面ボディを構築。
+  - **非立体フラット顔枠・縦長オーバル目・優しいスマイル口**: 顔枠（`frame_scale = 0.965, thickness_slim = 0.92`）、画面、縦長楕円の目（`rx = 0.090m, rz = 0.120m`）、真円半円キャップ付きの優しいスマイル口（`max_ang = 23.4°`）をすべて段差・落ち影ゼロのコンフォーマル平面シェルとして生成。
+  - **胸元立体3D文字メッシュ `LILI-ch`**: 原画ロゴ領域を5倍双三次補間＋色差内積スコア＋Taubin境界スムージングで抽出し、上付き短縦棒の2つの `I` を含む `LILI-ch` 全7文字を青枠直下に法線方向 `+18mm` で立体造形。
+  - **単一C字カーブ尻尾（地球儀真下・南極接続）＆ 正面日本列島360度地球儀**: 背面下部から弧を描くC字パイプ（`r_pipe = 0.040m`）を、正面中央に日本列島4島が見える360度地球儀の真下（南極中心 `Y = 0.720m, Z = 2.156m`）へ垂直接続。
+
+### 影響範囲
+- 新規作成・更新:
+  - [`00_COO/task_logs/log_20261105_cvn_iich_3d_modeling.md`](00_COO/task_logs/log_20261105_cvn_iich_3d_modeling.md)
+  - [`02_Creative_Dept/drafts/build_iich_kun.py`](02_Creative_Dept/drafts/build_iich_kun.py)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の `cvn_iich_kun.blend`, `cvn_iich_kun.glb`, `iich_kun_front.png`, `iich_kun_side.png`, `iich_kun_hero_3quarter.png`, `iich_kun_front_and_side.png`, `iich_kun_5views_sheet.png`（および `output_20261105_cvn_iich_*` 命名ファイル一式）
+  - [`04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md`](04_Delivery_Dept/outputs/output_20261104_cvn_iinet_3d_modeling_full.md)
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+
+---
+
 ## 2026-11-05 (v12): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.12〜Rev.13改修（立体グラデーションライティング刷新、および原画 `05_front.png` ピクセル実測値への原点回帰アライメント：顔枠・ボディバランス、`LILI-net` 位置関係、目の間隔・口の両端形状の完全一致）
 
 ### 変更理由
