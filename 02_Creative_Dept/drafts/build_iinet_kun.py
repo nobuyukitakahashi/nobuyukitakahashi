@@ -32,6 +32,7 @@ BLEND_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun.blend")
 GLB_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun.glb")
 
 HERO_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_hero_3quarter.png")
+FRONT_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_front.png")
 BOARD_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_front_and_side.png")
 SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_5views_sheet.png")
 
@@ -39,6 +40,7 @@ SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_5views_sheet.png")
 FLAT_BLEND_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun_flat_frame.blend")
 FLAT_GLB_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun_flat_frame.glb")
 FLAT_HERO_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_hero_3quarter.png")
+FLAT_FRONT_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_front.png")
 FLAT_BOARD_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_front_and_side.png")
 FLAT_SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_5views_sheet.png")
 
@@ -155,78 +157,83 @@ def extract_textures_and_profiles():
     lon_w = ((lon_deg + 2.4 * w_lon + 180.0) % 360.0) - 180.0
     lat_w = np.clip(lat_deg + 1.5 * w_lat, -89.9, 89.9)
 
-    # 全周360度どの角度(正面・側面・背面・上面・底面・斜め)から見ても地球儀と一目でわかる世界の大陸・半島・島列ポリゴン
-    world_polygons = [
-        # 1. アフリカ大陸 (正面左〜側面左〜底面)
-        [(-64, 10), (-66, 22), (-58, 32), (-42, 33), (-32, 29), (-24, 30), (-16, 12), (-14, 10),
-         (-22, -2), (-24, -14), (-32, -26), (-40, -36), (-46, -35), (-48, -22), (-50, -8), (-46, 2), (-56, 5)],
-        # 2. マダガスカル島
-        [(-18, -14), (-13, -15), (-15, -27), (-20, -28), (-21, -20)],
-        # 3. ヨーロッパ本土・イベリア・イタリア・バルカン (正面左上〜側面左上〜上面)
-        [(-62, 37), (-64, 43), (-54, 44), (-52, 50), (-42, 55), (-32, 58), (-15, 62), (-10, 48),
-         (-18, 42), (-26, 38), (-32, 43), (-37, 39), (-40, 44), (-48, 43), (-54, 36)],
-        # 4. スカンジナビア半島
-        [(-44, 58), (-40, 68), (-26, 71), (-16, 66), (-22, 60), (-32, 57), (-38, 56)],
-        # 5. イギリス・アイルランド
-        [(-62, 50), (-59, 58), (-53, 57), (-54, 50)],
-        # 6. アラビア半島
-        [(-24, 28), (-14, 30), (-4, 22), (-8, 12), (-18, 13)],
-        # 7. ユーラシア大陸・インド・インドシナ・東アジア・シベリア・カムチャツカ (正面中央〜右〜背面左上〜上面)
-        [(-18, 42), (-15, 65), (5, 71), (35, 73), (75, 72), (118, 70), (148, 65), (156, 54),
-         (142, 44), (134, 34), (124, 42), (114, 34), (96, 26), (78, 20), (64, 10),
-         (54, 12), (46, 22), (32, 23), (22, 8), (12, 22), (-2, 25), (-14, 32)],
-        # 8. 日本列島・東アジア島弧 (正面右＆背面左上)
-        [(52, 28), (58, 35), (63, 43), (67, 44), (62, 34), (56, 26)],
-        [(118, 22), (128, 30), (138, 40), (144, 43), (138, 31), (125, 20)],
-        # 9. 東南アジア諸島 (スマトラ・ジャワ・ボルネオ・ニューギニア)
-        [(54, 4), (66, -6), (80, -9), (78, -4), (64, 0), (56, 7)],
-        [(70, -3), (84, -3), (86, 6), (74, 7)],
-        [(94, -8), (128, -9), (130, -1), (96, 0)],
-        # 10. オーストラリア大陸 (正面右下〜背面左下〜底面)
-        [(58, -22), (68, -13), (92, -11), (122, -11), (144, -17), (148, -28),
-         (136, -38), (112, -39), (82, -35), (60, -33)],
-        # 11. ニュージーランド
-        [(148, -46), (162, -34), (156, -31), (144, -43)],
-        # 12. 北アメリカ大陸・アラスカ・フロリダ・中央アメリカ (経度180度を跨いで背面中央上〜側面右上〜上面に配置)
-        [(154, 52), (164, 67), (186, 71), (218, 70), (236, 65), (242, 54), (254, 58), (258, 46),
-         (248, 34), (242, 24), (236, 30), (222, 28), (212, 16), (222, 9), (212, 8),
-         (194, 16), (176, 26), (164, 38), (156, 46)],
-        # 13. グリーンランド・アイスランド (側面中央上〜斜め〜上面)
-        [(-96, 60), (-102, 72), (-88, 81), (-68, 78), (-72, 66), (-86, 59)],
-        [(-68, 63), (-60, 66), (-58, 63), (-66, 61)],
-        # 14. カリブ諸島
-        [(224, 22), (244, 20), (246, 16), (224, 18)],
-        # 15. 南アメリカ大陸 (背面中央右下〜側面右下〜底面)
-        [(196, 11), (224, 8), (246, -3), (256, -10), (250, -24), (234, -38),
-         (218, -49), (208, -55), (198, -51), (200, -35), (196, -18), (184, -5), (188, 5)],
-        # 16. 太平洋諸島・ハワイ
-        [(150, 14), (164, 18), (162, 23), (148, 19)],
+    # Rev.9: 正面図(lon=0°, lat=0°付近)の地球儀ど真ん中に日本列島(北海道・本州・四国・九州)がクッキリ独立して見える360度世界地図配置
+    continental_polygons = [
+        # 1. ユーラシア大陸(東アジア・中国・朝鮮半島・シベリア・カムチャツカ・インド・中央アジア)
+        [(-76, 40), (-68, 64), (-42, 70), (-5, 70), (24, 65), (40, 56), (35, 42), (29, 41), (27, 51),
+         (12, 49), (-4, 41), (-10, 26), (-8, 11), (-13, 9), (-16, 18), (-23, 15), (-20, 4),
+         (-26, -6), (-32, -8), (-31, -18), (-36, -19), (-39, -6), (-45, 4), (-52, 14), (-56, -4), (-62, -2),
+         (-68, 16), (-76, 24)],
+        # 2. 東南アジア諸島 (スマトラ・ジャワ・ボルネオ・ニューギニア)
+        [(-42, -20), (-30, -27), (-18, -28), (-20, -24), (-32, -22), (-40, -17)],
+        [(-26, -22), (-14, -22), (-13, -15), (-23, -15)],
+        [(10, -24), (30, -25), (32, -18), (12, -17)],
+        # 3. オーストラリア大陸・ニュージーランド (正面右下〜側面左下〜底面)
+        [(8, -38), (18, -30), (34, -29), (48, -34), (52, -44), (44, -52), (26, -53), (10, -48)],
+        [(58, -56), (68, -46), (63, -43), (54, -53)],
+        # 4. アラビア半島・アフリカ大陸・マダガスカル (正面左端〜側面〜背面左)
+        [(-88, 24), (-76, 26), (-66, 16), (-72, 6), (-82, 8)],
+        [(-128, 10), (-130, 22), (-122, 32), (-106, 33), (-96, 29), (-88, 28), (-80, 12), (-78, 8),
+         (-86, -4), (-88, -16), (-96, -28), (-104, -36), (-112, -35), (-114, -20), (-116, -6), (-122, 4)],
+        [(-82, -15), (-77, -16), (-79, -27), (-84, -28)],
+        # 5. ヨーロッパ・スカンジナビア・イギリス・グリーンランド (上面〜背面左)
+        [(-126, 37), (-128, 44), (-118, 46), (-114, 52), (-102, 56), (-90, 60), (-74, 62), (-72, 46),
+         (-82, 40), (-92, 38), (-100, 42), (-112, 42), (-118, 36)],
+        [(-108, 58), (-102, 68), (-88, 71), (-78, 66), (-86, 60), (-98, 57)],
+        [(-126, 50), (-122, 58), (-116, 57), (-118, 50)],
+        [(164, 60), (158, 72), (172, 80), (192, 77), (188, 65), (174, 59)],
+        # 6. 北アメリカ大陸・アラスカ・中央アメリカ (側面右〜背面中央上〜上面)
+        [(68, 54), (78, 67), (102, 71), (134, 69), (152, 62), (162, 50), (152, 34), (144, 24),
+         (136, 28), (124, 24), (116, 14), (126, 8), (114, 7), (98, 16), (84, 28), (74, 42)],
+        # 7. 南アメリカ大陸 (側面右下〜背面中央下〜底面)
+        [(118, 10), (144, 7), (164, -4), (174, -12), (168, -26), (152, -40), (136, -51),
+         (126, -54), (118, -48), (120, -32), (116, -16), (108, -4), (112, 5)],
+        # 8. ハワイ・太平洋諸島
+        [(52, 8), (62, 11), (60, 16), (50, 12)],
     ]
 
+    # 日本列島(北海道・本州・四国・九州): 正面カメラ(lon=0°, lat=0°)のど真ん中領域に配置し、
+    # 大陸と重ならず日本の弓なりシルエットと4島がクッキリ一目で判別できるように描画
+    japan_polygons = [
+        # 北海道 (Hokkaido)
+        [(11.5, 18.5), (13.8, 24.5), (17.5, 28.5), (22.0, 25.5), (24.8, 22.2), (20.2, 18.8), (15.8, 17.0), (12.2, 16.8)],
+        # 本州 (Honshu - 東北〜関東〜中部〜近畿〜中国地方の弓なり形状)
+        [(10.8, 14.8), (15.5, 13.8), (16.4, 8.2), (14.5, 2.0), (11.2, -1.2), (7.0, -2.4),
+         (2.8, -3.2), (-2.8, -2.5), (-3.8, 0.2), (1.8, 2.2), (6.5, 4.2), (9.0, 8.0), (9.8, 12.2)],
+        # 四国 (Shikoku)
+        [(0.2, -7.2), (5.6, -5.6), (4.8, -3.8), (-0.4, -5.2)],
+        # 九州 (Kyushu)
+        [(-6.8, -11.0), (-2.0, -10.0), (-1.2, -4.4), (-5.2, -3.8), (-7.2, -7.2)],
+    ]
+
+    def rasterize_polygons(poly_list, lon_field, lat_field, out_mask):
+        for poly in poly_list:
+            pts = np.asarray(poly, dtype=np.float64)
+            px, py = pts[:, 0], pts[:, 1]
+            lon0 = 0.5 * (px.min() + px.max())
+            lon_rel = lon0 + ((lon_field - lon0 + 180.0) % 360.0) - 180.0
+            in_bbox = (
+                (lon_rel >= px.min() - 0.5) & (lon_rel <= px.max() + 0.5)
+                & (lat_field >= py.min() - 0.5) & (lat_field <= py.max() + 0.5)
+            )
+            if not np.any(in_bbox):
+                continue
+            xs = lon_rel[in_bbox]
+            ys = lat_field[in_bbox]
+            inside = np.zeros(xs.shape, dtype=bool)
+            n_v = len(pts)
+            j = n_v - 1
+            for i in range(n_v):
+                xi, yi = px[i], py[i]
+                xj, yj = px[j], py[j]
+                cond = ((yi > ys) != (yj > ys)) & (xs < (xj - xi) * (ys - yi) / ((yj - yi) + 1e-12) + xi)
+                inside ^= cond
+                j = i
+            out_mask[in_bbox] |= inside
+
     is_land = np.zeros((gh, gw), dtype=bool)
-    for poly in world_polygons:
-        pts = np.asarray(poly, dtype=np.float64)
-        px, py = pts[:, 0], pts[:, 1]
-        lon0 = 0.5 * (px.min() + px.max())
-        lon_rel = lon0 + ((lon_w - lon0 + 180.0) % 360.0) - 180.0
-        in_bbox = (
-            (lon_rel >= px.min() - 0.5) & (lon_rel <= px.max() + 0.5)
-            & (lat_w >= py.min() - 0.5) & (lat_w <= py.max() + 0.5)
-        )
-        if not np.any(in_bbox):
-            continue
-        xs = lon_rel[in_bbox]
-        ys = lat_w[in_bbox]
-        inside = np.zeros(xs.shape, dtype=bool)
-        n_v = len(pts)
-        j = n_v - 1
-        for i in range(n_v):
-            xi, yi = px[i], py[i]
-            xj, yj = px[j], py[j]
-            cond = ((yi > ys) != (yj > ys)) & (xs < (xj - xi) * (ys - yi) / ((yj - yi) + 1e-12) + xi)
-            inside ^= cond
-            j = i
-        is_land[in_bbox] |= inside
+    rasterize_polygons(continental_polygons, lon_w, lat_w, is_land)
+    rasterize_polygons(japan_polygons, np.broadcast_to(lon_deg, (gh, gw)), np.broadcast_to(lat_deg, (gh, gw)), is_land)
 
     # 海岸線のジャギーを防ぐアンチエイリアス補間
     land_f = is_land.astype(np.float32)
@@ -376,17 +383,19 @@ class IINetSurfaceModel:
         self.Z_top_lut = data["Z_top_lut"]
         self.Z_bot_crotch_lut = data["Z_bot_crotch_lut"]
         self.Z_bot_egg_lut = data["Z_bot_egg_lut"]
-        self.W_max = float(self.X_lut[-1])    # 0.91625 m
-        self.D_max = 342.0 / 400.0            # 0.85500 m
-        self.Z_eq = (1022.0 - 560.0) / 400.0  # 1.15500 m
-        self.Z_apex = 2.01000                 # 頭頂高さ (m)
-        self.x_foot = 0.25800                 # 左右の足先の中心X座標 (m)
-        self.z_tip = -0.06800                 # 足先の最下端Z座標 (m)
-        self.z_crotch = 0.15200               # 股下アーチ中央のZ座標 (m)
+        # Rev.8: 顔の青枠サイズに合わせてボディ横幅をスリム化 (0.890倍)
+        self.body_x_scale = 0.890
+        self.W_max = float(self.X_lut[-1]) * self.body_x_scale  # 0.81546 m
+        self.D_max = 342.0 / 400.0                              # 0.85500 m
+        self.Z_eq = (1022.0 - 560.0) / 400.0                    # 1.15500 m
+        self.Z_apex = 2.01000                                   # 頭頂高さ (m)
+        self.x_foot = 0.25800 * self.body_x_scale               # 左右の足先の中心X座標 (0.22962 m)
+        self.z_tip = -0.06800                                   # 足先の最下端Z座標 (m)
+        self.z_crotch = 0.15200                                 # 股下アーチ中央のZ座標 (m)
 
     def z_top_of_x(self, abs_x):
         """
-        Rev.4: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
+        Rev.4/Rev.8: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
         正面・側面・背面・斜め3/4のどの角度から見ても歪みのない完璧に滑らかな頭頂ラインを実現
         """
         u = np.clip(abs_x / self.W_max, 0.0, 1.0)
@@ -409,7 +418,7 @@ class IINetSurfaceModel:
         """
         # 1) 外側輪郭 (|X| >= x_foot): 赤道(W_max, Z_eq)から足先(x_foot, z_tip)まで変曲点ゼロの単一凸曲線
         u_out = np.clip((abs_x - self.x_foot) / (self.W_max - self.x_foot), 0.0, 1.0)
-        f_x = self._f_convex_profile(u_out, alpha=0.34, delta=0.22)
+        f_x = self._f_convex_profile(u_out, alpha=0.45, delta=0.25)
         z_outer = self.Z_eq - (self.Z_eq - self.z_tip) * f_x
 
         # 2) 内側股下アーチ (|X| < x_foot): 足先(x_foot, z_tip)と C^2 連続で繋がり中央(X=0, z_crotch)へ滑らかに上がる曲線
@@ -572,7 +581,10 @@ def create_logo_3d_mesh(surf_model):
             ):
                 x_px = 192.0 + float(c)
                 y_px = 815.0 + float(r)
-                v_grid[(r, c)] = bm.verts.new(((x_px - 393.5) / 400.0, (1022.0 - y_px) / 400.0 - 0.014, 0.0))
+                # Rev.8: スリム化したボディ横幅に合わせて胸元3Dロゴもバランスよく配置
+                x_logo = ((x_px - 393.5) / 400.0) * 0.90
+                z_logo = 0.35 + ((1022.0 - y_px) / 400.0 - 0.014 - 0.35) * 0.92
+                v_grid[(r, c)] = bm.verts.new((x_logo, z_logo, 0.0))
 
     for r in range(H - 1):
         for c in range(W - 1):
@@ -922,16 +934,19 @@ def create_mouth_mesh(surf_model):
     return obj
 
 
-def create_arm_meshes(data):
+def create_arm_meshes(data, surf_model):
     """
     正面図(05_front.png)のぷっくり丸いハの字パドルシルエットと
     側面図(03_side.png)のティアドロップ輪郭(Z=0.28..0.76, 幅0.362m)を100%同時に満たす3Dラバーアームを生成
+    Rev.8: スリム化したボディ曲面(surf_model)の横幅に合わせてアーム位置と張り出し量を完全同期
     """
     arm_z_lut = data["arm_z_lut"]
     arm_half_d_lut = data["arm_half_d"]
     arm_mid_y_lut = data["arm_mid_y"]
-    arm_front_x_lut = data["arm_front_x"]
-    body_torso_x_lut = data["body_torso_x"]
+
+    # スリム化したボディ側面表面 X_body(Y=0, Z) の厳密な逆引きテーブルを構築
+    xs_test = np.linspace(surf_model.x_foot, surf_model.W_max, 400)
+    zs_test = surf_model._eval_lower_z(xs_test, np.zeros_like(xs_test))
 
     arms = []
     for side_sign, name in [(+1.0, "Arm.L"), (-1.0, "Arm.R")]:
@@ -962,26 +977,27 @@ def create_arm_meshes(data):
         Y = mid_y + half_y * cy
 
         # 胴体側面表面 X_body(Y=0, Z) とティアドロップ縁 Y=mid_y±half_y での胴体表面 X_body_rim(Z)
-        x_body_surf = np.interp(Z, arm_z_lut, body_torso_x_lut)
-        x_body_rim = x_body_surf - 0.011 * (half_y / 0.181) ** 2
+        x_body_surf = np.interp(Z, zs_test, xs_test)
+        x_body_rim = x_body_surf - 0.010 * (half_y / 0.181) ** 2
 
         # ① 正面図(05_front.png)の下端パドル丸み & ② 側面図の上半部(Z=0.55..0.76)の張り出しを同時に満たす凸曲線 x_outer(Z)
-        x_tip_bot = 0.900
-        x_tip_top = float(np.interp(z_max, arm_z_lut, body_torso_x_lut)) + 0.003
+        x_tip_top = float(np.interp(z_max, zs_test, xs_test)) + 0.003
+        x_tip_bot = x_tip_top - 0.005
+        x_peak = x_tip_top + 0.072
         t_bot = np.clip((Z - z_min) / (0.368 - z_min), 0.0, 1.0)
         u_up = np.clip((Z - 0.368) / (z_max - 0.368), 0.0, 1.0)
         x_outer = np.where(
             Z <= 0.368,
-            x_tip_bot + (0.984 - x_tip_bot) * np.sqrt(t_bot * (2.0 - t_bot)),
-            x_tip_top + (0.984 - x_tip_top) * (1.0 - (u_up ** 1.32)) ** 1.82,
+            x_tip_bot + (x_peak - x_tip_bot) * np.sqrt(t_bot * (2.0 - t_bot)),
+            x_tip_top + (x_peak - x_tip_top) * (1.0 - (u_up ** 1.32)) ** 1.82,
         )
 
         # 内側輪郭 x_inner(Z): 下端(Z=0.280)の x_tip_bot から脇下(Z=0.352)を通って胴体内部へぷっくり丸く収束
         s_in = np.clip((Z - z_min) / (0.355 - z_min), 0.0, 1.0)
-        x_inner_paddle = x_tip_bot - (x_tip_bot - 0.675) * (s_in ** 0.68)
+        x_inner_paddle = x_tip_bot - 0.200 * (s_in ** 0.68)
         u_top_in = np.clip((Z - 0.680) / (z_max - 0.680), 0.0, 1.0)
         env_top_in = np.sqrt(np.maximum(1.0 - u_top_in * u_top_in, 0.0))
-        x_inner_body = x_tip_top * (1.0 - env_top_in) + (x_body_surf - 0.065) * env_top_in
+        x_inner_body = x_tip_top * (1.0 - env_top_in) + (x_body_surf - 0.060) * env_top_in
         w_in = np.clip((Z - 0.345) / 0.055, 0.0, 1.0)
         w_in = w_in * w_in * (3.0 - 2.0 * w_in)
         x_inner = (1.0 - w_in) * x_inner_paddle + w_in * x_inner_body
@@ -1087,7 +1103,7 @@ def create_antenna_and_globe(data):
     y_fine[-6:] = globe_y
     z_fine[-6:] = np.linspace(float(z_fine[-7]), 2.255, 6)
 
-    r_pipe = 20.5 / 400.0
+    r_pipe = 15.5 / 400.0
     n_ring = 36
     ang = np.linspace(0.0, 2.0 * math.pi, n_ring, endpoint=False)
 
@@ -1202,23 +1218,23 @@ def create_armature_and_bind(all_mesh_objs):
     b_body.parent = b_root
 
     b_leg_l = eb.new("Leg.L")
-    b_leg_l.head = (0.275, 0.0, 0.18)
-    b_leg_l.tail = (0.258, 0.0, -0.105)
+    b_leg_l.head = (0.245, 0.0, 0.18)
+    b_leg_l.tail = (0.230, 0.0, -0.105)
     b_leg_l.parent = b_body
 
     b_leg_r = eb.new("Leg.R")
-    b_leg_r.head = (-0.275, 0.0, 0.18)
-    b_leg_r.tail = (-0.258, 0.0, -0.105)
+    b_leg_r.head = (-0.245, 0.0, 0.18)
+    b_leg_r.tail = (-0.230, 0.0, -0.105)
     b_leg_r.parent = b_body
 
     b_arm_l = eb.new("Arm.L")
-    b_arm_l.head = (0.72, 0.0, 0.68)
-    b_arm_l.tail = (0.96, 0.0, 0.32)
+    b_arm_l.head = (0.64, 0.0, 0.68)
+    b_arm_l.tail = (0.85, 0.0, 0.32)
     b_arm_l.parent = b_body
 
     b_arm_r = eb.new("Arm.R")
-    b_arm_r.head = (-0.72, 0.0, 0.68)
-    b_arm_r.tail = (-0.96, 0.0, 0.32)
+    b_arm_r.head = (-0.64, 0.0, 0.68)
+    b_arm_r.tail = (-0.85, 0.0, 0.32)
     b_arm_r.parent = b_body
 
     b_ant1 = eb.new("Antenna_1")
@@ -1511,7 +1527,7 @@ def configure_cycles_gpu(scene):
         scene.cycles.denoiser = 'OPENIMAGEDENOISE'
 
 
-def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, hero_path, board_path, sheet_path):
+def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, hero_path, front_path, board_path, sheet_path):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     configure_cycles_gpu(scene)
@@ -1524,7 +1540,7 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
     eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.272, cz_eye=1.265, radius=0.080)
     eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.272, cz_eye=1.265, radius=0.080)
     mouth_obj = create_mouth_mesh(surf_model)
-    arm_l_obj, arm_r_obj = create_arm_meshes(data)
+    arm_l_obj, arm_r_obj = create_arm_meshes(data, surf_model)
     ant_obj, globe_obj = create_antenna_and_globe(data)
 
     all_meshes = [
@@ -1591,6 +1607,7 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
     pw, ph = 800, 960
     set_camera_pose(cam_obj, (0.0, -6.0, 1.20), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.02)
     img_front = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
+    save_rgba_uint8_as_png(img_front, front_path)
 
     set_camera_pose(cam_obj, (6.0, 0.25, 1.20), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0), ortho=True, ortho_scale=3.02)
     img_side = composite_on_card(render_view_to_array(cam_obj, pw, ph, tmp_render, transparent=True), has_floor_shadow=True)
@@ -1645,17 +1662,17 @@ def main():
     data = extract_textures_and_profiles()
     surf_model = IINetSurfaceModel(data)
 
-    # 既存の立体青枠版が未生成または --all 指定時のみ立体青枠版をビルド
-    if ("--all" in sys.argv) or (not os.path.exists(BLEND_OUT_PATH)):
-        build_and_render_variant(
-            data, surf_model,
-            flat_mode=False,
-            blend_path=BLEND_OUT_PATH,
-            glb_path=GLB_OUT_PATH,
-            hero_path=HERO_IMG_PATH,
-            board_path=BOARD_IMG_PATH,
-            sheet_path=SHEET_IMG_PATH,
-        )
+    # 標準バージョン（顔の青枠＝立体ベゼル仕様）をビルド＆レンダリング
+    build_and_render_variant(
+        data, surf_model,
+        flat_mode=False,
+        blend_path=BLEND_OUT_PATH,
+        glb_path=GLB_OUT_PATH,
+        hero_path=HERO_IMG_PATH,
+        front_path=FRONT_IMG_PATH,
+        board_path=BOARD_IMG_PATH,
+        sheet_path=SHEET_IMG_PATH,
+    )
 
     # 別バージョン（顔の青枠＝非立体フラット曲面仕様）をビルド＆レンダリング
     build_and_render_variant(
@@ -1664,11 +1681,12 @@ def main():
         blend_path=FLAT_BLEND_OUT_PATH,
         glb_path=FLAT_GLB_OUT_PATH,
         hero_path=FLAT_HERO_IMG_PATH,
+        front_path=FLAT_FRONT_IMG_PATH,
         board_path=FLAT_BOARD_IMG_PATH,
         sheet_path=FLAT_SHEET_IMG_PATH,
     )
 
-    print("ALL RENDERS AND EXPORTS (FLAT FRAME VARIANT) COMPLETED SUCCESSFULLY.")
+    print("ALL RENDERS AND EXPORTS (BOTH 3D & FLAT FRAME VARIANTS) COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":
