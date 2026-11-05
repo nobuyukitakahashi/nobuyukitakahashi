@@ -5,6 +5,7 @@ Blender 5.2 3Dモデリング・リギング・マテリアル・レンダリン
 """
 
 import os
+import sys
 import math
 import bpy
 import bmesh
@@ -33,6 +34,13 @@ GLB_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun.glb")
 HERO_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_hero_3quarter.png")
 BOARD_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_front_and_side.png")
 SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_5views_sheet.png")
+
+# 別バージョン（顔の青枠＝非立体フラット曲面仕様）出力パス
+FLAT_BLEND_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun_flat_frame.blend")
+FLAT_GLB_OUT_PATH = os.path.join(OUTPUT_DIR, "cvn_iinet_kun_flat_frame.glb")
+FLAT_HERO_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_hero_3quarter.png")
+FLAT_BOARD_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_front_and_side.png")
+FLAT_SHEET_IMG_PATH = os.path.join(OUTPUT_DIR, "iinet_kun_flat_frame_5views_sheet.png")
 
 
 # ==========================================
@@ -668,14 +676,15 @@ def _compute_scaled_face_radii(data, ang_grid):
     return r_in, r_out, zc
 
 
-def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
+def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28, flat_mode=False):
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
     r_in, _, zc = _compute_scaled_face_radii(data, ang_grid)
-    r_max_ang = r_in + 0.012
+    r_max_ang = r_in if flat_mode else (r_in + 0.012)
 
     bm = bmesh.new()
     y_c, nx_c, ny_c, nz_c = surf_model.front_surface_y_and_normal(np.array([0.0]), np.array([zc]))
-    center_v = bm.verts.new((0.0, float(y_c[0] + 0.003 * ny_c[0]), zc))
+    c_off = 0.0007 if flat_mode else 0.003
+    center_v = bm.verts.new((0.0, float(y_c[0] + c_off * ny_c[0]), zc))
 
     rings = []
     for ir in range(1, n_rad + 1):
@@ -684,7 +693,7 @@ def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
         xs = rs * np.cos(ang_grid)
         zs = zc + rs * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
-        offset = 0.0035 * (1.0 - 0.5 * (ir / n_rad) ** 4)
+        offset = 0.0007 if flat_mode else (0.0035 * (1.0 - 0.5 * (ir / n_rad) ** 4))
         ring_verts = []
         for ia in range(n_ang):
             vx = float(xs[ia] + offset * nxs[ia])
@@ -710,10 +719,12 @@ def create_face_screen_mesh(surf_model, data, n_ang=160, n_rad=28):
     bpy.context.collection.objects.link(obj)
     for poly in mesh.polygons:
         poly.use_smooth = True
+    if flat_mode and hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
     return obj
 
 
-def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28):
+def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28, flat_mode=False):
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
     r_in, r_out, zc = _compute_scaled_face_radii(data, ang_grid)
 
@@ -721,15 +732,19 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28):
     s_vals = np.linspace(0.0, 1.0, n_prof)
     rings = []
     for s in s_vals:
-        u_rad = 0.5 * (1.0 - math.cos(math.pi * s))
+        u_rad = s if flat_mode else (0.5 * (1.0 - math.cos(math.pi * s)))
         rs = r_in + (r_out - r_in) * u_rad
         xs = rs * np.cos(ang_grid)
         zs = zc + rs * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
-        # TVモニターベゼルとしてしっかり立体的に盛り上げる (最大 +0.056m)
-        arch = math.sin(math.pi * s) ** 0.44
-        h_off = -0.005 + 0.061 * arch
+        if flat_mode:
+            # 非立体フラット青枠版: ボディ前面曲面とピタッと同一面(h_off=+0.0007m)のフラッシュ曲面
+            h_off = 0.0007
+        else:
+            # 立体青枠版: TVモニターベゼルとして立体的に盛り上げる
+            arch = math.sin(math.pi * s) ** 0.44
+            h_off = -0.005 + 0.043 * arch
 
         ring_v = []
         for ia in range(n_ang):
@@ -753,6 +768,8 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28):
     bpy.context.collection.objects.link(obj)
     for poly in mesh.polygons:
         poly.use_smooth = True
+    if flat_mode and hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
     return obj
 
 
@@ -1492,21 +1509,16 @@ def configure_cycles_gpu(scene):
         scene.cycles.denoiser = 'OPENIMAGEDENOISE'
 
 
-def main():
+def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, hero_path, board_path, sheet_path):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
-
     configure_cycles_gpu(scene)
-
-    # 1. 参照5面図からプロファイル＆テクスチャ抽出
-    data = extract_textures_and_profiles()
-    surf_model = IINetSurfaceModel(data)
 
     # 2. 全3Dパーツ生成
     body_obj = create_body_mesh(surf_model, res=136)
     logo_obj = create_logo_3d_mesh(surf_model)
-    screen_obj = create_face_screen_mesh(surf_model, data)
-    frame_obj = create_face_frame_mesh(surf_model, data)
+    screen_obj = create_face_screen_mesh(surf_model, data, flat_mode=flat_mode)
+    frame_obj = create_face_frame_mesh(surf_model, data, flat_mode=flat_mode)
     eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.272, cz_eye=1.265, radius=0.080)
     eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.272, cz_eye=1.265, radius=0.080)
     mouth_obj = create_mouth_mesh(surf_model)
@@ -1562,8 +1574,8 @@ def main():
 
     # 6. .blend 保存 & .glb エクスポート
     bpy.ops.file.pack_all()
-    bpy.ops.wm.save_as_mainfile(filepath=BLEND_OUT_PATH)
-    bpy.ops.export_scene.gltf(filepath=GLB_OUT_PATH, export_format='GLB')
+    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+    bpy.ops.export_scene.gltf(filepath=glb_path, export_format='GLB')
 
     # 7. 各ビューのレンダリングと高解像度シート生成
     tmp_render = os.path.join(DRAFTS_DIR, "_tmp_render.png")
@@ -1571,7 +1583,7 @@ def main():
     # (A) ヒーローカット (1400 x 1680)
     hero_raw = render_view_to_array(cam_obj, 1400, 1680, tmp_render, transparent=True)
     hero_card = composite_on_card(hero_raw, has_floor_shadow=True)
-    save_rgba_uint8_as_png(hero_card, HERO_IMG_PATH)
+    save_rgba_uint8_as_png(hero_card, hero_path)
 
     # (B) 5面図＋斜めビューの個別レンダリング (各 800 x 960)
     pw, ph = 800, 960
@@ -1604,7 +1616,7 @@ def main():
     for idx, panel in enumerate([img_front, img_side, img_persp, img_back]):
         x0 = pad + idx * (pw + pad)
         board[pad:pad + ph, x0:x0 + pw] = panel
-    save_rgba_uint8_as_png(board, BOARD_IMG_PATH)
+    save_rgba_uint8_as_png(board, board_path)
 
     sheet_w = pw * 3 + pad * 4
     sheet_h = ph * 2 + pad * 3
@@ -1622,9 +1634,39 @@ def main():
         y0 = pad + r_i * (ph + pad)
         x0 = pad + c_i * (pw + pad)
         sheet[y0:y0 + ph, x0:x0 + pw] = panel
-    save_rgba_uint8_as_png(sheet, SHEET_IMG_PATH)
+    save_rgba_uint8_as_png(sheet, sheet_path)
 
-    print("ALL RENDERS AND EXPORTS (REV.3) COMPLETED SUCCESSFULLY.")
+
+def main():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    # 1. 参照5面図からプロファイル＆テクスチャ抽出
+    data = extract_textures_and_profiles()
+    surf_model = IINetSurfaceModel(data)
+
+    # 既存の立体青枠版が未生成または --all 指定時のみ立体青枠版をビルド
+    if ("--all" in sys.argv) or (not os.path.exists(BLEND_OUT_PATH)):
+        build_and_render_variant(
+            data, surf_model,
+            flat_mode=False,
+            blend_path=BLEND_OUT_PATH,
+            glb_path=GLB_OUT_PATH,
+            hero_path=HERO_IMG_PATH,
+            board_path=BOARD_IMG_PATH,
+            sheet_path=SHEET_IMG_PATH,
+        )
+
+    # 別バージョン（顔の青枠＝非立体フラット曲面仕様）をビルド＆レンダリング
+    build_and_render_variant(
+        data, surf_model,
+        flat_mode=True,
+        blend_path=FLAT_BLEND_OUT_PATH,
+        glb_path=FLAT_GLB_OUT_PATH,
+        hero_path=FLAT_HERO_IMG_PATH,
+        board_path=FLAT_BOARD_IMG_PATH,
+        sheet_path=FLAT_SHEET_IMG_PATH,
+    )
+
+    print("ALL RENDERS AND EXPORTS (FLAT FRAME VARIANT) COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":
