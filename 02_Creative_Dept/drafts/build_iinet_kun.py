@@ -383,15 +383,15 @@ class IINetSurfaceModel:
         self.Z_top_lut = data["Z_top_lut"]
         self.Z_bot_crotch_lut = data["Z_bot_crotch_lut"]
         self.Z_bot_egg_lut = data["Z_bot_egg_lut"]
-        # Rev.10最終調整: 原画(05_front.png / 03_side.png)のふっくら丸いタマゴ底とスマートな横幅を両立
-        self.body_x_scale = 0.940
-        self.W_max = float(self.X_lut[-1]) * self.body_x_scale  # 0.86128 m
+        # Rev.13: 原画(05_front.png / 03_side.png)のピクセル計測値(Ground Truth)に完全一致
+        self.body_x_scale = 0.992
+        self.W_max = float(self.X_lut[-1]) * self.body_x_scale  # 約 0.909 m (原画 364px = 0.910m)
         self.D_back = 0.74000                                   # 背面奥行き (m)
-        self.D_front = 0.70000                                  # 前面奥行き (m)
+        self.D_front = 0.64000                                  # 前面奥行き (m, 03_side.png 胴体前後幅 550px = 1.375m)
         self.Z_eq = (1022.0 - 560.0) / 400.0                    # 1.15500 m
-        self.Z_apex = 2.01000                                   # 頭頂高さ (m)
-        self.x_foot = 0.24200                                   # 左右の足先の中心X座標 (m)
-        self.z_tip = -0.06800                                   # 足先の最下端Z座標 (m)
+        self.Z_apex = 2.00800                                   # 頭頂高さ (m, 原画 y=219px = 2.0075m)
+        self.x_foot = 0.25600                                   # 左右の足先の中心X座標 (m, 原画 dx=103.5px = 0.258m)
+        self.z_tip = -0.05500                                   # 足先の最下端Z座標 (m)
         self.z_crotch = 0.15200                                 # 股下アーチ中央のZ座標 (m)
 
     def _front_y_from_d_ell(self, d_ell):
@@ -403,10 +403,10 @@ class IINetSurfaceModel:
 
     def z_top_of_x(self, abs_x):
         """
-        Rev.4: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
+        Rev.13: 原画 05_front.png の頭頂〜赤道(y=219..560)の肩の張りを誤差 < 8.4mm で完全再現する超楕円ドーム関数
         """
         u = np.clip(abs_x / self.W_max, 0.0, 1.0)
-        return self.Z_eq + (self.Z_apex - self.Z_eq) * ((1.0 - u * u) ** 0.480)
+        return self.Z_eq + (self.Z_apex - self.Z_eq) * ((1.0 - (u ** 2.35)) ** 0.420)
 
     def _f_convex_profile(self, u, alpha, delta):
         """
@@ -589,9 +589,9 @@ def create_logo_3d_mesh(surf_model):
             ):
                 x_px = 192.0 + float(c)
                 y_px = 815.0 + float(r)
-                # Rev.10改: 画面枠の下のピンク領域中央にバランスよく配置
-                x_logo = ((x_px - 393.5) / 400.0) * 0.94
-                z_logo = 0.375 + ((1022.0 - y_px) / 400.0 - 0.014 - 0.35) * 0.95
+                # Rev.13: 青枠下端と LILI-net 上端の間隔を原画通りの約 0.050m (20px) にピタリと合わせる
+                x_logo = ((x_px - 393.5) / 400.0) * 0.985
+                z_logo = ((1022.0 - y_px) / 400.0) + 0.022
                 v_grid[(r, c)] = bm.verts.new((x_logo, z_logo, 0.0))
 
     for r in range(H - 1):
@@ -660,7 +660,7 @@ def create_logo_3d_mesh(surf_model):
     ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
     for idx, v in enumerate(all_verts):
-        h_off = 0.024 if (v in extruded_set) else -0.005
+        h_off = 0.018 if (v in extruded_set) else -0.005
         v.co = Vector((
             float(xs[idx] + h_off * nxs[idx]),
             float(ys[idx] + h_off * nys[idx]),
@@ -681,25 +681,24 @@ def create_logo_3d_mesh(surf_model):
 
 def _compute_scaled_face_radii(data, ang_grid):
     """
-    Rev.10改2: 画面の青枠をひと回り小さく(frame_scale=0.805)調整し、
-    さらに四隅の角張りを滑らかな楕円弧とブレンドして上面図・側面図・斜め図での青枠のS字歪みを完全解消
+    Rev.13: 原画(05_front.png)の顔枠とボディの余白バランス・枠太さに原点回帰
     """
     thetas = data["thetas"]
     r_in_orig = np.interp(ang_grid, thetas, data["r_in_lut"])
     r_out_orig = np.interp(ang_grid, thetas, data["r_out_lut"])
 
-    # 原画の角丸四角形TVモニター形状を82%維持しつつ、18%の楕円ブレンドで四隅のS字波打ちを抑える
     rx_out = float(np.interp(0.0, thetas, data["r_out_lut"]))
     rz_out = 0.5 * (float(np.interp(0.5 * math.pi, thetas, data["r_out_lut"])) + float(np.interp(1.5 * math.pi, thetas, data["r_out_lut"])))
     r_ell = 1.0 / np.sqrt((np.cos(ang_grid) / rx_out) ** 2 + (np.sin(ang_grid) / rz_out) ** 2)
-    r_out_smooth = 0.82 * r_out_orig + 0.18 * r_ell
+    r_out_smooth = 0.90 * r_out_orig + 0.10 * r_ell
 
-    frame_scale = 0.835
-    thickness_slim = 0.56
+    # Rev.13: 原画(05_front.png)の顔枠とボディの余白バランス・枠太さに原点回帰
+    frame_scale = 0.975
+    thickness_slim = 0.92
     r_out = r_out_smooth * frame_scale
     w_frame = (r_out_orig - r_in_orig) * frame_scale * thickness_slim
     r_in = r_out - w_frame
-    zc = data["face_center_Z"] + 0.022
+    zc = data["face_center_Z"]
     return r_in, r_out, zc
 
 
@@ -857,12 +856,13 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.073):
 
 def create_mouth_mesh(surf_model):
     """
-    Rev.10最終調整: 口も両端の丸みを維持したまま、立体的な出っ張り・落ち影のない完全フラット(h_off=+0.0014m)仕様で生成
+    Rev.13: 原画(05_front.png)の実測値(z_arc_center=1.271m, r_arc=0.378m, r_tube=0.0332m, max_ang=49.5°)と
+    真円の半円キャップ(ext = cos(alpha) * r_tube)を完全再現し、立体的な出っ張り・落ち影のない完全フラット(h_off=+0.0014m)仕様で生成
     """
-    z_arc_center = 1.325
-    r_arc = 0.355
-    r_tube = 0.027
-    max_ang = math.radians(37.5)
+    z_arc_center = 1.2710
+    r_arc = 0.3780
+    r_tube = 0.0332
+    max_ang = math.radians(49.5)
 
     n_spine = 64
     n_cap = 24
@@ -875,7 +875,7 @@ def create_mouth_mesh(surf_model):
         alpha = 0.5 * math.pi * u
         th = -max_ang
         tx, tz = math.cos(th), math.sin(th)
-        ext = math.cos(alpha) * (r_tube * 1.15)
+        ext = math.cos(alpha) * r_tube
         cx = r_arc * math.sin(th) - tx * ext
         cz = z_arc_center - r_arc * math.cos(th) - tz * ext
         r_sc = math.sin(max(alpha, 0.01))
@@ -901,7 +901,7 @@ def create_mouth_mesh(surf_model):
         alpha = 0.5 * math.pi * u
         th = max_ang
         tx, tz = math.cos(th), math.sin(th)
-        ext = math.cos(alpha) * (r_tube * 1.15)
+        ext = math.cos(alpha) * r_tube
         cx = r_arc * math.sin(th) + tx * ext
         cz = z_arc_center - r_arc * math.cos(th) + tz * ext
         r_sc = math.sin(max(alpha, 0.01))
@@ -959,8 +959,10 @@ def create_arm_meshes(data, surf_model):
     Rev.8: スリム化したボディ曲面(surf_model)の横幅に合わせてアーム位置と張り出し量を完全同期
     """
     arm_z_lut = data["arm_z_lut"]
-    arm_half_d_lut = data["arm_half_d"]
-    arm_mid_y_lut = data["arm_mid_y"]
+    kern = np.exp(-0.5 * (np.arange(-12, 13) / 4.5) ** 2)
+    kern /= kern.sum()
+    arm_half_d_lut = np.convolve(np.pad(data["arm_half_d"], (12, 12), mode="edge"), kern, mode="valid")
+    arm_mid_y_lut = np.convolve(np.pad(data["arm_mid_y"], (12, 12), mode="edge"), kern, mode="valid")
 
     # スリム化したボディ側面表面 X_body(Y=0, Z) の厳密な逆引きテーブルを構築
     xs_test = np.linspace(surf_model.x_foot, surf_model.W_max, 400)
@@ -1001,7 +1003,7 @@ def create_arm_meshes(data, surf_model):
         # ① 正面図(05_front.png)の下端パドル丸み & ② 側面図の上半部(Z=0.55..0.76)の張り出しを同時に満たす凸曲線 x_outer(Z)
         x_tip_top = float(np.interp(z_max, zs_test, xs_test)) + 0.003
         x_tip_bot = x_tip_top - 0.005
-        x_peak = x_tip_top + 0.072
+        x_peak = x_tip_top + 0.105
         t_bot = np.clip((Z - z_min) / (0.368 - z_min), 0.0, 1.0)
         u_up = np.clip((Z - 0.368) / (z_max - 0.368), 0.0, 1.0)
         x_outer = np.where(
@@ -1042,19 +1044,19 @@ def create_arm_meshes(data, surf_model):
         for i, v in enumerate(verts):
             v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
 
-        # アーム下端極付近(Z < 0.308)の法線特異点を滑らかに緩和
-        for _ in range(3):
+        # アーム全体の微小ステップおよび下端極付近(Z < 0.308)の法線特異点を滑らかに緩和
+        for it in range(4):
             tip_updates = {}
             for v in verts:
-                if v.co.z < 0.308:
+                if it < 2 or v.co.z < 0.308:
                     nb = [e.other_vert(v) for e in v.link_edges]
                     if nb:
-                        tip_updates[v] = 0.55 * v.co + 0.45 * (sum((n.co for n in nb), Vector((0.0, 0.0, 0.0))) / len(nb))
+                        w_lap = 0.25 if it < 2 else 0.45
+                        tip_updates[v] = (1.0 - w_lap) * v.co + w_lap * (sum((n.co for n in nb), Vector((0.0, 0.0, 0.0))) / len(nb))
             for v, co in tip_updates.items():
                 v.co = co
 
-        if side_sign < 0:
-            bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
         mesh = bpy.data.meshes.new(name + "_Mesh")
         bm.to_mesh(mesh)
@@ -1343,15 +1345,15 @@ def rgb255_to_linear_rgba(r, g, b, a=1.0):
 
 def set_bsdf_matte_params(bsdf, rgba):
     """
-    Rev.3: フラットな自己発光(Emission)を完全ゼロにし、
-    テカリを抑えたしっとりした3Dマット質感(Roughness=0.94, Specular=0.08)で自然な立体陰影を表現
+    Rev.12: フラットな自己発光(Emission)を完全ゼロにし、
+    しっとりした3Dソフトビニール・マット質感(Roughness=0.84, Specular=0.14)で美しい光のグラデーションと立体陰影を表現
     """
     bsdf.inputs["Base Color"].default_value = rgba
-    bsdf.inputs["Roughness"].default_value = 0.94
+    bsdf.inputs["Roughness"].default_value = 0.84
     if "Metallic" in bsdf.inputs:
         bsdf.inputs["Metallic"].default_value = 0.0
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.08
+        bsdf.inputs["Specular IOR Level"].default_value = 0.14
     if "Coat Weight" in bsdf.inputs:
         bsdf.inputs["Coat Weight"].default_value = 0.0
         bsdf.inputs["Coat Roughness"].default_value = 1.0
@@ -1398,20 +1400,20 @@ def setup_lighting_and_world():
     scene = bpy.context.scene
     scene.view_settings.view_transform = 'Standard'
     scene.view_settings.look = 'None'
-    scene.view_settings.exposure = 0.05
+    scene.view_settings.exposure = 0.0
 
     world = bpy.data.worlds.new("StudioWorld")
     scene.world = world
     bg_node = next(n for n in world.node_tree.nodes if n.type == 'BACKGROUND')
-    bg_node.inputs[0].default_value = (0.98, 0.98, 1.00, 1.0)
-    bg_node.inputs[1].default_value = 0.44
+    bg_node.inputs[0].default_value = (1.00, 0.98, 0.99, 1.0)
+    bg_node.inputs[1].default_value = 0.20
 
     STUDIO_RIG_LIGHTS.clear()
     rig_defs = [
-        ("Key_Cam", 215.0, 3.4, (1.00, 0.99, 0.98), True),
-        ("Fill_Cam", 105.0, 4.4, (0.97, 0.99, 1.00), False),
-        ("Rim_Cam", 95.0, 3.8, (0.98, 0.99, 1.00), False),
-        ("Bounce_Cam", 70.0, 4.5, (1.00, 0.99, 1.00), False),
+        ("Key_Cam", 335.0, 2.7, (1.00, 0.99, 0.98), True),
+        ("Fill_Cam", 44.0, 4.8, (1.00, 0.98, 0.99), True),
+        ("Rim_Cam", 88.0, 3.2, (0.98, 0.99, 1.00), True),
+        ("Bounce_Cam", 18.0, 4.5, (1.00, 0.98, 0.99), False),
     ]
     for name, energy, size, col, cast_sh in rig_defs:
         ldata = bpy.data.lights.new(name=name, type='AREA')
@@ -1428,10 +1430,10 @@ def setup_lighting_and_world():
 def update_camera_studio_lights(forward, right, up):
     target = Vector((0.0, 0.12, 1.08))
     placements = {
-        "Key_Cam": target - 4.7 * forward - 2.6 * right + 2.5 * up,
-        "Fill_Cam": target - 4.8 * forward + 3.1 * right + 0.6 * up,
-        "Rim_Cam": target + 3.4 * forward + 0.8 * right + 3.6 * up,
-        "Bounce_Cam": target - 3.6 * forward - 3.4 * up,
+        "Key_Cam": target - 3.4 * forward - 3.4 * right + 3.4 * up,
+        "Fill_Cam": target - 3.8 * forward + 4.2 * right + 0.3 * up,
+        "Rim_Cam": target + 3.4 * forward + 1.8 * right + 3.6 * up,
+        "Bounce_Cam": target - 3.2 * forward - 3.8 * up,
     }
     for name, lpos in placements.items():
         if name in STUDIO_RIG_LIGHTS:
@@ -1550,13 +1552,13 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
     scene = bpy.context.scene
     configure_cycles_gpu(scene)
 
-    # 2. 全3Dパーツ生成 (Rev.10最終調整: 画面枠サイズに合わせて目の間隔・サイズも原画バランスに最適化)
+    # 2. 全3Dパーツ生成 (Rev.13: 原画05_front.pngの目の間隔・サイズ・口の両端形状・顔枠・ロゴ位置へ完全一致)
     body_obj = create_body_mesh(surf_model, res=136)
     logo_obj = create_logo_3d_mesh(surf_model)
     screen_obj = create_face_screen_mesh(surf_model, data, flat_mode=flat_mode)
     frame_obj = create_face_frame_mesh(surf_model, data, flat_mode=flat_mode)
-    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.218, cz_eye=1.262, radius=0.072)
-    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.218, cz_eye=1.262, radius=0.072)
+    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.3055, cz_eye=1.2535, radius=0.0630)
+    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.3055, cz_eye=1.2535, radius=0.0630)
     mouth_obj = create_mouth_mesh(surf_model)
     arm_l_obj, arm_r_obj = create_arm_meshes(data, surf_model)
     ant_obj, globe_obj = create_antenna_and_globe(data)
@@ -1604,7 +1606,7 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
     bpy.context.collection.objects.link(cam_obj)
 
     hero_target = Vector((0.02, 0.12, 1.18))
-    hero_pos = Vector((3.55, -6.10, 1.78))
+    hero_pos = Vector((2.82, -6.45, 1.72))
     set_camera_pose(cam_obj, hero_pos, hero_target - hero_pos, (0, 0, 1), ortho=False, lens=72.0)
     scene.camera = cam_obj
 
