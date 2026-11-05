@@ -25,6 +25,7 @@
 - [x] Step 2-Rev7: 地球儀に繋がっている尻尾（`Antenna`）のパイプ径をもう少し細くする改修（`r_pipe = 0.05125m` ➔ `0.03875m`）および単体正面図（`front.png`）の追加出力 (`02_Creative_Dept`)
 - [x] Step 2-Rev8: ボディ横幅の膨らみを抑え、顔の青枠に合わせて幅を狭くする改修（両腕・足先・胸ロゴ位置も連動調整） (`02_Creative_Dept`)
 - [x] Step 2-Rev9: 正面からの構図のときに地球儀上に日本列島がはっきり見えるよう地球儀の大陸・経度配置を調整する改修 (`02_Creative_Dept`)
+- [x] Step 2-Rev10: 顔全体（枠・画面・目・口）を立体的な出っ張り・段差のない平面仕様（ボディ曲面に密着）にし、画面の枠（`Face_Frame` / `Face_Screen`）をもう少し小さく（`0.835x`）し、原図5面図との照合により斜め3/4・側面・底面のタマゴ曲線を完全平滑化する改修 (`02_Creative_Dept`)
 - [x] Step 3: Marketing (`03_Marketing_Dept` - SKIPPED)
 - [x] Step 3.5: [Conditional] Legal & Compliance Review (`06_Legal_Dept` - SKIPPED)
 - [x] Step 4: Final Delivery 両バージョン最新データ格納 to `04_Delivery_Dept/outputs/` (`04_Delivery_Dept`)

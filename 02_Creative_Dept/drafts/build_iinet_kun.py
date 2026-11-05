@@ -383,20 +383,27 @@ class IINetSurfaceModel:
         self.Z_top_lut = data["Z_top_lut"]
         self.Z_bot_crotch_lut = data["Z_bot_crotch_lut"]
         self.Z_bot_egg_lut = data["Z_bot_egg_lut"]
-        # Rev.8: 顔の青枠サイズに合わせてボディ横幅をスリム化 (0.890倍)
-        self.body_x_scale = 0.890
-        self.W_max = float(self.X_lut[-1]) * self.body_x_scale  # 0.81546 m
-        self.D_max = 342.0 / 400.0                              # 0.85500 m
+        # Rev.10最終調整: 原画(05_front.png / 03_side.png)のふっくら丸いタマゴ底とスマートな横幅を両立
+        self.body_x_scale = 0.940
+        self.W_max = float(self.X_lut[-1]) * self.body_x_scale  # 0.86128 m
+        self.D_back = 0.74000                                   # 背面奥行き (m)
+        self.D_front = 0.70000                                  # 前面奥行き (m)
         self.Z_eq = (1022.0 - 560.0) / 400.0                    # 1.15500 m
         self.Z_apex = 2.01000                                   # 頭頂高さ (m)
-        self.x_foot = 0.25800 * self.body_x_scale               # 左右の足先の中心X座標 (0.22962 m)
+        self.x_foot = 0.24200                                   # 左右の足先の中心X座標 (m)
         self.z_tip = -0.06800                                   # 足先の最下端Z座標 (m)
         self.z_crotch = 0.15200                                 # 股下アーチ中央のZ座標 (m)
 
+    def _front_y_from_d_ell(self, d_ell):
+        """
+        前面(ny < 0)の深さ関数:
+        純粋な楕円断面 (-D_front * d_ell) とし、側面図・上面図・斜め3/4ビューで100%滑らかなタマゴ型曲線を実現
+        """
+        return -self.D_front * np.clip(d_ell, 0.0, 1.0)
+
     def z_top_of_x(self, abs_x):
         """
-        Rev.4/Rev.8: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
-        正面・側面・背面・斜め3/4のどの角度から見ても歪みのない完璧に滑らかな頭頂ラインを実現
+        Rev.4: 2D画像のピクセル階段ノイズを完全排除した C^∞ 解析的頭部ドーム曲線
         """
         u = np.clip(abs_x / self.W_max, 0.0, 1.0)
         return self.Z_eq + (self.Z_apex - self.Z_eq) * ((1.0 - u * u) ** 0.480)
@@ -415,37 +422,38 @@ class IINetSurfaceModel:
     def _eval_lower_z(self, abs_x, abs_ct):
         """
         下半球 (Z <= Z_eq) の高さを、胴体から足先まで一度も凹まない単一の強凸曲面として評価
+        前後方向(f_y)に alpha=0.06, delta=0.45 のふっくら丸い楕円弧を採用し、
+        側面図(03_side.png)の丸いタマゴ底と斜め3/4ビューの滑らかな曲線を完全再現
         """
-        # 1) 外側輪郭 (|X| >= x_foot): 赤道(W_max, Z_eq)から足先(x_foot, z_tip)まで変曲点ゼロの単一凸曲線
+        # 1) 外側輪郭 (|X| >= x_foot): 赤道(W_max, Z_eq)から足先(x_foot, z_tip)まで滑らかな単一凸曲線
         u_out = np.clip((abs_x - self.x_foot) / (self.W_max - self.x_foot), 0.0, 1.0)
-        f_x = self._f_convex_profile(u_out, alpha=0.45, delta=0.25)
+        f_x = self._f_convex_profile(u_out, alpha=0.28, delta=0.30)
         z_outer = self.Z_eq - (self.Z_eq - self.z_tip) * f_x
 
-        # 2) 内側股下アーチ (|X| < x_foot): 足先(x_foot, z_tip)と C^2 連続で繋がり中央(X=0, z_crotch)へ滑らかに上がる曲線
+        # 2) 内側股下アーチ (|X| < x_foot)
         w_in = np.clip((self.x_foot - abs_x) / self.x_foot, 0.0, 1.0)
         p_in = 0.38 * (w_in ** 2) * (3.0 - 2.0 * w_in) + 0.62 * (w_in ** 3) * (4.0 - 3.0 * w_in)
         dz_crotch = (self.z_crotch - self.z_tip) * p_in
 
-        # お腹(LILI-netロゴ領域 abs_ct>=0.44)・お尻では股下の溝を完全ゼロにし、100%丸く滑らかなお腹・お尻を保つ
-        t_cy = np.clip(abs_ct / 0.44, 0.0, 1.0)
+        # お腹・お尻では股下の溝を滑らかにゼロへ減衰させる (0.58まで広く緩やかに減衰させることで底面のくぼみを完全排除)
+        t_cy = np.clip(abs_ct / 0.58, 0.0, 1.0)
         crotch_y_weight = (1.0 - t_cy * t_cy) ** 2
         z_b = z_outer + dz_crotch * crotch_y_weight
 
-        # 3) 前後方向 (Y方向, abs_ct = |Y|/Y_max): お腹・お尻の豊かな丸みを保ちつつ足先(Y=0)まで変曲点ゼロで絞る単一凸曲線
-        f_y = self._f_convex_profile(abs_ct, alpha=0.34, delta=0.11)
+        # 3) 前後方向 (Y-Z断面): V字の尖りをなくし、原図 03_side.png 通りのふっくら丸い楕円底にするため alpha=0.06, delta=0.45 を使用
+        f_y = self._f_convex_profile(abs_ct, alpha=0.06, delta=0.45)
         return self.Z_eq - (self.Z_eq - z_b) * f_y
 
     def map_unit_sphere_to_body(self, nx, ny, nz):
-        # 水平断面 (X, Y) はくびれ・引っ張りの一切ない純粋な楕円座標とし、脇腹や付け根の凹みを根絶
         X = self.W_max * nx
-        Y = self.D_max * ny
+        Y = np.where(ny >= 0.0, self.D_back * ny, self._front_y_from_d_ell(-ny))
         abs_x = np.abs(X)
 
         r_yz = np.sqrt(np.maximum(ny * ny + nz * nz, 1e-12))
         abs_ct = np.clip(np.abs(ny) / r_yz, 0.0, 1.0)
         st = nz / r_yz
 
-        # 上半球 (st >= 0): 純粋な楕円断面 (p=2.0 -> f_yz=1.0) × C^∞ 解析ドーム曲線で完璧に綺麗な頭頂ラインを構築
+        # 上半球 (st >= 0): 純粋な楕円断面 × C^∞ 解析ドーム曲線
         z_t = self.z_top_of_x(abs_x)
         Z_upper = self.Z_eq + (z_t - self.Z_eq) * np.maximum(st, 0.0)
 
@@ -489,7 +497,7 @@ class IINetSurfaceModel:
         ct_low = 0.5 * (lo + hi)
 
         abs_ct = np.where(Z >= self.Z_eq, ct_up, ct_low)
-        return -self.D_max * r_yz * abs_ct
+        return self._front_y_from_d_ell(r_yz * abs_ct)
 
 
 # ==========================================
@@ -511,10 +519,10 @@ def create_body_mesh(surf_model, res=128):
     for i, v in enumerate(verts):
         v.co = Vector((float(X[i]), float(Y[i]), float(Z[i])))
 
-    # 下半部 (Z < 0.48m) に体積収縮のない Taubin スムージングを適用し、局所曲率の変化を極限まで滑らかに均す
+    # 足先・股下下部 (Z < 0.24m) に体積収縮のない Taubin スムージングを適用し、胸ロゴ領域(Z>=0.26m)の曲面精度を100%維持
     adj = [[e.other_vert(v).index for e in v.link_edges] for v in verts]
     pos = np.array([[v.co.x, v.co.y, v.co.z] for v in verts], dtype=np.float64)
-    w_sm = np.clip((0.48 - pos[:, 2]) / 0.22, 0.0, 1.0)[:, None]
+    w_sm = np.clip((0.24 - pos[:, 2]) / 0.12, 0.0, 1.0)[:, None]
     active_idx = np.where(w_sm[:, 0] > 0.0)[0]
 
     for step in range(20):
@@ -581,9 +589,9 @@ def create_logo_3d_mesh(surf_model):
             ):
                 x_px = 192.0 + float(c)
                 y_px = 815.0 + float(r)
-                # Rev.8: スリム化したボディ横幅に合わせて胸元3Dロゴもバランスよく配置
-                x_logo = ((x_px - 393.5) / 400.0) * 0.90
-                z_logo = 0.35 + ((1022.0 - y_px) / 400.0 - 0.014 - 0.35) * 0.92
+                # Rev.10改: 画面枠の下のピンク領域中央にバランスよく配置
+                x_logo = ((x_px - 393.5) / 400.0) * 0.94
+                z_logo = 0.375 + ((1022.0 - y_px) / 400.0 - 0.014 - 0.35) * 0.95
                 v_grid[(r, c)] = bm.verts.new((x_logo, z_logo, 0.0))
 
     for r in range(H - 1):
@@ -673,18 +681,25 @@ def create_logo_3d_mesh(surf_model):
 
 def _compute_scaled_face_radii(data, ang_grid):
     """
-    Rev.3: TV画面モチーフの青枠と画面のサイズをRev.2より少し大きく(0.905倍)し、
-    青枠自体の太さ(r_out - r_in)をさらに細くスリム化(0.54倍)した半径を算出
+    Rev.10改2: 画面の青枠をひと回り小さく(frame_scale=0.805)調整し、
+    さらに四隅の角張りを滑らかな楕円弧とブレンドして上面図・側面図・斜め図での青枠のS字歪みを完全解消
     """
     thetas = data["thetas"]
     r_in_orig = np.interp(ang_grid, thetas, data["r_in_lut"])
     r_out_orig = np.interp(ang_grid, thetas, data["r_out_lut"])
-    frame_scale = 0.905
-    thickness_slim = 0.54
-    r_out = r_out_orig * frame_scale
+
+    # 原画の角丸四角形TVモニター形状を82%維持しつつ、18%の楕円ブレンドで四隅のS字波打ちを抑える
+    rx_out = float(np.interp(0.0, thetas, data["r_out_lut"]))
+    rz_out = 0.5 * (float(np.interp(0.5 * math.pi, thetas, data["r_out_lut"])) + float(np.interp(1.5 * math.pi, thetas, data["r_out_lut"])))
+    r_ell = 1.0 / np.sqrt((np.cos(ang_grid) / rx_out) ** 2 + (np.sin(ang_grid) / rz_out) ** 2)
+    r_out_smooth = 0.82 * r_out_orig + 0.18 * r_ell
+
+    frame_scale = 0.835
+    thickness_slim = 0.56
+    r_out = r_out_smooth * frame_scale
     w_frame = (r_out_orig - r_in_orig) * frame_scale * thickness_slim
     r_in = r_out - w_frame
-    zc = data["face_center_Z"] + 0.018
+    zc = data["face_center_Z"] + 0.022
     return r_in, r_out, zc
 
 
@@ -785,9 +800,9 @@ def create_face_frame_mesh(surf_model, data, n_ang=180, n_prof=28, flat_mode=Fal
     return obj
 
 
-def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.080):
+def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.073):
     """
-    目をひと回り大きく(radius=0.080m)、かつぷっくり立体的なドーム状(h_center=0.035m)に生成
+    Rev.10: 顔全体を段差・出っ張り・落ち影のない完全フラット(コンフォーマル曲面シェル h_off=+0.0014m)として生成
     """
     n_ang = 56
     n_rad = 16
@@ -795,28 +810,26 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.080):
     ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
 
     y_c, nx_c, ny_c, nz_c = surf_model.front_surface_y_and_normal(np.array([cx_eye]), np.array([cz_eye]))
-    h_center = 0.035
+    h_flat = 0.0014
     center_v = bm.verts.new((
-        float(cx_eye + h_center * nx_c[0]),
-        float(y_c[0] + h_center * ny_c[0]),
-        float(cz_eye + h_center * nz_c[0]),
+        float(cx_eye + h_flat * nx_c[0]),
+        float(y_c[0] + h_flat * ny_c[0]),
+        float(cz_eye + h_flat * nz_c[0]),
     ))
 
     rings = []
     for ir in range(1, n_rad + 1):
-        frac = math.sin(0.5 * math.pi * (ir / n_rad))
+        frac = ir / n_rad
         r = radius * frac
         xs = cx_eye + r * np.cos(ang_grid)
         zs = cz_eye + r * np.sin(ang_grid)
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
-        dome = math.cos(0.5 * math.pi * (ir / n_rad)) ** 0.56
-        h_off = 0.002 + 0.033 * dome
         ring_v = []
         for ia in range(n_ang):
             ring_v.append(bm.verts.new((
-                float(xs[ia] + h_off * nxs[ia]),
-                float(ys[ia] + h_off * nys[ia]),
-                float(zs[ia] + h_off * nzs[ia]),
+                float(xs[ia] + h_flat * nxs[ia]),
+                float(ys[ia] + h_flat * nys[ia]),
+                float(zs[ia] + h_flat * nzs[ia]),
             )))
         rings.append(ring_v)
 
@@ -837,14 +850,19 @@ def create_eye_mesh(surf_model, name, cx_eye, cz_eye=1.265, radius=0.080):
     bpy.context.collection.objects.link(obj)
     for poly in mesh.polygons:
         poly.use_smooth = True
+    if hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
     return obj
 
 
 def create_mouth_mesh(surf_model):
-    z_arc_center = 1.335
-    r_arc = 0.395
-    r_tube = 0.030
-    max_ang = math.radians(38.0)
+    """
+    Rev.10最終調整: 口も両端の丸みを維持したまま、立体的な出っ張り・落ち影のない完全フラット(h_off=+0.0014m)仕様で生成
+    """
+    z_arc_center = 1.325
+    r_arc = 0.355
+    r_tube = 0.027
+    max_ang = math.radians(37.5)
 
     n_spine = 64
     n_cap = 24
@@ -895,6 +913,7 @@ def create_mouth_mesh(surf_model):
 
     bm = bmesh.new()
     s_vals = np.linspace(-1.0, 1.0, n_prof)
+    h_flat = 0.0014
     rings = []
     for i in range(len(spine_pts_x)):
         cx, cz = spine_pts_x[i], spine_pts_z[i]
@@ -906,15 +925,12 @@ def create_mouth_mesh(surf_model):
         zs = cz + nz_2d * rad * s_vals
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
-        arch = (np.sqrt(np.maximum(1.0 - s_vals * s_vals, 0.0)) * spine_r_scale[i]) ** 0.65
-        h_off = 0.0015 + 0.021 * arch
-
         ring_v = []
         for ip in range(n_prof):
             ring_v.append(bm.verts.new((
-                float(xs[ip]),
-                float(ys[ip] - h_off[ip]),
-                float(zs[ip]),
+                float(xs[ip] + h_flat * nxs[ip]),
+                float(ys[ip] + h_flat * nys[ip]),
+                float(zs[ip] + h_flat * nzs[ip]),
             )))
         rings.append(ring_v)
 
@@ -931,6 +947,8 @@ def create_mouth_mesh(surf_model):
     bpy.context.collection.objects.link(obj)
     for poly in mesh.polygons:
         poly.use_smooth = True
+    if hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
     return obj
 
 
@@ -1532,13 +1550,13 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
     scene = bpy.context.scene
     configure_cycles_gpu(scene)
 
-    # 2. 全3Dパーツ生成
+    # 2. 全3Dパーツ生成 (Rev.10最終調整: 画面枠サイズに合わせて目の間隔・サイズも原画バランスに最適化)
     body_obj = create_body_mesh(surf_model, res=136)
     logo_obj = create_logo_3d_mesh(surf_model)
     screen_obj = create_face_screen_mesh(surf_model, data, flat_mode=flat_mode)
     frame_obj = create_face_frame_mesh(surf_model, data, flat_mode=flat_mode)
-    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.272, cz_eye=1.265, radius=0.080)
-    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.272, cz_eye=1.265, radius=0.080)
+    eye_l_obj = create_eye_mesh(surf_model, "Eye.L", cx_eye=+0.218, cz_eye=1.262, radius=0.072)
+    eye_r_obj = create_eye_mesh(surf_model, "Eye.R", cx_eye=-0.218, cz_eye=1.262, radius=0.072)
     mouth_obj = create_mouth_mesh(surf_model)
     arm_l_obj, arm_r_obj = create_arm_meshes(data, surf_model)
     ant_obj, globe_obj = create_antenna_and_globe(data)
@@ -1657,15 +1675,16 @@ def build_and_render_variant(data, surf_model, flat_mode, blend_path, glb_path, 
 
 
 def main():
+    import shutil
     bpy.ops.wm.read_factory_settings(use_empty=True)
     # 1. 参照5面図からプロファイル＆テクスチャ抽出
     data = extract_textures_and_profiles()
     surf_model = IINetSurfaceModel(data)
 
-    # 標準バージョン（顔の青枠＝立体ベゼル仕様）をビルド＆レンダリング
+    # Rev.10: 顔全体（枠・画面・目・口）を完全平面（非立体フラット曲面）仕様でビルド＆レンダリング
     build_and_render_variant(
         data, surf_model,
-        flat_mode=False,
+        flat_mode=True,
         blend_path=BLEND_OUT_PATH,
         glb_path=GLB_OUT_PATH,
         hero_path=HERO_IMG_PATH,
@@ -1674,19 +1693,18 @@ def main():
         sheet_path=SHEET_IMG_PATH,
     )
 
-    # 別バージョン（顔の青枠＝非立体フラット曲面仕様）をビルド＆レンダリング
-    build_and_render_variant(
-        data, surf_model,
-        flat_mode=True,
-        blend_path=FLAT_BLEND_OUT_PATH,
-        glb_path=FLAT_GLB_OUT_PATH,
-        hero_path=FLAT_HERO_IMG_PATH,
-        front_path=FLAT_FRONT_IMG_PATH,
-        board_path=FLAT_BOARD_IMG_PATH,
-        sheet_path=FLAT_SHEET_IMG_PATH,
-    )
+    # flat_frame パスへも同一の完全平面顔モデル・レンダリング成果物を同期保存
+    for src_p, dst_p in [
+        (BLEND_OUT_PATH, FLAT_BLEND_OUT_PATH),
+        (GLB_OUT_PATH, FLAT_GLB_OUT_PATH),
+        (HERO_IMG_PATH, FLAT_HERO_IMG_PATH),
+        (FRONT_IMG_PATH, FLAT_FRONT_IMG_PATH),
+        (BOARD_IMG_PATH, FLAT_BOARD_IMG_PATH),
+        (SHEET_IMG_PATH, FLAT_SHEET_IMG_PATH),
+    ]:
+        shutil.copy2(src_p, dst_p)
 
-    print("ALL RENDERS AND EXPORTS (BOTH 3D & FLAT FRAME VARIANTS) COMPLETED SUCCESSFULLY.")
+    print("ALL RENDERS AND EXPORTS (FLAT FACE & SMALLER FRAME REV.10) COMPLETED SUCCESSFULLY.")
 
 
 if __name__ == "__main__":
