@@ -835,19 +835,20 @@ def create_mouth_mesh(surf_model):
     max_ang = math.radians(38.0)
 
     n_spine = 64
-    n_cap = 10
-    n_prof = 18
+    n_cap = 24
+    n_prof = 24
 
     spine_pts_x, spine_pts_z, spine_tx, spine_tz, spine_r_scale = [], [], [], [], []
 
     for ic in range(n_cap):
         u = ic / n_cap
+        alpha = 0.5 * math.pi * u
         th = -max_ang
         tx, tz = math.cos(th), math.sin(th)
-        ext = (1.0 - math.sin(0.5 * math.pi * u)) * r_tube
+        ext = math.cos(alpha) * (r_tube * 1.15)
         cx = r_arc * math.sin(th) - tx * ext
         cz = z_arc_center - r_arc * math.cos(th) - tz * ext
-        r_sc = math.sin(0.5 * math.pi * max(u, 0.02))
+        r_sc = math.sin(max(alpha, 0.01))
         spine_pts_x.append(cx)
         spine_pts_z.append(cz)
         spine_tx.append(tx)
@@ -867,12 +868,13 @@ def create_mouth_mesh(surf_model):
 
     for ic in range(1, n_cap + 1):
         u = 1.0 - (ic / n_cap)
+        alpha = 0.5 * math.pi * u
         th = max_ang
         tx, tz = math.cos(th), math.sin(th)
-        ext = (1.0 - math.sin(0.5 * math.pi * u)) * r_tube
+        ext = math.cos(alpha) * (r_tube * 1.15)
         cx = r_arc * math.sin(th) + tx * ext
         cz = z_arc_center - r_arc * math.cos(th) + tz * ext
-        r_sc = math.sin(0.5 * math.pi * max(u, 0.02))
+        r_sc = math.sin(max(alpha, 0.01))
         spine_pts_x.append(cx)
         spine_pts_z.append(cz)
         spine_tx.append(tx)
@@ -892,15 +894,15 @@ def create_mouth_mesh(surf_model):
         zs = cz + nz_2d * rad * s_vals
         ys, nxs, nys, nzs = surf_model.front_surface_y_and_normal(xs, zs)
 
-        arch = (np.sqrt(np.maximum(1.0 - s_vals * s_vals, 0.0)) ** 0.70) * spine_r_scale[i]
-        h_off = 0.002 + 0.020 * arch
+        arch = (np.sqrt(np.maximum(1.0 - s_vals * s_vals, 0.0)) * spine_r_scale[i]) ** 0.65
+        h_off = 0.0015 + 0.021 * arch
 
         ring_v = []
         for ip in range(n_prof):
             ring_v.append(bm.verts.new((
-                float(xs[ip] + h_off[ip] * nxs[ip]),
-                float(ys[ip] + h_off[ip] * nys[ip]),
-                float(zs[ip] + h_off[ip] * nzs[ip]),
+                float(xs[ip]),
+                float(ys[ip] - h_off[ip]),
+                float(zs[ip]),
             )))
         rings.append(ring_v)
 

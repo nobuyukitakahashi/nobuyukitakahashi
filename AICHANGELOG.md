@@ -1,5 +1,27 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-05 (v11): 株式会社CVN「いい-NETくん（LILI-net）」3DモデルのRev.5〜Rev.6改修（非立体フラット青枠別バージョンの追加生成、および口の両端の完全半円カプセル化）
+
+### 変更理由
+ユーザーからの追加デザイン指示（①既存の立体青枠バージョンを残したまま、別バージョンとして「顔の青枠を非立体的に」したモデル・レンダリング画像を生成、②口の両端を丸くする）を反映し、両バージョン（標準・立体青枠ベゼル版および別バージョン・非立体フラット青枠版）を更新・納品するため。
+
+### Before / After
+- **Before (Rev.4)**:
+  - 顔の青枠が法線方向へ `+0.038m` 隆起した立体ベゼル仕様のみ存在。
+  - 口（`Mouth`）の先端キャップの延長距離に `ext = (1.0 - sin(α)) * r_tube`（一次線形補間）と横法線オフセットを用いていたため、U字の先端が台形状にすぼまり完全な半円になっていなかった。
+- **After (Rev.5 & Rev.6)**:
+  - **別バージョン（非立体フラット青枠版：`*_flat_frame.*`）の追加生成（Rev.5）**: 既存の立体青枠バージョンを保持したまま、`Face_Frame` と `Screen` をボディ前面曲面に段差・出っ張り・落ち影ゼロ（`+0.0007m` コンフォーマルシェル、`visible_shadow=False`）で密着させた非立体フラット青枠版を生成。
+  - **口の両端の完全半円カプセル化（Rev.6）**: `create_mouth_mesh` のキャップ生成式を真円の三角関数プロファイル（`ext = cos(α) * (r_tube * 1.15)`, `r_sc = sin(α)`、24分割、横法線シアリング除去）へ改修し、立体青枠版・非立体フラット青枠版の両方で口の両端がぷっくり丸い半円ドーム先端になるよう再生成。
+
+### 影響範囲
+- 更新・追加:
+  - [`02_Creative_Dept/drafts/build_iinet_kun.py`](02_Creative_Dept/drafts/build_iinet_kun.py)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の立体青枠版・非立体フラット青枠版の全 `.blend` / `.glb` / `.png` / `.md` ファイル
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`00_COO/task_logs/log_20261104_cvn_iinet_3d_modeling.md`](00_COO/task_logs/log_20261104_cvn_iinet_3d_modeling.md)
+
+---
+
 ## 2026-11-05 (v10): 株式会社cvn モバイル事業新ブランド「cvn プラスモバイル / cvn plus mobile / cvn + mobile」ロゴデザイン全6案の設計およびデザイン提案書パッケージ納品
 
 ### 変更理由
