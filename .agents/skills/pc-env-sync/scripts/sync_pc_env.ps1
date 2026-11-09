@@ -50,15 +50,33 @@ foreach ($skill in $SkillsToSync) {
     }
 }
 
+$GlobalPluginsDir = Join-Path $env:USERPROFILE ".gemini\config\plugins"
+if (-not (Test-Path $GlobalPluginsDir)) {
+    New-Item -ItemType Directory -Path $GlobalPluginsDir -Force | Out-Null
+}
+$NotebookPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\notebooklm-plugin"
+if (Test-Path $NotebookPluginSrc) {
+    Copy-Item -Path $NotebookPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
+    Write-Host "  [OK] Synced global plugin: notebooklm-plugin"
+}
+
 Write-Host "`n=== [4/6] Verifying Obsidian MCP (@bitbonsai/mcpvault) & Blender MCP (mcp-for-blender) ==="
 $NpmGlobalModules = (npm root -g).Trim()
 $McpVaultScript = Join-Path $NpmGlobalModules "@bitbonsai\mcpvault\dist\server.js"
+$NotebookLmMcpScript = Join-Path $NpmGlobalModules "notebooklm-mcp\dist\index.js"
 
 if (-not (Test-Path $McpVaultScript)) {
     Write-Host "  Installing @bitbonsai/mcpvault globally..."
     npm install -g "@bitbonsai/mcpvault" | Out-Host
 } else {
     Write-Host "  [OK] @bitbonsai/mcpvault already installed: $McpVaultScript"
+}
+
+if (-not (Test-Path $NotebookLmMcpScript)) {
+    Write-Host "  Installing notebooklm-mcp globally..."
+    npm install -g "notebooklm-mcp" | Out-Host
+} else {
+    Write-Host "  [OK] notebooklm-mcp already installed: $NotebookLmMcpScript"
 }
 
 $UvxCmd = Get-Command uvx -ErrorAction SilentlyContinue
@@ -79,7 +97,8 @@ if ($UvxCmd) {
 Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian & blender) ==="
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
-    (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json")
+    (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json"),
+    (Join-Path $env:USERPROFILE ".gemini\antigravity-obsidian\mcp_config.json")
 )
 
 foreach ($cfgPath in $McpConfigPaths) {
@@ -107,6 +126,12 @@ foreach ($cfgPath in $McpConfigPaths) {
         args    = @("mcp-for-blender")
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
+
+    $notebookLmEntry = [PSCustomObject]@{
+        command = "node"
+        args    = @($NotebookLmMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "notebooklm-research" -Value $notebookLmEntry -Force
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)

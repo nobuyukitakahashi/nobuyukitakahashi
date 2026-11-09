@@ -1,10 +1,9 @@
 {
   "mcpServers": {
     "notebooklm-research": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "notebooklm-mcp@latest"
+        "C:\\Users\\nobuy\\AppData\\Roaming\\npm\\node_modules\\notebooklm-mcp\\dist\\index.js"
       ]
     }
   }
