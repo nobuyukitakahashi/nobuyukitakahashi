@@ -968,14 +968,18 @@ def assign_seamless_body_vertex_groups(body_obj, zs_test, xs_test, z_leg_top, z_
         ax = float(abs_x[i])
         x_b = float(xb[i])
         if z < z_leg_top and ax < 0.45:
-            w_leg = float(np.clip((z_leg_top - z) / z_leg_span, 0.0, 1.0))
+            # 股の中央(|x|<0.05)で左右脚の反対回転による裂け・筋が出ないよう smoothstep(ax) で内側ウェイトを減衰
+            u_leg = float(np.clip((z_leg_top - z) / z_leg_span, 0.0, 1.0))
+            ux_leg = float(np.clip((ax - 0.045) / 0.110, 0.0, 1.0))
+            w_leg = (u_leg * u_leg * (3.0 - 2.0 * u_leg)) * (ux_leg * ux_leg * (3.0 - 2.0 * ux_leg))
             if x >= 0.0:
                 vg_leg_l.add([i], w_leg, 'REPLACE')
             else:
                 vg_leg_r.add([i], w_leg, 'REPLACE')
             vg_body.add([i], 1.0 - w_leg, 'REPLACE')
-        elif (z_arm_min - 0.02 <= z <= z_arm_max + 0.02) and (ax > x_b - 0.03):
-            w_arm = float(np.clip((ax - (x_b - 0.03)) / 0.06, 0.0, 1.0))
+        elif (z_arm_min - 0.015 <= z <= z_arm_max + 0.015) and (ax > x_b - 0.010):
+            u_arm = float(np.clip((ax - (x_b - 0.010)) / 0.050, 0.0, 1.0))
+            w_arm = u_arm * u_arm * (3.0 - 2.0 * u_arm)
             if x >= 0.0:
                 vg_arm_l.add([i], w_arm, 'REPLACE')
             else:
@@ -1336,12 +1340,12 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
     b_leg_l = eb.new("Leg.L")
     b_leg_l.head = (0.2625 * sx, 0.0, 0.14)
     b_leg_l.tail = (0.2625 * sx, 0.0, 0.0)
-    b_leg_l.parent = b_body
+    b_leg_l.parent = b_root
 
     b_leg_r = eb.new("Leg.R")
     b_leg_r.head = (-0.2625 * sx, 0.0, 0.14)
     b_leg_r.tail = (-0.2625 * sx, 0.0, 0.0)
-    b_leg_r.parent = b_body
+    b_leg_r.parent = b_root
 
     b_arm_l = eb.new("Arm.L")
     b_arm_l.head = (0.82 * sx, 0.03, 0.52 * sz)
@@ -1556,12 +1560,12 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
     b_leg_l = eb.new("Leg.L")
     b_leg_l.head = (0.245, 0.0, 0.18)
     b_leg_l.tail = (0.230, 0.0, 0.0)
-    b_leg_l.parent = b_body
+    b_leg_l.parent = b_root
 
     b_leg_r = eb.new("Leg.R")
     b_leg_r.head = (-0.245, 0.0, 0.18)
     b_leg_r.tail = (-0.230, 0.0, 0.0)
-    b_leg_r.parent = b_body
+    b_leg_r.parent = b_root
 
     b_arm_l = eb.new("Arm.L")
     b_arm_l.head = (0.76, 0.015, 0.58)
