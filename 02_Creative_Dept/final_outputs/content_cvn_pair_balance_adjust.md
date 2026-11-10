@@ -3,8 +3,8 @@
 - **対象プロジェクト**: CVN公式マスコットキャラクター「いい-ch（左・緑）」＆「いい-NETくん（右・ピンク）」2体ペア並び3Dシーン
 - **参照原画（Ground Truth）**: [`02_Creative_Dept/drafts/ref_20261110_pair_balance.png`](../drafts/ref_20261110_pair_balance.png)（解像度 `1024 × 680 px`）
 - **ビルドスクリプト**: [`02_Creative_Dept/drafts/build_pair_scene.py`](../drafts/build_pair_scene.py)
-- **使用エンジン**: Blender 5.2.3 LTS（Cycles Engine / 192 Samples + OpenImageDenoise）
-- **正面シルエット重なり一致率（IoU）**: **98.10%**（ソフビ一体成型シームレス融合後 / 検証画像：[`02_Creative_Dept/drafts/audit_overlay_pair.png`](../drafts/audit_overlay_pair.png)）
+- **使用エンジン**: Blender 5.2.3 LTS（Cycles Engine / 96 Samples + OpenImageDenoise `RGB_ALBEDO_NORMAL` + `ACCURATE`）
+- **正面シルエット重なり一致率（IoU）**: **98.11%**（ソフビ一体成型シームレス融合＋微細グレイン質感付与後 / 検証画像：[`02_Creative_Dept/drafts/audit_overlay_pair.png`](../drafts/audit_overlay_pair.png)）
 
 ---
 
@@ -68,18 +68,32 @@
 
 ---
 
-## 3. 視覚監査（Visual Audit）結果と出力ファイル一覧
+## 3. 微細グレイン（シボ加工／フロストマットソフビ）質感と微妙な光のニュアンス設計（`create_micro_grain_material`）
+
+オーナーからの追加要望に基づき、2キャラクターのすべてのマテリアル（ボディ・顔画面・青枠・目・口・アンテナ・地球儀・胸ロゴ）に「ほんの少しだけざらついた心地よい梨地（シボ）粒子感」と「微妙な光の陰影・ハイライトのニュアンス」を付与するプロシージャルシェーダーノード網を構築した。
+
+1. **3Dオブジェクト座標（`ShaderNodeTexCoord -> Object`）による2階層プロシージャルノイズ合成**:
+   - **高周波シボ粒子（`fine_scale = 68.0〜85.0, Detail = 6.0, Roughness = 0.65`）**と、**中周波の光ムラ・表面揺らぎ（`mid_scale = 18.0〜24.0, Detail = 3.5, Roughness = 0.55`）**を `74% : 26%` でミックスし、`ShaderNodeMapRange`（`From: [0.28, 0.72] -> To: [0.0, 1.0]`）でコントラスト正規化することで、Cycles のデノイザー（OpenImageDenoise）通過後でもツルツルに潰れない繊細な粒子ピークを形成した。
+2. **微細バンプ法線・ラフネス変調・微細トーン変調・ソフトクリア層の統合**:
+   - **Micro-Grain Bump**: `ShaderNodeBump`（ボディ：`Strength = 0.46, Distance = 0.0045 m`）を介して `Principled BSDF` の `Normal` に入力し、光が当たるハイライト縁や明暗境界（ターミネーター）で微細なシボ粒子が光を柔らかく散乱するように設計。
+   - **Roughness & Sheen / Coat 変調**: `Roughness` を粒子ごとに `0.50〜0.80` の範囲で微細に揺らがせるとともに、`Specular IOR Level = 0.28`、フロスト散乱感を生む `Sheen Weight = 0.14`（`Sheen Roughness = 0.42`）、および極薄のソフトクリア層 `Coat Weight = 0.08`（`Coat Roughness = 0.38`）を設定。さらに `Base Color` にも `0.925x〜1.055x` の極微細な明暗トーン変調を加えることで、原画の鮮やかな発色を100%保ちながら、しっとりとした高級ソフビ・フロストマットフィギュアの質感を実現した。
+   - **Cycles デノイザー設定の最適化**: `denoising_input_passes = 'RGB_ALBEDO_NORMAL'` および `denoising_prefilter = 'ACCURATE'` を有効化し、バンプ法線とアルベドの微細グレインがデノイザーによって保持されるように構成した。
+
+---
+
+## 4. 視覚監査（Visual Audit）結果と出力ファイル一覧
 
 生成されたすべてのレンダリング画像を `read_file` で視覚監査し、以下の合格基準をすべて満たしていることを確認した：
 1. **腕と胴体の交差境界の筋の完全消滅**: `pair_iich_and_iinet_front.png`、`pair_iich_and_iinet_hero_3quarter.png`、`pair_iich_and_iinet_board.png`（正面・斜め3/4・背面）において、いい-NETくん・いい-ch ともに胴体から腕へ移る部分に斜めの境界線・明暗ステップ・水平のくびれが一切なく、1つの滑らかなソフビ人形として自然に繋がっている。
-2. **アンテナと地球儀の3D中心接続**: 斜め3/4ビュー（`pair_iich_and_iinet_hero_3quarter.png` および `pair_iich_and_iinet_board.png` 中央パネル）において、アンテナが地球儀の前面に貼り付いたり突き出したりせず、球体下部から中心へ自然に刺さっている。
-3. **原画シルエットとの高精度一致**: `audit_overlay_pair.png` における正面シルエット IoU は **98.10%** を達成。
+2. **微細グレイン質感と微妙な光のニュアンス**: 緑・ピンクのボディ、クリーム色の顔画面、青枠、地球儀、立体ロゴ `LILI-ch` / `LILI-net` に至るまで、ほんの少しだけざらついた上品なシボ粒子感と、ハイライトから陰影へ移るしっとりした光のグラデーションが鮮明に表現されている。
+3. **アンテナと地球儀の3D中心接続**: 斜め3/4ビューにおいて、アンテナが地球儀の前面に貼り付いたり突き出したりせず、球体下部から中心へ自然に刺さっている。
+4. **原画シルエットとの高精度一致**: `audit_overlay_pair.png` における正面シルエット IoU は **98.11%** を達成。
 
 | ファイル名 | パス | 内容・検証結果 |
 | :--- | :--- | :--- |
-| **`pair_iich_and_iinet_front.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_front.png`](pair_iich_and_iinet_front.png) | 2体ペア正面オルソビュー（`1600 × 1200 px`）。腕の付け根の斜め境界筋ゼロ、ソフビ一体成型で原画と完全一致（IoU **98.10%**）。 |
-| **`pair_iich_and_iinet_hero_3quarter.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_hero_3quarter.png`](pair_iich_and_iinet_hero_3quarter.png) | 斜め3/4ヒーロービュー（`1600 × 1200 px`）。腕と胴体のシームレスな連続曲面、および地球儀中心へ刺さるアンテナの立体整合性を確認。 |
-| **`pair_iich_and_iinet_board.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_board.png`](pair_iich_and_iinet_board.png) | 正面・斜め3/4・背面の3面比較ボード（`2400 × 600 px`）。背面も含め全角度で腕の境界筋ゼロ・しっぽ曲線の自然な繋がりを確認。 |
-| **`cvn_iich_and_iinet_pair.blend`** | [`02_Creative_Dept/final_outputs/cvn_iich_and_iinet_pair.blend`](cvn_iich_and_iinet_pair.blend) | テクスチャパック済み Blender 5.2 マスターファイル（`Collection_IICh` / `Collection_IINet` ソフビ一体成型ボディ＋リグ付き）。 |
+| **`pair_iich_and_iinet_front.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_front.png`](pair_iich_and_iinet_front.png) | 2体ペア正面オルソビュー（`1600 × 1200 px`）。微細グレイン質感・直線ロゴ `LILI-ch`/`LILI-net`・シームレス腕で原画と完全一致（IoU **98.11%**）。 |
+| **`pair_iich_and_iinet_hero_3quarter.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_hero_3quarter.png`](pair_iich_and_iinet_hero_3quarter.png) | 斜め3/4ヒーロービュー（`1600 × 1200 px`）。微細シボ粒子による柔らかなハイライト散乱と立体感を確認。 |
+| **`pair_iich_and_iinet_board.png`** | [`02_Creative_Dept/final_outputs/pair_iich_and_iinet_board.png`](pair_iich_and_iinet_board.png) | 正面・斜め3/4・背面の3面比較ボード（`2400 × 600 px`）。背面のお尻・背中も含め全角度で心地よい微細グレイン質感を確認。 |
+| **`cvn_iich_and_iinet_pair.blend`** | [`02_Creative_Dept/final_outputs/cvn_iich_and_iinet_pair.blend`](cvn_iich_and_iinet_pair.blend) | テクスチャパック済み Blender 5.2 マスターファイル（微細グレインシェーダー＋ソフビ一体成型ボディ＋リグ付き）。 |
 | **`cvn_iich_and_iinet_pair.glb`** | [`02_Creative_Dept/final_outputs/cvn_iich_and_iinet_pair.glb`](cvn_iich_and_iinet_pair.glb) | Web / AR / 汎用3Dビューア用 GLB モデル。 |
-| **`audit_overlay_pair.png`** | [`02_Creative_Dept/drafts/audit_overlay_pair.png`](../drafts/audit_overlay_pair.png) | 左：参照原画、中：3Dレンダリング正面図、右：50%半透明オーバーレイ＆輪郭エッジ比較画像（IoU **98.10%**）。 |
+| **`audit_overlay_pair.png`** | [`02_Creative_Dept/drafts/audit_overlay_pair.png`](../drafts/audit_overlay_pair.png) | 左：参照原画、中：3Dレンダリング正面図、右：50%半透明オーバーレイ＆輪郭エッジ比較画像（IoU **98.11%**）。 |

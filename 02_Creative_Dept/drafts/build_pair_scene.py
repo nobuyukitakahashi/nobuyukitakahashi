@@ -985,6 +985,184 @@ def assign_seamless_body_vertex_groups(body_obj, zs_test, xs_test, z_leg_top, z_
             vg_body.add([i], 1.0, 'REPLACE')
 
 
+def create_micro_grain_material(
+    name,
+    rgb255,
+    bump_dist=0.0042,
+    bump_strength=0.45,
+    rough_min=0.50,
+    rough_max=0.80,
+    spec_ior=0.28,
+    sheen_weight=0.14,
+    coat_weight=0.08,
+    coat_rough=0.38,
+    fine_scale=68.0,
+    mid_scale=18.0,
+):
+    """
+    3Dオブジェクト座標に基づく2階層プロシージャル微細グレイン（高周波シボ粒子 fine_scale + 中周波の光ムラ mid_scale）を
+    Bump法線変調・Roughness微小変調・微細Base Color明暗変調としてPrincipled BSDFに統合し、
+    「ほんの少しだけざらついた心地よい梨地・フロストソフビ質感」と「微妙な光の陰影・ハイライトのニュアンス」を表現する。
+    """
+    mat = bpy.data.materials.new(name=name)
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
+
+    rgba = mod_iinet.rgb255_to_linear_rgba(*rgb255)
+    mat.diffuse_color = rgba
+
+    # 1) 3D Object Texture Coordinate
+    tex_coord = nodes.new(type='ShaderNodeTexCoord')
+    tex_coord.location = (-980, 0)
+
+    # 2) 高周波ノイズ（微細な梨地・シボ粒子）
+    noise_fine = nodes.new(type='ShaderNodeTexNoise')
+    noise_fine.location = (-740, 180)
+    noise_fine.inputs["Scale"].default_value = fine_scale
+    noise_fine.inputs["Detail"].default_value = 6.0
+    noise_fine.inputs["Roughness"].default_value = 0.65
+    links.new(tex_coord.outputs["Object"], noise_fine.inputs["Vector"])
+
+    # 3) 中周波ノイズ（微妙な光の揺らぎ・表面ニュアンス）
+    noise_mid = nodes.new(type='ShaderNodeTexNoise')
+    noise_mid.location = (-740, -120)
+    noise_mid.inputs["Scale"].default_value = mid_scale
+    noise_mid.inputs["Detail"].default_value = 3.5
+    noise_mid.inputs["Roughness"].default_value = 0.55
+    links.new(tex_coord.outputs["Object"], noise_mid.inputs["Vector"])
+
+    # 4) 2階層グレイン合成 (74% 高周波シボ + 26% 中周波揺らぎ)
+    mix_grain = nodes.new(type='ShaderNodeMix')
+    mix_grain.data_type = 'FLOAT'
+    mix_grain.location = (-520, 60)
+    mix_grain.inputs["Factor"].default_value = 0.26
+    links.new(noise_fine.outputs["Fac"], mix_grain.inputs["A"])
+    links.new(noise_mid.outputs["Fac"], mix_grain.inputs["B"])
+
+    # FBMノイズの [0.28..0.72] 分布を [0..1] へコントラスト正規化し、繊細な粒子ピークを鮮明化
+    norm_grain = nodes.new(type='ShaderNodeMapRange')
+    norm_grain.location = (-360, 60)
+    norm_grain.inputs["From Min"].default_value = 0.28
+    norm_grain.inputs["From Max"].default_value = 0.72
+    norm_grain.inputs["To Min"].default_value = 0.0
+    norm_grain.inputs["To Max"].default_value = 1.0
+    links.new(mix_grain.outputs["Result"], norm_grain.inputs["Value"])
+
+    # 5) Base Color の極微細トーン変調（上品な粒子感を保持しつつ鮮やかな発色を維持）
+    r_lin, g_lin, b_lin, a_lin = rgba
+    col_dark = (max(0.0, r_lin * 0.925), max(0.0, g_lin * 0.925), max(0.0, b_lin * 0.925), a_lin)
+    col_light = (min(1.0, r_lin * 1.055), min(1.0, g_lin * 1.055), min(1.0, b_lin * 1.055), a_lin)
+    mix_col = nodes.new(type='ShaderNodeMix')
+    mix_col.data_type = 'RGBA'
+    mix_col.location = (-180, 260)
+    mix_col.inputs["A"].default_value = col_dark
+    mix_col.inputs["B"].default_value = col_light
+    links.new(norm_grain.outputs["Result"], mix_col.inputs["Factor"])
+    links.new(mix_col.outputs["Result"], bsdf.inputs["Base Color"])
+
+    # 6) Roughness の微細変調 (rough_min 〜 rough_max)
+    map_rough = nodes.new(type='ShaderNodeMapRange')
+    map_rough.location = (-180, 20)
+    map_rough.inputs["From Min"].default_value = 0.0
+    map_rough.inputs["From Max"].default_value = 1.0
+    map_rough.inputs["To Min"].default_value = rough_min
+    map_rough.inputs["To Max"].default_value = rough_max
+    links.new(norm_grain.outputs["Result"], map_rough.inputs["Value"])
+    links.new(map_rough.outputs["Result"], bsdf.inputs["Roughness"])
+
+    # 7) Micro-Grain Bump 法線変調（ハイライト縁や明暗境界に繊細なシボ粒子の光沢ニュアンスを付与）
+    bump_node = nodes.new(type='ShaderNodeBump')
+    bump_node.location = (-180, -220)
+    bump_node.inputs["Strength"].default_value = bump_strength
+    bump_node.inputs["Distance"].default_value = bump_dist
+    links.new(norm_grain.outputs["Result"], bump_node.inputs["Height"])
+    links.new(bump_node.outputs["Normal"], bsdf.inputs["Normal"])
+
+    # 8) Principled BSDF の光沢・フロスト散乱パラメータ設定
+    if "Metallic" in bsdf.inputs:
+        bsdf.inputs["Metallic"].default_value = 0.0
+    if "Specular IOR Level" in bsdf.inputs:
+        bsdf.inputs["Specular IOR Level"].default_value = spec_ior
+    if "Sheen Weight" in bsdf.inputs:
+        bsdf.inputs["Sheen Weight"].default_value = sheen_weight
+    if "Sheen Roughness" in bsdf.inputs:
+        bsdf.inputs["Sheen Roughness"].default_value = 0.42
+    if "Coat Weight" in bsdf.inputs:
+        bsdf.inputs["Coat Weight"].default_value = coat_weight
+        bsdf.inputs["Coat Roughness"].default_value = coat_rough
+    if "Subsurface Weight" in bsdf.inputs:
+        bsdf.inputs["Subsurface Weight"].default_value = 0.0
+    if "Emission Strength" in bsdf.inputs:
+        bsdf.inputs["Emission Strength"].default_value = 0.0
+
+    return mat
+
+
+def create_micro_grain_globe_material():
+    """地球儀テクスチャにもボディと調和する微細グレイン質感＆ソフトな光沢ニュアンスを付与"""
+    mat = bpy.data.materials.new(name="Mat_Globe")
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
+
+    tex_node = nodes.new(type='ShaderNodeTexImage')
+    tex_node.location = (-550, 260)
+    tex_node.image = bpy.data.images.load(mod_iinet.GLOBE_TEX_PATH, check_existing=True)
+    tex_node.interpolation = 'Linear'
+    links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
+
+    tex_coord = nodes.new(type='ShaderNodeTexCoord')
+    tex_coord.location = (-920, -100)
+
+    noise_fine = nodes.new(type='ShaderNodeTexNoise')
+    noise_fine.location = (-680, -40)
+    noise_fine.inputs["Scale"].default_value = 78.0
+    noise_fine.inputs["Detail"].default_value = 5.5
+    noise_fine.inputs["Roughness"].default_value = 0.62
+    links.new(tex_coord.outputs["Object"], noise_fine.inputs["Vector"])
+
+    noise_mid = nodes.new(type='ShaderNodeTexNoise')
+    noise_mid.location = (-680, -260)
+    noise_mid.inputs["Scale"].default_value = 22.0
+    noise_mid.inputs["Detail"].default_value = 3.0
+    noise_mid.inputs["Roughness"].default_value = 0.52
+    links.new(tex_coord.outputs["Object"], noise_mid.inputs["Vector"])
+
+    mix_grain = nodes.new(type='ShaderNodeMix')
+    mix_grain.data_type = 'FLOAT'
+    mix_grain.location = (-460, -120)
+    mix_grain.inputs["Factor"].default_value = 0.25
+    links.new(noise_fine.outputs["Fac"], mix_grain.inputs["A"])
+    links.new(noise_mid.outputs["Fac"], mix_grain.inputs["B"])
+
+    map_rough = nodes.new(type='ShaderNodeMapRange')
+    map_rough.location = (-240, -40)
+    map_rough.inputs["From Min"].default_value = 0.28
+    map_rough.inputs["From Max"].default_value = 0.72
+    map_rough.inputs["To Min"].default_value = 0.52
+    map_rough.inputs["To Max"].default_value = 0.76
+    links.new(mix_grain.outputs["Result"], map_rough.inputs["Value"])
+    links.new(map_rough.outputs["Result"], bsdf.inputs["Roughness"])
+
+    bump_node = nodes.new(type='ShaderNodeBump')
+    bump_node.location = (-240, -240)
+    bump_node.inputs["Strength"].default_value = 0.34
+    bump_node.inputs["Distance"].default_value = 0.0028
+    links.new(mix_grain.outputs["Result"], bump_node.inputs["Height"])
+    links.new(bump_node.outputs["Normal"], bsdf.inputs["Normal"])
+
+    if "Specular IOR Level" in bsdf.inputs:
+        bsdf.inputs["Specular IOR Level"].default_value = 0.27
+    if "Sheen Weight" in bsdf.inputs:
+        bsdf.inputs["Sheen Weight"].default_value = 0.10
+    if "Coat Weight" in bsdf.inputs:
+        bsdf.inputs["Coat Weight"].default_value = 0.07
+        bsdf.inputs["Coat Roughness"].default_value = 0.38
+
+    return mat
+
+
 # ==========================================
 # 3. 2キャラクター構築（Collection_IICh & Collection_IINet）
 # ==========================================
@@ -1057,16 +1235,52 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
 
     ant_obj, globe_obj = create_iich_pair_antenna_and_globe(sx=sx, sy=sy, sz=sz)
 
-    # マテリアル作成＆割り当て（ボディと腕は完全一体メッシュ化済み）
-    mat_body_green = mod_iich.create_matte_material("IICh_Mat_Body_Green", (134, 194, 78))
-    mat_frame_blue = mod_iich.create_matte_material("IICh_Mat_Frame_Blue", (52, 114, 182))
-    mat_feature_blue = mod_iich.create_matte_material("IICh_Mat_Feature_Blue", (22, 96, 172))
-    mat_eye_outer_blue = mod_iich.create_matte_material("IICh_Mat_Eye_Outer_Blue", (64, 134, 204))
-    mat_eye_inner_navy = mod_iich.create_matte_material("IICh_Mat_Eye_Inner_Navy", (10, 68, 142))
-    mat_stem_blue = mod_iich.create_matte_material("IICh_Mat_Stem_Blue", (52, 114, 182))
-    mat_screen_cream = mod_iich.create_matte_material("IICh_Mat_Screen_Cream", (253, 250, 210))
-    mat_logo_yellow = mod_iich.create_matte_material("IICh_Mat_Logo_Yellow", (252, 242, 20))
-    mat_logo_side = mod_iich.create_matte_material("IICh_Mat_Logo_Side", (185, 130, 0))
+    # マテリアル作成＆割り当て（微細グレイン質感＆微妙な光の陰影・ハイライトニュアンス仕様）
+    mat_body_green = create_micro_grain_material(
+        "IICh_Mat_Body_Green", (134, 194, 78),
+        bump_dist=0.0045, bump_strength=0.46, rough_min=0.50, rough_max=0.80,
+        spec_ior=0.28, sheen_weight=0.14, coat_weight=0.08, fine_scale=68.0, mid_scale=18.0
+    )
+    mat_frame_blue = create_micro_grain_material(
+        "IICh_Mat_Frame_Blue", (52, 114, 182),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.54, rough_max=0.78,
+        spec_ior=0.26, sheen_weight=0.10, coat_weight=0.06, fine_scale=78.0, mid_scale=22.0
+    )
+    mat_feature_blue = create_micro_grain_material(
+        "IICh_Mat_Feature_Blue", (22, 96, 172),
+        bump_dist=0.0022, bump_strength=0.28, rough_min=0.56, rough_max=0.76,
+        spec_ior=0.25, sheen_weight=0.08, coat_weight=0.05, fine_scale=85.0, mid_scale=24.0
+    )
+    mat_eye_outer_blue = create_micro_grain_material(
+        "IICh_Mat_Eye_Outer_Blue", (64, 134, 204),
+        bump_dist=0.0022, bump_strength=0.26, rough_min=0.54, rough_max=0.74,
+        spec_ior=0.26, sheen_weight=0.08, coat_weight=0.06, fine_scale=85.0, mid_scale=24.0
+    )
+    mat_eye_inner_navy = create_micro_grain_material(
+        "IICh_Mat_Eye_Inner_Navy", (10, 68, 142),
+        bump_dist=0.0022, bump_strength=0.26, rough_min=0.52, rough_max=0.72,
+        spec_ior=0.27, sheen_weight=0.08, coat_weight=0.06, fine_scale=85.0, mid_scale=24.0
+    )
+    mat_stem_blue = create_micro_grain_material(
+        "IICh_Mat_Stem_Blue", (52, 114, 182),
+        bump_dist=0.0036, bump_strength=0.40, rough_min=0.52, rough_max=0.78,
+        spec_ior=0.28, sheen_weight=0.11, coat_weight=0.07, fine_scale=72.0, mid_scale=20.0
+    )
+    mat_screen_cream = create_micro_grain_material(
+        "IICh_Mat_Screen_Cream", (253, 250, 210),
+        bump_dist=0.0028, bump_strength=0.32, rough_min=0.56, rough_max=0.80,
+        spec_ior=0.25, sheen_weight=0.12, coat_weight=0.06, fine_scale=75.0, mid_scale=20.0
+    )
+    mat_logo_yellow = create_micro_grain_material(
+        "IICh_Mat_Logo_Yellow", (252, 242, 20),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.50, rough_max=0.74,
+        spec_ior=0.28, sheen_weight=0.10, coat_weight=0.08, fine_scale=80.0, mid_scale=22.0
+    )
+    mat_logo_side = create_micro_grain_material(
+        "IICh_Mat_Logo_Side", (185, 130, 0),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.54, rough_max=0.76,
+        spec_ior=0.26, sheen_weight=0.10, coat_weight=0.06, fine_scale=80.0, mid_scale=22.0
+    )
 
     body_obj.data.materials.append(mat_body_green)
     logo_obj.data.materials.append(mat_logo_yellow)
@@ -1261,13 +1475,41 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
         ant_obj, globe_obj,
     ]
 
-    mat_body_pink = mod_iinet.create_matte_material("IINet_Mat_Body_Pink", (245, 82, 164))
-    mat_frame_blue = mod_iinet.create_matte_material("IINet_Mat_Frame_Blue", (58, 90, 174))
-    mat_feature_blue = mod_iinet.create_matte_material("IINet_Mat_Feature_Blue", (46, 76, 168))
-    mat_stem_blue = mod_iinet.create_matte_material("IINet_Mat_Stem_Blue", (58, 92, 172))
-    mat_screen_cream = mod_iinet.create_matte_material("IINet_Mat_Screen_Cream", (250, 228, 156))
-    mat_logo_yellow = mod_iinet.create_matte_material("IINet_Mat_Logo_Yellow", (255, 242, 15))
-    mat_logo_side = mod_iinet.create_matte_material("IINet_Mat_Logo_Side", (185, 125, 0))
+    mat_body_pink = create_micro_grain_material(
+        "IINet_Mat_Body_Pink", (245, 82, 164),
+        bump_dist=0.0045, bump_strength=0.46, rough_min=0.50, rough_max=0.80,
+        spec_ior=0.28, sheen_weight=0.14, coat_weight=0.08, fine_scale=68.0, mid_scale=18.0
+    )
+    mat_frame_blue = create_micro_grain_material(
+        "IINet_Mat_Frame_Blue", (58, 90, 174),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.54, rough_max=0.78,
+        spec_ior=0.26, sheen_weight=0.10, coat_weight=0.06, fine_scale=78.0, mid_scale=22.0
+    )
+    mat_feature_blue = create_micro_grain_material(
+        "IINet_Mat_Feature_Blue", (46, 76, 168),
+        bump_dist=0.0022, bump_strength=0.28, rough_min=0.56, rough_max=0.76,
+        spec_ior=0.25, sheen_weight=0.08, coat_weight=0.05, fine_scale=85.0, mid_scale=24.0
+    )
+    mat_stem_blue = create_micro_grain_material(
+        "IINet_Mat_Stem_Blue", (58, 92, 172),
+        bump_dist=0.0036, bump_strength=0.40, rough_min=0.52, rough_max=0.78,
+        spec_ior=0.28, sheen_weight=0.11, coat_weight=0.07, fine_scale=72.0, mid_scale=20.0
+    )
+    mat_screen_cream = create_micro_grain_material(
+        "IINet_Mat_Screen_Cream", (250, 228, 156),
+        bump_dist=0.0028, bump_strength=0.32, rough_min=0.56, rough_max=0.80,
+        spec_ior=0.25, sheen_weight=0.12, coat_weight=0.06, fine_scale=75.0, mid_scale=20.0
+    )
+    mat_logo_yellow = create_micro_grain_material(
+        "IINet_Mat_Logo_Yellow", (255, 242, 15),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.50, rough_max=0.74,
+        spec_ior=0.28, sheen_weight=0.10, coat_weight=0.08, fine_scale=80.0, mid_scale=22.0
+    )
+    mat_logo_side = create_micro_grain_material(
+        "IINet_Mat_Logo_Side", (185, 125, 0),
+        bump_dist=0.0028, bump_strength=0.34, rough_min=0.54, rough_max=0.76,
+        spec_ior=0.26, sheen_weight=0.10, coat_weight=0.06, fine_scale=80.0, mid_scale=22.0
+    )
 
     body_obj.data.materials.append(mat_body_pink)
     logo_obj.data.materials.append(mat_logo_yellow)
@@ -1556,6 +1798,11 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     mod_iinet.configure_cycles_gpu(scene)
+    scene.cycles.samples = 96
+    if hasattr(scene.cycles, "denoising_input_passes"):
+        scene.cycles.denoising_input_passes = 'RGB_ALBEDO_NORMAL'
+    if hasattr(scene.cycles, "denoising_prefilter"):
+        scene.cycles.denoising_prefilter = 'ACCURATE'
 
     coll_iich = bpy.data.collections.new("Collection_IICh")
     coll_iinet = bpy.data.collections.new("Collection_IINet")
@@ -1564,7 +1811,7 @@ def main():
 
     if not os.path.exists(mod_iinet.GLOBE_TEX_PATH):
         mod_iinet.extract_textures_and_profiles()
-    mat_globe = mod_iinet.create_globe_material()
+    mat_globe = create_micro_grain_globe_material()
 
     im_ref = mod_iinet.load_image_rgba_uint8(REF_PAIR_PATH)
 
