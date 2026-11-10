@@ -1,5 +1,42 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-10 (v17): 株式会社CVN「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体横並び3Dシーンの原画（`ref_20261110_pair_balance.png`）完全一致バランス改修・アンテナ3D球心接続・ソフビ一体成型シームレス腕造形化、および Creative部門3D造形ルール・Git同期スキルの改善
+
+### 変更理由
+1. ユーザー提示の2体横並び参照原画（`02_Creative_Dept/drafts/ref_20261110_pair_balance.png`、`1024×680 px`）に基づき、正面から見た2体（左：いい-ch、右：いい-NETくん）のボディバランス（身長比・横幅比・輪郭シルエット・画面枠とボディ余白・2体間の距離と内側腕の重なり・接地ライン）、「アンテナの傾き（いい-chは左上外側、いい-NETくんは右上外側へカーブして地球儀へ接続）」「しっぽの曲がり（C字/S字空間曲線）」、および胸ロゴ表記（ひらがな＋英字「いい-ch」「いい-net」）を原画に完全一致させるため。
+2. 追加重点指示（「いい-NETくんの手が変、原画に忠実に」「胴体と腕が別パーツの交差で付け根に斜めの筋が出ているのを1つのソフビ人形としてシームレスに繋げる」「斜めビューでアンテナが地球儀から突き出ないように接続する」）を解決し、さらにその技術的知見を `02_Creative_Dept/AGENTS.md` に標準化するとともに、`auto-git-sync` スキルのブランチ名不整合（`master` ➔ `main`）を是正するため。
+
+### Before / After
+- **Before (v16)**:
+  - 旧ペアシーンでは左（いい-ch）と右（いい-NETくん）の胴体縦横比の違い（いい-chは `1.000` の丸型タマゴ、いい-NETくんは `1.108` の縦長タマゴ）や胸ロゴのひらがな表記（「いい-ch」「いい-net」）、アンテナの外側への傾き角度が原画 `ref_20261110_pair_balance.png` と完全には一致していなかった。
+  - 胴体（`Body`）と左右の腕（`Arm.L` / `Arm.R`）が別メッシュの交差配置だったため、同一マテリアルでも交差線上の法線不連続（$C^0$ 連続・$C^1$ 不連続）により正面・斜め・背面で腕の付け根に斜めの明暗境界筋が生じていた。
+  - [`.agents/skills/auto-git-sync/SKILL.md`](.agents/skills/auto-git-sync/SKILL.md) の同期コマンド例が `origin master` となっていた。
+- **After (v17)**:
+  - **① 原画 `ref_20261110_pair_balance.png` ピクセル実測に基づく2体プロポーション・配置・胸ロゴ完全一致（IoU 98.10%）**:
+    - いい-NETくん全高 `555 px = 2.0080 m`、いい-ch全高 `459 px = 1.6607 m`（身長比 `82.70%`、胴体幅比 `91.62%`、中心間隔 `1.8271 m`、内側の腕先端の重なり `7 px = 25.3 mm`）および各自の輪郭LUT・画面枠・目・口・ひらがな＋英字3D胸ロゴ（「いい-ch」「いい-net」）を精密再現。
+  - **② アンテナの傾き・曲がりと地球儀3D球心への直接貫入接続**:
+    - いい-chは頭頂から左上外側（`-X`）、いい-NETくんは頭頂から右上外側（`+X`）へ滑らかに傾く3D空間曲線（C字 / S字）を構築し、終端を地球儀の3D球心へ直接貫入（`round_tip=False`）させることで、正面図での原画一致と斜め3/4ビューでのパイプ突出ゼロを両立。
+  - **③ ソフビ一体成型メッシュ化（`fuse_body_and_arms_seamless`）による腕付け根の境界筋の完全消滅**:
+    - 交差部内側の厚みフレア拡大でV字谷を解消した上で、`BOOLEAN (UNION)` ＋ 高解像度 `REMESH (VOXEL)`（`voxel_size = 0.0075 m`）で単一連続メッシュに統合し、正面2D外周シルエット `(X, Z)` を完全ロックした2段階調和曲面スムージング（`Smooth_Seam_3D` + `Smooth_Seam_Y`）を適用。正面シルエット IoU **98.10%** を維持したまま、正面・斜め3/4・背面の全角度で腕の境界筋を完全ゼロ化。
+  - **④ 組織ルール・スキルの自律改善**:
+    - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) にソフビ一体成型シームレス融合および3D球心貫入接続の鉄則を追記。
+    - [`.agents/skills/auto-git-sync/SKILL.md`](.agents/skills/auto-git-sync/SKILL.md) のブランチ名を `main`（`git pull origin main` / `git push origin main`）に修正。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`00_COO/task_logs/log_20261110_cvn_pair_balance_adjust.md`](00_COO/task_logs/log_20261110_cvn_pair_balance_adjust.md)
+  - [`02_Creative_Dept/drafts/ref_20261110_pair_balance.png`](02_Creative_Dept/drafts/ref_20261110_pair_balance.png)
+  - [`02_Creative_Dept/drafts/build_pair_scene.py`](02_Creative_Dept/drafts/build_pair_scene.py)
+  - [`02_Creative_Dept/drafts/audit_overlay_pair.png`](02_Creative_Dept/drafts/audit_overlay_pair.png)
+  - [`02_Creative_Dept/final_outputs/content_cvn_pair_balance_adjust.md`](02_Creative_Dept/final_outputs/content_cvn_pair_balance_adjust.md)
+  - [`02_Creative_Dept/final_outputs/`](02_Creative_Dept/final_outputs/) および [`04_Delivery_Dept/outputs/`](04_Delivery_Dept/outputs/) 内の `cvn_iich_and_iinet_pair.blend`, `cvn_iich_and_iinet_pair.glb`, `pair_iich_and_iinet_front.png`, `pair_iich_and_iinet_hero_3quarter.png`, `pair_iich_and_iinet_board.png`（および `output_20261110_cvn_pair_*` 一式）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`.agents/skills/auto-git-sync/SKILL.md`](.agents/skills/auto-git-sync/SKILL.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261110.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261110.md)
+
+---
+
 ## 2026-11-05 (v16): 株式会社CVN 2体ペア並びシーン（「いい-ch」左・「いい-NETくん」右）別Blenderファイル構築＆ペアレンダリング一式納品
 
 ### 変更理由

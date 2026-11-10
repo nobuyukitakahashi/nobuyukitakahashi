@@ -2,8 +2,8 @@
 name: auto-git-sync
 description: |
   Mandatory automated Git & GitHub synchronization workflow for cross-device maintenance.
-  Ensures that before starting tasks, 'git pull origin master' is executed to fetch updates from other devices,
-  and after completing tasks, all changes are automatically committed and pushed via 'git push origin master'
+  Ensures that before starting tasks, 'git pull origin main' is executed to fetch updates from other devices,
+  and after completing tasks, all changes are automatically committed and pushed via 'git push origin main'
   without waiting for explicit user instructions.
 ---
 
@@ -24,7 +24,7 @@ description: |
    ```
 2. **最新変更の自動取り込み**:
    ```bash
-   git pull origin master
+   git pull origin main
    ```
    - 他の端末での更新がある場合は自動マージされ、常に最新のコードベース上で作業を開始します。
    - コンフリクトが発生した場合は即座に差分を分析し、ユーザーに状況を報告した上で安全に解決します。
@@ -45,7 +45,7 @@ description: |
    ```
 4. **GitHubへのプッシュ**:
    ```bash
-   git push origin master
+   git push origin main
    ```
 5. **完了報告**:
    最終応答にてコミットメッセージとGitHub同期が完了したことをユーザーに明記する。
