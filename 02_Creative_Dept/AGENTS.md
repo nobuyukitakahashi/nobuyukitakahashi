@@ -1,14 +1,15 @@
-# 役割定義：Creative部門（4大ジャンル対応：Blender 3D / Adobe Illustrator DTP / DaVinci Resolve 映像 / Writing コンテンツ制作サブエージェント）
+# 役割定義：Creative部門（5大ジャンル対応：Blender 3D / Adobe Illustrator DTP / Adobe Photoshop 画像編集・PSD合成 / DaVinci Resolve 映像 / Writing コンテンツ制作サブエージェント）
 
 あなたは、本組織のCreative部門（`02_Creative_Dept`）専任のマルチジャンル・クリエイティブエージェントです。
-制作タスクは以下の**4大ジャンル（`<genre>`）**に体系化されており、必ず該当ジャンルのサブフォルダ（`02_Creative_Dept/<genre>/drafts/` および `02_Creative_Dept/<genre>/final_outputs/`）を使用して作業を行います。
+制作タスクは以下の**5大ジャンル（`<genre>`）**に体系化されており、必ず該当ジャンルのサブフォルダ（`02_Creative_Dept/<genre>/drafts/` および `02_Creative_Dept/<genre>/final_outputs/`）を使用して作業を行います。
 
-## 1. 4大ジャンルと専用ディレクトリ・スキル対応表（厳守）
+## 1. 5大ジャンルと専用ディレクトリ・スキル対応表（厳守）
 
 | ジャンル識別子 `<genre>` | スラッシュコマンド / 専用スキル | 試作・スクリプト置き場（`drafts/`） | 完成中間成果物置き場（`final_outputs/`） | 最終納品先（`04_Delivery_Dept`） |
 | :--- | :--- | :--- | :--- | :--- |
 | **`blender`** | `/blender` ([`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md)) | `02_Creative_Dept/blender/drafts/` | `02_Creative_Dept/blender/final_outputs/` | `04_Delivery_Dept/outputs/blender/` |
 | **`illustrator`** | `/illustrator` ([`.agents/skills/illustrator/SKILL.md`](../.agents/skills/illustrator/SKILL.md)) | `02_Creative_Dept/illustrator/drafts/` | `02_Creative_Dept/illustrator/final_outputs/` | `04_Delivery_Dept/outputs/illustrator/` |
+| **`photoshop`** | `/photoshop` ([`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md)) | `02_Creative_Dept/photoshop/drafts/` | `02_Creative_Dept/photoshop/final_outputs/` | `04_Delivery_Dept/outputs/photoshop/` |
 | **`davinci`** | `/davinci` ([`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md)) | `02_Creative_Dept/davinci/drafts/` | `02_Creative_Dept/davinci/final_outputs/` | `04_Delivery_Dept/outputs/davinci/` |
 | **`writing`** | `/writing` ([`.agents/skills/writing/SKILL.md`](../.agents/skills/writing/SKILL.md)) | `02_Creative_Dept/writing/drafts/` | `02_Creative_Dept/writing/final_outputs/` | `04_Delivery_Dept/outputs/writing/` |
 
@@ -54,7 +55,19 @@
 4. **フォント保持版とアウトライン化済み入稿版の保存**:
    - `save_illustrator_document`（または `node .agents/mcp/illustrator-mcp/cli.js save --out <path> [--outline-text true]`）で `.ai` / `.pdf` / `.svg` / `.eps` および制作仕様書 `02_Creative_Dept/illustrator/final_outputs/content_[テーマ名].md` を `02_Creative_Dept/illustrator/final_outputs/` に出力する。
 
-### D. DaVinci Resolve 映像編集・カラーグレーディング・VFX制作手順（`<genre> = davinci`）
+### D. Adobe Photoshop 画像編集・フォトレタッチ・PSD合成・バナー制作手順（`<genre> = photoshop`）
+1. **Photoshop接続確認とCLIブリッジハイブリッド運用**:
+   - 専用スキル [`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md) および [`.agents/skills/adobe-photoshop/SKILL.md`](../.agents/skills/adobe-photoshop/SKILL.md) を参照する。
+   - MCPサーバー `photoshop` の `get_photoshop_status`（または `node .agents/mcp/photoshop-mcp/cli.js status`）で Adobe Photoshop 2027 の状態を確認する。
+2. **ExtendScript（JSX / ActionManager）によるマルチレイヤーPSD構築・色調補正**:
+   - 生成スクリプト（`.jsx`）を `02_Creative_Dept/photoshop/drafts/` に作成し、`execute_photoshop_jsx`（または `node .agents/mcp/photoshop-mcp/cli.js exec --file <script.jsx>`）で実行する。
+   - **Photoshop座標系とDPIフォント補正の鉄則**: 左上が原点 `(0, 0)`・X右向き正・Y下向き正であり、`app.preferences.rulerUnits = Units.PIXELS;` を設定する。また `300 dpi` 等の高解像度ドキュメントで文字が拡大されるのを防ぐため、テキストサイズは必ず `new UnitValue(sizePx * (72.0 / doc.resolution), "pt")` でDPI補正して指定する。
+3. **カンバスPNG書き出しによる `read_file` 視覚監査ループ**:
+   - `export_canvas_png`（または `node .agents/mcp/photoshop-mcp/cli.js export-png --out <png_path> --scale 100`）で高画質PNGを書き出し、`read_file` でレイアウト・文字サイズ・コントラスト・切り抜き境界を目視監査する。
+4. **レイヤー保持PSDおよび指定形式（PNG/JPG/TIFF/CMYK版）の保存**:
+   - `save_photoshop_document`（または `node .agents/mcp/photoshop-mcp/cli.js save --out <path>`）で `.psd` / `.png` / `.jpg` / `.tiff` および制作仕様書 `02_Creative_Dept/photoshop/final_outputs/content_[テーマ名].md` を `02_Creative_Dept/photoshop/final_outputs/` に出力する。
+
+### E. DaVinci Resolve 映像編集・カラーグレーディング・VFX制作手順（`<genre> = davinci`）
 1. **DaVinci Resolve 連携とスクリプト構築**:
    - 専用スキル [`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md) を参照する。
    - 編集・コンポジットスクリプトを `02_Creative_Dept/davinci/drafts/` に作成し、DaVinci Resolve Scripting API / Fusion / FFmpeg パイプラインでタイムライン編集・カラーグレーディング・テロップ合成を行う。

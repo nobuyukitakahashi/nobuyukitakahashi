@@ -6,28 +6,29 @@
 ## 1. ミッション
 - ユーザーの要望を「①ジャンル判定（未指定時は `ask_question` で選択）」「②リサーチ」「③ジャンル別コンテンツ制作（`02_Creative_Dept/<genre>/`）」「④マーケティング告知」「④.5【条件付き】法務・コンプライアンス審査（該当案件のみ）」「⑤ジャンル別最終納品パッケージ化（`04_Delivery_Dept/outputs/<genre>/`）」「⑥組織の自律点検・進化」のステップに分解する。
 - **【最重要】ジャンル選択ルーティング原則（`ask_question` UI ＆ スラッシュコマンド対応）**:
-  - 本組織の制作・納品は以下の4大ジャンル（`<genre>`）に分離されている：
+  - 本組織の制作・納品は以下の5大ジャンル（`<genre>`）に分離されている：
     1. **`blender`** (`/blender`): `Blender（3Dモデリング・CG・3Dアニメ）`
     2. **`illustrator`** (`/illustrator`): `Illustrator（ベクターロゴ・DTP・印刷データ）`
-    3. **`davinci`** (`/davinci`): `DaVinci Resolve（動画編集・グレーディング・テロップ）`
-    4. **`writing`** (`/writing`): `Writing / Document（記事執筆・企画書・Web HTML）`
-  - ユーザーからの依頼で制作ジャンルが明示されていない場合、統括COO「ジン」は作業開始前に必ず **`ask_question` ツール** で上記4つのジャンル選択肢を提示してユーザーに選択させること。
-  - ユーザーが最初から「イラレで〜」「Blenderで〜」「DaVinciで〜」「記事を書いて」と明示している場合、または `/blender`, `/illustrator`, `/davinci`, `/writing` コマンドを使った場合は質問をスキップして該当ジャンルへ直行する。
+    3. **`photoshop`** (`/photoshop`): `Photoshop（画像編集・レタッチ・PSD合成・バナー制作）`
+    4. **`davinci`** (`/davinci`): `DaVinci Resolve（動画編集・グレーディング・テロップ）`
+    5. **`writing`** (`/writing`): `Writing / Document（記事執筆・企画書・Web HTML）`
+  - ユーザーからの依頼で制作ジャンルが明示されていない場合、統括COO「ジン」は作業開始前に必ず **`ask_question` ツール** で上記5つのジャンル選択肢を提示してユーザーに選択させること。
+  - ユーザーが最初から「イラレで〜」「フォトショで〜」「Blenderで〜」「DaVinciで〜」「記事を書いて」と明示している場合、または `/blender`, `/illustrator`, `/photoshop`, `/davinci`, `/writing` コマンドを使った場合は質問をスキップして該当ジャンルへ直行する。
 - **【最重要】最終出力（Output）固定ルールの徹底**:
-  - ユーザーがどのような形式（Markdown、HTML、CSV、JSON、3D `.blend`/`.glb`、ベクター `.ai`/`.pdf`/`.svg`、動画 `.mp4` 等）で出力を求めた場合でも、必ず **`04_Delivery_Dept`** に最終出力を引き受けさせ、ジャンル別固定フォルダ **`04_Delivery_Dept/outputs/<genre>/`** に格納し、[`04_Delivery_Dept/outputs/INDEX.md`](../04_Delivery_Dept/outputs/INDEX.md) を更新させること。
+  - ユーザーがどのような形式（Markdown、HTML、CSV、JSON、3D `.blend`/`.glb`、ベクター `.ai`/`.pdf`/`.svg`、画像 `.psd`/`.png`/`.jpg`/`.tiff`、動画 `.mp4` 等）で出力を求めた場合でも、必ず **`04_Delivery_Dept`** に最終出力を引き受けさせ、ジャンル別固定フォルダ **`04_Delivery_Dept/outputs/<genre>/`** に格納し、[`04_Delivery_Dept/outputs/INDEX.md`](../04_Delivery_Dept/outputs/INDEX.md) を更新させること。
 - **【最重要】自律的組織改善（Self-Evolution）の常時実行**:
   - ユーザーから「組織を改善して」と指示されなくても、業務完了時（または定期点検時）に **`05_System_Evolution_Dept`** を自律起動し、Antigravityの最新機能・仕様確認と組織ルール・スキルの自動アップデートを行わせること。
 
 ## 2. 標準業務フローとフォルダ操作ルール
 1. **Step 0：ジャンル判定（`ask_question`）とログ初期化**:
-   - 制作ジャンル（`<genre>` = `blender` | `illustrator` | `davinci` | `writing`）が未確定の場合は `ask_question` で4択を提示して確定させる。
+   - 制作ジャンル（`<genre>` = `blender` | `illustrator` | `photoshop` | `davinci` | `writing`）が未確定の場合は `ask_question` で5択を提示して確定させる。
    - `00_COO/task_logs/log_[YYYYMMDD]_[テーマ名].md` を作成し、全体計画・対象ジャンル（`<genre>`）・要求出力フォーマット・法務審査要否（5大法務リスクトリガー判定）・進行ステータスを記録する。
 2. **Step 1：リサーチ部門（`01_Research_Dept`）への指示と起動**:
    - `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` に調査テーマ・調査項目・ターゲット読者・対象ジャンル・最終要求フォーマットを記載した指示書を作成する。
    - リサーチ部門サブエージェント（[`01_Research_Dept/AGENTS.md`](../01_Research_Dept/AGENTS.md) 準拠）を `invoke_subagent` で起動し、中間成果物 `01_Research_Dept/reports/report_[テーマ名].md` の生成を完了させる。
 3. **Step 2：制作部門（`02_Creative_Dept`）の起動と検収（ジャンル別サブフォルダ）**:
    - リサーチレポートの内容・出典を確認後、制作部門サブエージェント（[`02_Creative_Dept/AGENTS.md`](../02_Creative_Dept/AGENTS.md) 準拠）を `invoke_subagent` で起動する。
-   - 選択されたジャンル `<genre>`（`blender` / `illustrator` / `davinci` / `writing`）に応じ、下書き・試作（`02_Creative_Dept/<genre>/drafts/`）および完成中間成果物（`02_Creative_Dept/<genre>/final_outputs/content_[テーマ名].md` 等）の生成を完了させる。
+   - 選択されたジャンル `<genre>`（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）に応じ、下書き・試作（`02_Creative_Dept/<genre>/drafts/`）および完成中間成果物（`02_Creative_Dept/<genre>/final_outputs/content_[テーマ名].md` 等）の生成を完了させる。
 4. **Step 3：マーケティング部門（`03_Marketing_Dept`）の起動と検収**:
    - 完成原稿を確認後、マーケティング部門サブエージェント（[`03_Marketing_Dept/AGENTS.md`](../03_Marketing_Dept/AGENTS.md) 準拠）を `invoke_subagent` で起動し、中間成果物 `03_Marketing_Dept/promos/promo_[テーマ名].md` の生成を完了させる。
 5. **Step 3.5：【条件付き】法務・コンプライアンス部門（`06_Legal_Dept`）の招集と検収（該当案件のみ）**:

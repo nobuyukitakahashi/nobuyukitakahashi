@@ -1,14 +1,15 @@
-# 最終成果物（Output）納品インデックス（4大ジャンル別台帳）
+# 最終成果物（Output）納品インデックス（5大ジャンル別台帳）
 
 本フォルダ（`04_Delivery_Dept/outputs/`）は、AIバーチャル組織が生成するすべての最終成果物を受け取るための**唯一の固定出力フォルダ**です。
-成果物は制作ジャンル別の4つのサブフォルダ（[`blender/`](blender/)、[`illustrator/`](illustrator/)、[`davinci/`](davinci/)、[`writing/`](writing/)）に体系的に分類・格納されています。
+成果物は制作ジャンル別の5つのサブフォルダ（[`blender/`](blender/)、[`illustrator/`](illustrator/)、[`photoshop/`](photoshop/)、[`davinci/`](davinci/)、[`writing/`](writing/)）に体系的に分類・格納されています。
 
 | ジャンル | 格納サブフォルダ | 対応スラッシュコマンド | 主な用途・ファイル形式 |
 | :--- | :--- | :--- | :--- |
 | **🎨 1. Blender** | [`04_Delivery_Dept/outputs/blender/`](blender/) | `/blender` | 3Dモデリング、CGレンダリング、3Dアニメーション（`.blend`, `.glb`, `.png`, `.mp4`） |
 | **✒️ 2. Adobe Illustrator** | [`04_Delivery_Dept/outputs/illustrator/`](illustrator/) | `/illustrator` | ベクターロゴ、CMYK印刷入稿データ、アウトライン化DTP（`.ai`, `.pdf`, `.svg`, `.eps`, `.png`） |
-| **🎬 3. DaVinci Resolve** | [`04_Delivery_Dept/outputs/davinci/`](davinci/) | `/davinci` | 映像編集、カラーグレーディング、テロップ・VFX合成（`.mp4`, `.mov`, `.drp`） |
-| **📝 4. Writing & Documents** | [`04_Delivery_Dept/outputs/writing/`](writing/) | `/writing` | 記事・コラム、調査レポート、会議資料、法務・システム仕様書（`.md`, `.html`, `.csv`, `.json`） |
+| **🖼️ 3. Adobe Photoshop** | [`04_Delivery_Dept/outputs/photoshop/`](photoshop/) | `/photoshop` | 画像編集、フォトレタッチ、マルチレイヤーPSD合成、バナー・サムネイル制作（`.psd`, `.png`, `.jpg`, `.tiff`） |
+| **🎬 4. DaVinci Resolve** | [`04_Delivery_Dept/outputs/davinci/`](davinci/) | `/davinci` | 映像編集、カラーグレーディング、テロップ・VFX合成（`.mp4`, `.mov`, `.drp`） |
+| **📝 5. Writing & Documents** | [`04_Delivery_Dept/outputs/writing/`](writing/) | `/writing` | 記事・コラム、調査レポート、会議資料、法務・システム仕様書（`.md`, `.html`, `.csv`, `.json`） |
 
 ---
 
@@ -36,7 +37,15 @@
 
 ---
 
-## 🎬 3. DaVinci Resolve（映像編集・カラーグレーディング・VFX） — `outputs/davinci/`
+## 🖼️ 3. Adobe Photoshop（画像編集・レタッチ・PSD合成・バナー制作） — `outputs/photoshop/`
+
+| 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-11-11 | Adobe Photoshop 2027 (v28.0) 自動制御用ローカルMCPサーバー（`photoshop`）＆専用スキル（`/photoshop`・`adobe-photoshop`）構築・5大ジャンル拡張・実機検証パッケージ | [`output_20261111_photoshop_mcp_setup_full.md`](photoshop/output_20261111_photoshop_mcp_setup_full.md)<br>[`output_20261111_photoshop_mcp_verify.psd`](photoshop/output_20261111_photoshop_mcp_verify.psd)<br>[`output_20261111_photoshop_mcp_verify.png`](photoshop/output_20261111_photoshop_mcp_verify.png) | Markdown / Adobe Photoshop (`.psd`, 3グループ計18レイヤー保持) / PNG (`1600×1000 px`, `300 dpi` RGB 8-bit) | 外部npmパッケージ依存ゼロで Windows COM (`Photoshop.Application`) ＆ macOS (`osascript`) の両方に対応する stdio JSON-RPC 2.0 MCPサーバー（[`.agents/mcp/photoshop-mcp/server.js`](../../.agents/mcp/photoshop-mcp/server.js)）および即時実行CLIブリッジ（[`cli.js`](../../.agents/mcp/photoshop-mcp/cli.js)）を構築。全5ツール（`get_photoshop_status`, `execute_photoshop_jsx`, `get_document_summary`, `export_canvas_png`, `save_photoshop_document`）、300dpi環境向けフォントサイズDPI補正公式（`sizePx * 72 / doc.resolution` pt）・日本語パスUTF-8 BOM完全保護を実装し、Adobe Photoshop 2027 (`v28.0.0`) 実機にてマルチレイヤーPSD生成・視覚監査PNG書き出しを完了 |
+
+---
+
+## 🎬 4. DaVinci Resolve（映像編集・カラーグレーディング・VFX） — `outputs/davinci/`
 
 | 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -44,7 +53,7 @@
 
 ---
 
-## 📝 4. Writing & Documents（記事・調査レポート・会議資料・システム文書） — `outputs/writing/`
+## 📝 5. Writing & Documents（記事・調査レポート・会議資料・システム文書） — `outputs/writing/`
 
 | 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
 | :--- | :--- | :--- | :--- | :--- |

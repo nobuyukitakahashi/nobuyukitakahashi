@@ -1,5 +1,35 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-11 (v20): Adobe Photoshop 2027 (v28.0) 自動制御用ローカルMCPサーバー（`photoshop`）＆専用スキル（`/photoshop`, `adobe-photoshop`）の構築・実機検証、および制作体制の5大ジャンル（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）への拡張
+
+### 変更理由
+`02_Creative_Dept` および `04_Delivery_Dept/outputs/` において、画像編集・フォトレタッチ・マルチレイヤーPSD合成・バナー制作を **Adobe Photoshop 2027 (`v28.0.0`)** 実機で自動遂行できるよう、外部npmパッケージ依存ゼロのローカルMCPサーバー（`photoshop`）およびCLIブリッジ（`cli.js`）、専用スキル（`/photoshop`, `adobe-photoshop`）を構築・登録し、組織の制作ルーティングを従来の4大ジャンルから **5大ジャンル（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）** に拡張するため。
+
+### Before / After
+- **Before (v19)**:
+  - 制作ジャンルは4大ジャンル（`blender`, `illustrator`, `davinci`, `writing`）で構成されており、Adobe Photoshop 2027 によるマルチレイヤー `.psd` 制作やフォトレタッチの専用MCPサーバー・専用ジャンルフォルダが未整備だった。
+- **After (v20)**:
+  - **① ローカルMCPサーバー [`.agents/mcp/photoshop-mcp/server.js`](.agents/mcp/photoshop-mcp/server.js) および CLIブリッジ [`.agents/mcp/photoshop-mcp/cli.js`](.agents/mcp/photoshop-mcp/cli.js) の新設**:
+    - 外部npmパッケージ依存ゼロで `Content-Length` ヘッダおよび改行区切りJSON-RPC 2.0 の両方に対応し、`get_photoshop_status`, `execute_photoshop_jsx`, `get_document_summary`, `export_canvas_png`, `save_photoshop_document` の全5ツールを実装。
+    - Windows ヘッドレス安全設計（`-NonInteractive`, `stdio: ["ignore", "pipe", "pipe"]`, `windowsHide: true`, `tasklist.exe` 高速プロセス検出で `316 ms` 応答）および WMI デタッチド COM ホルダー（`agy_ps_com_holder.ps1`）による DCOM クラスファクトリ維持機構、UTF-8 BOM 完全保護を実装。
+  - **② 専用スキル [`.agents/skills/photoshop/SKILL.md`](.agents/skills/photoshop/SKILL.md) ＆ [`.agents/skills/adobe-photoshop/SKILL.md`](.agents/skills/adobe-photoshop/SKILL.md) の新設とグローバル同期**:
+    - Photoshopの座標系（左上原点・Y軸下向き正）、`300 dpi` 等の高解像度環境におけるテキストサイズのDPIスケーリング補正公式（`sizePx * (72.0 / doc.resolution)` pt）、`export_canvas_png` + `read_file` 視覚監査ループを体系化し、グローバルスキルフォルダおよび `pc-env-sync` に同期。
+  - **③ 5大ジャンル体制への拡張と実機検証の完了**:
+    - `02_Creative_Dept/photoshop/{drafts,final_outputs}/` および `04_Delivery_Dept/outputs/photoshop/` を新設し、全組織ルール（`AGENTS.md`, `00_COO/AGENTS.md`, `02_Creative_Dept/AGENTS.md`, `04_Delivery_Dept/AGENTS.md`）およびオーケストレーションスキルを5択ルーティングに更新。
+    - Adobe Photoshop 2027 (`v28.0.0`) 実機にて `1600×1000 px` (`300 dpi`, RGB 8-bit, 3グループ計18レイヤー) のマルチレイヤーPSD [`output_20261111_photoshop_mcp_verify.psd`](04_Delivery_Dept/outputs/photoshop/output_20261111_photoshop_mcp_verify.psd) および視覚監査用PNG [`output_20261111_photoshop_mcp_verify.png`](04_Delivery_Dept/outputs/photoshop/output_20261111_photoshop_mcp_verify.png) を生成し、`read_file` 目視監査と `INDEX.md` 全5ジャンルリンク実在検証を完了。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`.agents/mcp/photoshop-mcp/server.js`](.agents/mcp/photoshop-mcp/server.js), [`.agents/mcp/photoshop-mcp/cli.js`](.agents/mcp/photoshop-mcp/cli.js)
+  - [`.agents/skills/photoshop/SKILL.md`](.agents/skills/photoshop/SKILL.md), [`.agents/skills/adobe-photoshop/SKILL.md`](.agents/skills/adobe-photoshop/SKILL.md)
+  - `02_Creative_Dept/photoshop/{drafts,final_outputs}/`, `04_Delivery_Dept/outputs/photoshop/`, [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`AGENTS.md`](AGENTS.md), [`00_COO/AGENTS.md`](00_COO/AGENTS.md), [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md), [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md)
+  - [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md), [`.agents/skills/creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md), [`.agents/skills/delivery-dept/SKILL.md`](.agents/skills/delivery-dept/SKILL.md)
+  - [`.agents/skills/pc-env-sync/SKILL.md`](.agents/skills/pc-env-sync/SKILL.md), [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1), [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261111_photoshop_mcp.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261111_photoshop_mcp.md)
+
+---
+
 ## 2026-11-11 (v19): 4大制作ジャンル選択ルーティング（`/blender`, `/illustrator`, `/davinci`, `/writing` ＆ `ask_question` UI）の導入、および `02_Creative_Dept/`・`04_Delivery_Dept/outputs/` のジャンル別サブフォルダ分離と全既存ファイル移行
 
 ### 変更理由

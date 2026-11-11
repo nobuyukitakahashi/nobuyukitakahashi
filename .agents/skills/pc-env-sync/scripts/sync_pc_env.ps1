@@ -39,8 +39,10 @@ $SkillsToSync = @(
     "auto-git-sync",
     "wordpress-avada-maintenance",
     "adobe-illustrator",
+    "adobe-photoshop",
     "blender",
     "illustrator",
+    "photoshop",
     "davinci",
     "writing",
     "pc-env-sync"
@@ -99,8 +101,9 @@ if ($UvxCmd) {
     }
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender & illustrator) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator & photoshop) ==="
 $IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
+$PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server.js"
 $BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
@@ -162,6 +165,12 @@ foreach ($cfgPath in $McpConfigPaths) {
         args    = @($IllustratorMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "illustrator" -Value $illustratorEntry -Force
+
+    $photoshopEntry = [PSCustomObject]@{
+        command = "node"
+        args    = @($PhotoshopMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "photoshop" -Value $photoshopEntry -Force
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)
