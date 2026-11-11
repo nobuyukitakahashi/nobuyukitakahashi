@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$env:PATH = "$env:LOCALAPPDATA\Programs\nodejs;$env:USERPROFILE\.local\bin;$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env:PATH"
 
 Write-Host "=== [1/6] Detecting Workspace & Google Drive Paths ==="
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -102,6 +103,8 @@ if ($UvxCmd) {
 }
 
 Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator & photoshop) ==="
+$NodeCmd = Get-Command node -ErrorAction SilentlyContinue
+$NodeExe = if ($NodeCmd) { $NodeCmd.Source } else { "node" }
 $IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
 $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server.js"
 $BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
@@ -126,26 +129,31 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
 
     $obsidianEntry = [PSCustomObject]@{
-        command = "node"
+        command = $NodeExe
         args    = @($McpVaultScript, $ObsidianVaultPath)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "obsidian" -Value $obsidianEntry -Force
 
+    $DetectedBlenderExe = Get-ChildItem "C:\Program Files\Blender Foundation" -Recurse -Filter "blender.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $DetectedBlenderExe) {
+        $DetectedBlenderExe = "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe"
+    }
+
     # Preserve existing blender-mcp.exe configuration if already configured or if blender-mcp.exe exists
     $existingBlender = $json.mcpServers.PSObject.Properties["blender"]
-    if ($existingBlender -and $existingBlender.Value.command -and ($existingBlender.Value.command -match "blender-mcp\.exe")) {
-        Write-Host "  [OK] Preserved existing blender-mcp.exe config in $cfgPath"
-    } elseif (Test-Path $BlenderMcpExe) {
+    if (Test-Path $BlenderMcpExe) {
         $blenderEntry = [PSCustomObject]@{
             command = $BlenderMcpExe
             args    = @()
             env     = [PSCustomObject]@{
-                BLENDER_PATH     = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
+                BLENDER_PATH     = $DetectedBlenderExe
                 BLENDER_MCP_HOST = "localhost"
                 BLENDER_MCP_PORT = "9876"
             }
         }
         $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
+    } elseif ($existingBlender -and $existingBlender.Value.command -and ($existingBlender.Value.command -match "blender-mcp\.exe")) {
+        Write-Host "  [OK] Preserved existing blender-mcp.exe config in $cfgPath"
     } else {
         $blenderEntry = [PSCustomObject]@{
             command = $UvxPath
@@ -155,19 +163,19 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
 
     $notebookLmEntry = [PSCustomObject]@{
-        command = "node"
+        command = $NodeExe
         args    = @($NotebookLmMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "notebooklm-research" -Value $notebookLmEntry -Force
 
     $illustratorEntry = [PSCustomObject]@{
-        command = "node"
+        command = $NodeExe
         args    = @($IllustratorMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "illustrator" -Value $illustratorEntry -Force
 
     $photoshopEntry = [PSCustomObject]@{
-        command = "node"
+        command = $NodeExe
         args    = @($PhotoshopMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "photoshop" -Value $photoshopEntry -Force
