@@ -39,6 +39,10 @@ $SkillsToSync = @(
     "auto-git-sync",
     "wordpress-avada-maintenance",
     "adobe-illustrator",
+    "blender",
+    "illustrator",
+    "davinci",
+    "writing",
     "pc-env-sync"
 )
 

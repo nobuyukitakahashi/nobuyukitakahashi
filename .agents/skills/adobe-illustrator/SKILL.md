@@ -5,17 +5,23 @@ description: >
   （node .agents/mcp/illustrator-mcp/cli.js）経由で自動制御し、ベクターロゴ、DTP・印刷用CMYKデータ、
   パッケージ・キャラクター図面、アウトライン化済み入稿データ（.ai / .pdf / .svg / .eps）および
   視覚監査用高解像度PNGを生成・編集するスキル。
+  作業ディレクトリは 02_Creative_Dept/illustrator/{drafts,final_outputs}/、最終納品先は 04_Delivery_Dept/outputs/illustrator/。
   Illustratorでのベクター制作、SVGからのCMYK .ai変換、テキストのアウトライン化、DTP入稿データ作成時に使用する。
 ---
 
-# Adobe Illustrator 自動制御スキル (`adobe-illustrator`)
+# Adobe Illustrator 自動制御スキル (`adobe-illustrator` / `/illustrator`)
 
-## 1. 概要とハイブリッド運用アーキテクチャ
+## 1. 概要とジャンル別ディレクトリ規約
 本スキルは、**Adobe Illustrator 2027**（Windows COM `Illustrator.Application` / macOS `osascript`）を以下の2経路でシームレスに制御します：
 1. **MCPサーバー `illustrator`**（[`.agents/mcp/illustrator-mcp/server.js`](../../mcp/illustrator-mcp/server.js)）:
    - `call_mcp_tool` から `illustrator` サーバーの5つのネイティブツールを呼び出す。
 2. **即時実行CLIブリッジ**（[`.agents/mcp/illustrator-mcp/cli.js`](../../mcp/illustrator-mcp/cli.js)）:
-   - MCP未接続時（Antigravity再起動前）やバッチ処理時に、`run_command` から `node .agents/mcp/illustrator-mcp/cli.js <subcommand>` を呼び出して全く同じ5つのツール機能を実行する。
+   - MCP未接続時やバッチ処理時に、`run_command` から `node .agents/mcp/illustrator-mcp/cli.js <subcommand>` を呼び出して全く同じ5つのツール機能を実行する。
+
+### 格納ディレクトリ規約（厳守）
+- **試作・JSXスクリプト置き場**: `02_Creative_Dept/illustrator/drafts/`
+- **制作部門の完成中間成果物置き場**: `02_Creative_Dept/illustrator/final_outputs/`
+- **最終納品フォルダ**: `04_Delivery_Dept/outputs/illustrator/`（`INDEX.md` の `## ✒️ 2. Adobe Illustrator` セクションへ登録）
 
 ---
 
@@ -41,19 +47,19 @@ node .agents/mcp/illustrator-mcp/cli.js status
 
 # 2. アクティブドキュメント（または指定ファイル）の構造サマリーを取得
 node .agents/mcp/illustrator-mcp/cli.js summary
-node .agents/mcp/illustrator-mcp/cli.js summary --file "02_Creative_Dept/final_outputs/logo.ai"
+node .agents/mcp/illustrator-mcp/cli.js summary --file "02_Creative_Dept/illustrator/final_outputs/logo.ai"
 
 # 3. ExtendScript (JSX) のインライン実行または .jsx ファイル実行
 node .agents/mcp/illustrator-mcp/cli.js exec --code "return app.version;"
-node .agents/mcp/illustrator-mcp/cli.js exec --file "02_Creative_Dept/drafts/build_logo.jsx"
+node .agents/mcp/illustrator-mcp/cli.js exec --file "02_Creative_Dept/illustrator/drafts/build_logo.jsx"
 
 # 4. 視覚監査（read_file）用の高解像度アートボードPNG書き出し（200%スケール・透過あり）
-node .agents/mcp/illustrator-mcp/cli.js export-png --out "02_Creative_Dept/final_outputs/preview.png" --scale 200 --transparent true
+node .agents/mcp/illustrator-mcp/cli.js export-png --out "02_Creative_Dept/illustrator/final_outputs/preview.png" --scale 200 --transparent true
 
 # 5. ドキュメントの保存（.ai / .pdf / .svg / .eps）＋テキストのアウトライン化
-node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/final_outputs/master_editable.ai" --outline-text false
-node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/final_outputs/print_outlined.ai" --outline-text true
-node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/final_outputs/print_outlined.pdf" --outline-text true
+node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/illustrator/final_outputs/master_editable.ai" --outline-text false
+node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/illustrator/final_outputs/print_outlined.ai" --outline-text true
+node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/illustrator/final_outputs/print_outlined.pdf" --outline-text true
 ```
 
 ---
@@ -138,9 +144,9 @@ for (var i = 0; i < doc.pathItems.length; i++) {
 ```
 
 ### 鉄則⑥：アートボードPNG書き出し＋`read_file` による視覚監査ループ（Visual Ground Truth）
-1. JSXスクリプトで図形・ロゴ・レイアウトを構築したら、必ず `export_artboard_png`（または `cli.js export-png`）で200%高解像度PNGを書き出す。
+1. JSXスクリプトで図形・ロゴ・レイアウトを構築したら、必ず `export_artboard_png`（または `cli.js export-png`）で200%高解像度PNGを `02_Creative_Dept/illustrator/final_outputs/` に書き出す。
 2. `read_file` で書き出したPNG画像を実際に目視確認し、以下を監査する：
    - アートボードの上下左右マージン・センタリングのズレがないか（特にY軸反転の計算ミスによる天地逆転やアートボード外へのはみ出し）。
    - 文字やベクターパーツ同士の重なり・潰れ・カーニング不良がないか。
    - 指定したCMYK配色・線幅・角丸半径がデザイン意図通りか。
-3. 視覚監査に合格したら、`save_illustrator_document`（または `cli.js save`）で `.ai` / `.pdf` / `.svg` を保存する。
+3. 視覚監査に合格したら、`save_illustrator_document`（または `cli.js save`）で `.ai` / `.pdf` / `.svg` を `02_Creative_Dept/illustrator/final_outputs/` に保存し、`04_Delivery_Dept` を通じて `04_Delivery_Dept/outputs/illustrator/` へ最終納品する。

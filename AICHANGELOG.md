@@ -1,5 +1,35 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-11 (v19): 4大制作ジャンル選択ルーティング（`/blender`, `/illustrator`, `/davinci`, `/writing` ＆ `ask_question` UI）の導入、および `02_Creative_Dept/`・`04_Delivery_Dept/outputs/` のジャンル別サブフォルダ分離と全既存ファイル移行
+
+### 変更理由
+制作案件の多様化（Blender 3D / Adobe Illustrator ベクター・DTP / DaVinci Resolve 映像編集 / Writing 記事・資料作成）に伴い、①依頼時に制作ジャンルが明示されていない場合は統括COO「ジン」が `ask_question` UI で4つのジャンル選択肢を提示してルーティングする仕組み（および `/blender`, `/illustrator`, `/davinci`, `/writing` で直行できる専用スキル）を導入し、②`02_Creative_Dept/` と最終納品先 `04_Delivery_Dept/outputs/` を4つのジャンル別サブフォルダに分離して既存全ファイルを体系的に整理・移行するため。
+
+### Before / After
+- **Before (v18)**:
+  - `02_Creative_Dept/drafts/`、`02_Creative_Dept/final_outputs/`、および `04_Delivery_Dept/outputs/` 直下に Blender 3D、Illustrator DTP、テキスト記事・会議資料のファイルが混在していた。
+  - 依頼時にジャンルを選択する対話型UIルールやジャンル別の専用スラッシュコマンド（`/blender`, `/illustrator`, `/davinci`, `/writing`）が未整備だった。
+- **After (v19)**:
+  - **① 4大ジャンル別サブフォルダ分離と全既存ファイル移行完了**:
+    - `02_Creative_Dept/{blender,illustrator,davinci,writing}/{drafts,final_outputs}/` を新設し、既存の全ドラフト・完成中間成果物をジャンル別に完全移行（`blender`: 15 drafts / 48 final_outputs、`illustrator`: 14 drafts / 17 final_outputs）。
+    - `04_Delivery_Dept/outputs/{blender,illustrator,davinci,writing}/` を新設し、`INDEX.md` 以外の全116ファイルをジャンル別に完全移行（`blender`: 82ファイル、`illustrator`: 32ファイル、`writing`: 2ファイル）。
+    - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) を4大ジャンル別セクション構成に全面刷新し、全120箇所のMarkdownリンクの実在性（リンク切れ0件）をスクリプトで検証完了。
+  - **② 対話型ジャンル選択ルーティング（`ask_question` UI）と専用スキル4種の新設**:
+    - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) (`/blender`)、[`.agents/skills/illustrator/SKILL.md`](.agents/skills/illustrator/SKILL.md) (`/illustrator`)、[`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md) (`/davinci`)、[`.agents/skills/writing/SKILL.md`](.agents/skills/writing/SKILL.md) (`/writing`) を新設し、グローバルスキルフォルダおよび `pc-env-sync` に同期。
+    - [`AGENTS.md`](AGENTS.md)、[`00_COO/AGENTS.md`](00_COO/AGENTS.md)、[`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)、[`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md) 等にジャンル選択ルーティング原則を明文化。
+
+### 影響範囲
+- 新設・更新:
+  - `02_Creative_Dept/{blender,illustrator,davinci,writing}/{drafts,final_outputs}/`
+  - `04_Delivery_Dept/outputs/{blender,illustrator,davinci,writing}/` および [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md), [`.agents/skills/illustrator/SKILL.md`](.agents/skills/illustrator/SKILL.md), [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md), [`.agents/skills/writing/SKILL.md`](.agents/skills/writing/SKILL.md), [`.agents/skills/adobe-illustrator/SKILL.md`](.agents/skills/adobe-illustrator/SKILL.md)
+  - [`AGENTS.md`](AGENTS.md), [`00_COO/AGENTS.md`](00_COO/AGENTS.md), [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md), [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md)
+  - [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md), [`.agents/skills/creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md), [`.agents/skills/delivery-dept/SKILL.md`](.agents/skills/delivery-dept/SKILL.md)
+  - [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1), [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261111_genre_restructure.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261111_genre_restructure.md)
+
+---
+
 ## 2026-11-11 (v18): Adobe Illustrator 2027 自動制御用ローカルMCPサーバー（`illustrator`）＆専用スキル（`adobe-illustrator`）の構築・グローバル登録・実機検証
 
 ### 変更理由
