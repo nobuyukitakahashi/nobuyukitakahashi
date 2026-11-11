@@ -1,5 +1,28 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-12 (v21): 丸胴体・超短足・超短腕3Dマスコット（カービィ／サンリオ型）アニメーション設計鉄則（`SO(3)` 純粋直交回転リグ・適応ストライドピボット・両足踏ん張りおじぎ）の Blender スキル＆Creative部門ルールへの統合
+
+### 変更理由
+株式会社CVN 公式マスコット「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体ペア3Dアニメーション全面再設計（`cvn_pair_mascot_anim_redesign`）において、旧ラバー弾性変形（短い手足のゴム伸長や腹部の凹み折れ曲がり）を全廃し、カービィ型 `SO(3)` 純粋回転リグによる愛らしい超短足マスコット動作を確立した技術知見・再発防止策を組織標準資産へ昇華し、将来の全Blenderマスコット案件で即座に再現できるようにするため。
+
+### Before / After
+- **Before (v20)**:
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) には静止3D造形（5面図LUT投影、ソフビ一体成型シームレス融合、空間曲線の球心貫入接続）の鉄則は定義されていたが、丸胴体・超短足・超短腕マスコットの3Dアニメーション変形・カメラ演出に関する設計鉄則が未定義だった。
+- **After (v21)**:
+  - **「丸胴体・超短足・超短腕マスコット（カービィ／サンリオ型）の3Dアニメーション鉄則」を [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に明文化**:
+    1. **ラバー伸縮・腹部凹みの厳禁と `SO(3)` 純粋直交回転**: 短い腕や足をゴムのように引き伸ばす表現（`stretch > 1.0`）やおじぎで腹部を凹ませる表現はマスコットの魅力を損なうため厳禁とし、タマゴ／球体側面の接線曲率中心まわりの `SO(3)` 純粋直交回転（`det(R)=1`, 伸縮率 `1.000倍`）で短いパドル手をほっぺ横までパタパタ挙上・前後スイングさせる。
+    2. **適応ピボットによる横シワ防止と斜め前3/4導入カメラ**: 前後ストライド時は前すね／後かかと適応ピボットで胸ロゴ直下の横シワ（`dz'/dz <= 0`）を防止し、Phase 1 歩き出しは前後スイングが立体的に見える約 `33°〜36°` の斜め前3/4アングルから正面構図へ回り込む。
+    3. **両足踏ん張り型のおじぎピボットと厳密接地ロック**: おじぎ時は足底〜足首下部の回転重みを抑えて短い2本の足を床に踏ん張らせ、足なしボーリング玉化を防ぐ（毎フレーム足底最下点 `min(z)` で床面接地を厳密ロック）。
+
+### 影響範囲
+- 更新・新規作成:
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261112.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261112.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
 ## 2026-11-11 (v20): Adobe Photoshop 2027 (v28.0) 自動制御用ローカルMCPサーバー（`photoshop`）＆専用スキル（`/photoshop`, `adobe-photoshop`）の構築・実機検証、および制作体制の5大ジャンル（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）への拡張
 
 ### 変更理由

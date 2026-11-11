@@ -15,10 +15,10 @@ from mathutils import Vector, Matrix
 # ==========================================
 # 0. パス設定とディレクトリ準備
 # ==========================================
-WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-REF_DIR = os.path.join(WORKSPACE_DIR, "02_Creative_Dept", "drafts", "ref_images")
-DRAFTS_DIR = os.path.join(WORKSPACE_DIR, "02_Creative_Dept", "drafts")
-OUTPUT_DIR = os.path.join(WORKSPACE_DIR, "02_Creative_Dept", "final_outputs")
+DRAFTS_DIR = os.path.dirname(os.path.abspath(__file__))
+BLENDER_DEPT_DIR = os.path.dirname(DRAFTS_DIR)
+REF_DIR = os.path.join(DRAFTS_DIR, "ref_images")
+OUTPUT_DIR = os.path.join(BLENDER_DEPT_DIR, "final_outputs")
 os.makedirs(DRAFTS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
