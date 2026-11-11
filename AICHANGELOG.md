@@ -1,5 +1,37 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-11 (v18): Adobe Illustrator 2027 自動制御用ローカルMCPサーバー（`illustrator`）＆専用スキル（`adobe-illustrator`）の構築・グローバル登録・実機検証
+
+### 変更理由
+`02_Creative_Dept`（制作・編集・3D・ベクターDTP部門）において、コーポレートロゴ、DTP・印刷用CMYKデータ（`.ai` / `.pdf` / `.svg` / `.eps`）、テキストのアウトライン化（`createOutline()`）、およびアートボードの高解像度PNG書き出し＋`read_file` 視覚監査ループを **Adobe Illustrator 2027 (Version 31.0.0)** 実機で自動遂行できるよう、外部パッケージ依存ゼロのローカルMCPサーバー（`illustrator`）およびCLIブリッジ（`cli.js`）、専用スキル（`adobe-illustrator`）を構築・登録するため。
+
+### Before / After
+- **Before (v17)**:
+  - `02_Creative_Dept` はテキスト原稿執筆および Blender 5.2 MCP / Headless CLI による3D制作に対応していたが、Adobe Illustrator を直接制御してCMYKカラースペースの純正 `.ai` / `.pdf` 入稿データやテキストアウトライン化データを生成するMCPサーバー・スキルが未構築だった。
+- **After (v18)**:
+  - **ローカルMCPサーバー [`.agents/mcp/illustrator-mcp/server.js`](.agents/mcp/illustrator-mcp/server.js) および CLIブリッジ [`.agents/mcp/illustrator-mcp/cli.js`](.agents/mcp/illustrator-mcp/cli.js) の新設**:
+    - 外部npmパッケージ依存ゼロで `Content-Length` ヘッダおよび改行区切りJSON-RPC 2.0 の両方に対応し、`get_illustrator_status`, `execute_illustrator_jsx`, `get_document_summary`, `export_artboard_png`, `save_illustrator_document` の全5ツールを実装。
+    - UTF-8 BOM（`\uFEFF`）＋ASCII一時ファイル仲介＋ExtendScript `JSON.stringify` ポリフィルにより日本語パス（`マイドライブ`）環境下での文字化けを完全防止。
+  - **専用スキル [`.agents/skills/adobe-illustrator/SKILL.md`](.agents/skills/adobe-illustrator/SKILL.md) の新設とグローバル同期**:
+    - MCPツール＆CLIリファレンス、IllustratorのY軸上向き正の座標系、CMYKカラー設定、ベジェパス構築、アウトライン化、`export_artboard_png` + `read_file` 目視監査ループの鉄則を体系化し、`C:\Users\nobuy\.gemini\config\skills\adobe-illustrator\SKILL.md` へ同期。
+  - **グローバル `mcp_config.json` 3箇所への登録と `pc-env-sync` の拡張**:
+    - 既存の `blender-mcp.exe` カスタム設定を保護した上で `illustrator` MCPサーバーを登録し、`sync_pc_env.ps1` / `sync_mac_env.sh` に組み込み。
+  - **Adobe Illustrator 2027 実機検証の完了**:
+    - CVNブランドグリーン（`C:90 M:0 Y:70 K:0`）のCMYKベクターバッジ＆アウトライン化テキストを生成し、[`test_illustrator_mcp_verify.ai`](02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.ai) および [`test_illustrator_mcp_verify.png`](02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.png)（`1600×1000 px`）を出力して `read_file` で視覚監査を実施。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`.agents/mcp/illustrator-mcp/server.js`](.agents/mcp/illustrator-mcp/server.js)
+  - [`.agents/mcp/illustrator-mcp/cli.js`](.agents/mcp/illustrator-mcp/cli.js)
+  - [`.agents/skills/adobe-illustrator/SKILL.md`](.agents/skills/adobe-illustrator/SKILL.md)
+  - [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1), [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh), [`.agents/skills/pc-env-sync/SKILL.md`](.agents/skills/pc-env-sync/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md), [`.agents/skills/creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md), [`AGENTS.md`](AGENTS.md)
+  - [`02_Creative_Dept/drafts/test_illustrator_mcp_build.jsx`](02_Creative_Dept/drafts/test_illustrator_mcp_build.jsx)
+  - [`02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.ai`](02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.ai), [`02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.png`](02_Creative_Dept/final_outputs/test_illustrator_mcp_verify.png), [`02_Creative_Dept/final_outputs/content_illustrator_mcp_setup.md`](02_Creative_Dept/final_outputs/content_illustrator_mcp_setup.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261111_illustrator_mcp.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261111_illustrator_mcp.md)
+
+---
+
 ## 2026-11-10 (v17): 株式会社CVN「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体横並び3Dシーンの原画（`ref_20261110_pair_balance.png`）完全一致バランス改修・アンテナ3D球心接続・ソフビ一体成型シームレス腕造形化、および Creative部門3D造形ルール・Git同期スキルの改善
 
 ### 変更理由

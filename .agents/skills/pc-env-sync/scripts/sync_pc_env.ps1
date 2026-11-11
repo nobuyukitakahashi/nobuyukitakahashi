@@ -38,6 +38,7 @@ $SkillsToSync = @(
     "audio-meeting-minutes",
     "auto-git-sync",
     "wordpress-avada-maintenance",
+    "adobe-illustrator",
     "pc-env-sync"
 )
 
@@ -94,7 +95,9 @@ if ($UvxCmd) {
     }
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian & blender) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender & illustrator) ==="
+$IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
+$BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
     (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json"),
@@ -121,17 +124,40 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "obsidian" -Value $obsidianEntry -Force
 
-    $blenderEntry = [PSCustomObject]@{
-        command = $UvxPath
-        args    = @("mcp-for-blender")
+    # Preserve existing blender-mcp.exe configuration if already configured or if blender-mcp.exe exists
+    $existingBlender = $json.mcpServers.PSObject.Properties["blender"]
+    if ($existingBlender -and $existingBlender.Value.command -and ($existingBlender.Value.command -match "blender-mcp\.exe")) {
+        Write-Host "  [OK] Preserved existing blender-mcp.exe config in $cfgPath"
+    } elseif (Test-Path $BlenderMcpExe) {
+        $blenderEntry = [PSCustomObject]@{
+            command = $BlenderMcpExe
+            args    = @()
+            env     = [PSCustomObject]@{
+                BLENDER_PATH     = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
+                BLENDER_MCP_HOST = "localhost"
+                BLENDER_MCP_PORT = "9876"
+            }
+        }
+        $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
+    } else {
+        $blenderEntry = [PSCustomObject]@{
+            command = $UvxPath
+            args    = @("mcp-for-blender")
+        }
+        $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
     }
-    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
 
     $notebookLmEntry = [PSCustomObject]@{
         command = "node"
         args    = @($NotebookLmMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "notebooklm-research" -Value $notebookLmEntry -Force
+
+    $illustratorEntry = [PSCustomObject]@{
+        command = "node"
+        args    = @($IllustratorMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "illustrator" -Value $illustratorEntry -Force
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)

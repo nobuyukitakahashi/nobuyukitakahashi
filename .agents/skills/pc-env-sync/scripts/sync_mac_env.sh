@@ -33,6 +33,7 @@ SKILLS_TO_SYNC=(
   "audio-meeting-minutes"
   "auto-git-sync"
   "wordpress-avada-maintenance"
+  "adobe-illustrator"
   "pc-env-sync"
 )
 
@@ -141,9 +142,13 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
       command: blenderDir + "/venv/bin/mcp-for-blender",
       args: []
     };
+    json.mcpServers["illustrator"] = {
+      command: nodeBin,
+      args: [process.argv[8]]
+    };
 
     fs.writeFileSync(cfgPath, JSON.stringify(json, null, 2) + "\n", "utf8");
-  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$BLENDER_MCP_DIR"
+  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$BLENDER_MCP_DIR" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
 

@@ -2,7 +2,8 @@
 name: pc-env-sync
 description: >
   複数PC間で nobuyukitakahashi プロジェクトのAntigravity実行環境（Git最新化、グローバルスキル、
-  Obsidian MCPサーバー設定、Blender MCPサーバー設定、NotebookLM認証ディレクトリ準備）を一言で完全同期・再現するスキル。
+  Obsidian MCPサーバー設定、Blender MCPサーバー設定、Adobe Illustrator MCPサーバー設定、
+  NotebookLM認証ディレクトリ準備）を一言で完全同期・再現するスキル。
   ユーザーが「このPCの環境セットアップをして」「環境同期して」「別PCの初期設定をして」と指示した際、
   または /pc-env-sync 実行時に使用する。
 ---
@@ -16,7 +17,7 @@ description: >
 
 1. **同期スクリプトの実行（OS別）**
    - **Windows 環境の場合**:
-     以下のPowerShellスクリプトを実行し、Git最新化・グローバルスキル配置・`@bitbonsai/mcpvault` 導入・Blender MCP (`uvx mcp-for-blender`) 登録・`mcp_config.json` 更新・NotebookLM保存先フォルダ作成を一括で行う。
+     以下のPowerShellスクリプトを実行し、Git最新化・グローバルスキル配置（`adobe-illustrator` 等を含む）・`@bitbonsai/mcpvault` 導入・Blender MCP & Adobe Illustrator MCP (`.agents/mcp/illustrator-mcp/server.js`) 登録・`mcp_config.json` 更新・NotebookLM保存先フォルダ作成を一括で行う。
      ```powershell
      powershell -NoProfile -ExecutionPolicy Bypass -File "g:\マイドライブ\git\nobuyukitakahashi\.agents\skills\pc-env-sync\scripts\sync_pc_env.ps1"
      ```
