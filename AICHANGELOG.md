@@ -1,5 +1,37 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-12 (v22): 株式会社CVN「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体ペア15秒3Dアニメーション v5 完成版改修（Blender 5.3移行・腕付け根の「ひれ」完全根絶・超短足のねじれ解消・ボディ保護制御）、および Blender 5.3 対応＆手足リグ変形知見のスキル・ルール標準化
+
+### 変更理由
+1. 株式会社CVN 公式キャラクター「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体ペア15秒3Dアニメーション（`cvn_pair_anim_arm_fin_fix`）において、①静止画用の単一溶接メッシュ（`Boolean Union + Voxel Remesh`）をそのまま局所ウェイトで大角度回転させたために腕付け根の遷移帯が引き伸ばされて出現していた「翼の骨格・ひれ状のシワ」を幾何学的に100%根絶し、②超短足の前後スイング時のねじれ・カギ鼻状変形を解消して可愛い丸足を保ったまま心地よく弾性伸縮させ、③ボディ本体（タマゴ型輪郭・お腹・胸ロゴ `LILI-ch` / `LILI-net`・顔枠）への歪み波及を完全ゼロに抑えるため。
+2. 実行環境の **Blender 5.3**（`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe`）移行に伴うCLI検出・動画出力設定手順（`media_type = 'VIDEO'` 先行指定）および今回の手足リグ変形・ボディ保護鉄則を [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) と [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に標準化するため。
+
+### Before / After
+- **Before (v21)**:
+  - 静止画用の溶接一体メッシュ（`Body + Arm.L/R`）に対して腕領域のみを重み `0 -> 1` で大角度スイング・手振り挙上させたため、境界遷移帯ポリゴンがせん断・引き伸ばされて腕付け根に不自然なひれ・膜状のシワが発生していた。また足領域の横幅途中カットオフや前後非対称クリフにより、前後ストライド時に丸足がねじれて歪んでいた。
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) のCLIパスが Blender 5.2 固定記載であり、`media_type = 'VIDEO'` 先行設定や「静止画溶接メッシュ vs アニメーション剛体埋め込み腕の使い分け」「足キャップ均一ウェイト＋ボディ `w=0.000` ロック保護」が未記載だった。
+- **After (v22)**:
+  - **① 腕付け根の不自然なひれ完全根絶（純粋タマゴ胴体＋独立閉曲面パドル腕 `w=1.000` 剛体 `SO(3)` 回転）**:
+    - アニメーション時は胴体（`Body`）を腕を含まない純粋で滑らかなタマゴ型メッシュ（`fuse_arms=False`）として保持し、胴体側面の引っ張りシワ・ひれ発生率を幾何学的に `0%` 化。
+    - 腕（`Arm.L` / `Arm.R`）は根元フランジなしの閉曲面パドルメッシュとして胴体内部へ埋め込み、全頂点 `w=1.000` の純粋剛体 `SO(3)` 回転＋胴体同一微細グレインマテリアル＋`visible_shadow=False` で駆動することで、腕自体のせん断・折れも `0%` 化。
+  - **② 超短足のねじれ解消＆軸方向弾性伸縮＋ボディ本体 `w=0.000` 完全保護**:
+    - 足幅の途中カットオフと前後非対称クリフを全廃して足キャップ外縁まで均一 `w_leg=1.000` とし、付け根支点まわりの振り子回転＋体積保存つき軸方向弾性伸縮（`+8.5%` 伸び／`-6.0%` 縮み）を実装。股関節リング帯のみで `1.0 -> 0.0` へ減衰させ、胸ロゴ下端より上のボディ本体を `w_leg=0.000` で完全ロック。
+  - **③ Blender 5.3（360フレーム・15.0秒 @ 24fps）レンダリング完遂とスキル・ルール標準化**:
+    - 最終納品パッケージ一式を [`04_Delivery_Dept/outputs/blender/`](04_Delivery_Dept/outputs/blender/) に格納・[`INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) 更新済。
+    - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に Blender 5.3 優先検出・`media_type = 'VIDEO'` 必須手順・アニメーション時の腕剛体埋め込み＆ボディ保護鉄則を明文化。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`00_COO/task_logs/log_20261112_cvn_pair_anim_arm_fin_fix.md`](00_COO/task_logs/log_20261112_cvn_pair_anim_arm_fin_fix.md)
+  - [`04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_mascot_anim_full.md`](04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_mascot_anim_full.md), [`output_20261112_cvn_pair_run_bow_wave.mp4`](04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_run_bow_wave.mp4), [`output_20261112_cvn_pair_anim_keyframes.png`](04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_anim_keyframes.png), [`output_20261112_cvn_pair_walk_cycle_8frames.png`](04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_walk_cycle_8frames.png), [`output_20261112_cvn_pair_anim.blend`](04_Delivery_Dept/outputs/blender/output_20261112_cvn_pair_anim.blend)（および互換名ファイル一式）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261112.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261112.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
 ## 2026-11-12 (v21): 丸胴体・超短足・超短腕3Dマスコット（カービィ／サンリオ型）アニメーション設計鉄則（`SO(3)` 純粋直交回転リグ・適応ストライドピボット・両足踏ん張りおじぎ）の Blender スキル＆Creative部門ルールへの統合
 
 ### 変更理由

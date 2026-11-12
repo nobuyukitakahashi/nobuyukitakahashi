@@ -1170,7 +1170,7 @@ def create_micro_grain_globe_material():
 # ==========================================
 # 3. 2キャラクター構築（Collection_IICh & Collection_IINet）
 # ==========================================
-def build_iich_character(coll_iich, mat_globe, im_ref):
+def build_iich_character(coll_iich, mat_globe, im_ref, fuse_arms=True):
     data_iich = mod_iich.extract_iich_profiles()
     surf_iich = mod_iich.IIChSurfaceModel(data_iich)
 
@@ -1208,17 +1208,22 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
         surf_iich, sx, sy, sz, z_min_raw,
         z_min=0.245 * sz, z_armpit=0.315 * sz, z_peak=0.320 * sz, z_max=0.555 * sz,
         x_tip_bot=0.905 * sx, x_armpit=0.695 * sx, x_peak=1.048 * sx,
-        base_half_y=0.130 * sy, root_flare_gain=0.92, mid_y_base=0.040 * sy,
+        base_half_y=0.130 * sy, root_flare_gain=(0.92 if fuse_arms else 0.0), mid_y_base=0.040 * sy,
         prefix="IICh"
     )
 
-    fuse_body_and_arms_seamless(
-        body_obj, arm_l_obj, arm_r_obj,
-        surf_scaled, zs_test_iich, xs_test_iich,
-        z_arm_min=0.245 * sz, z_armpit=0.315 * sz, z_arm_peak=0.320 * sz, z_arm_max=0.555 * sz,
-        x_tip_bot=0.905 * sx, x_peak=1.048 * sx,
-        x_safe_margin=0.075, mid_y_equator=0.032
-    )
+    if fuse_arms:
+        fuse_body_and_arms_seamless(
+            body_obj, arm_l_obj, arm_r_obj,
+            surf_scaled, zs_test_iich, xs_test_iich,
+            z_arm_min=0.245 * sz, z_armpit=0.315 * sz, z_arm_peak=0.320 * sz, z_arm_max=0.555 * sz,
+            x_tip_bot=0.905 * sx, x_peak=1.048 * sx,
+            x_safe_margin=0.075, mid_y_equator=0.032
+        )
+    else:
+        for arm_part in (arm_l_obj, arm_r_obj):
+            if hasattr(arm_part, "visible_shadow"):
+                arm_part.visible_shadow = False
 
     # 原画 ref_20261110_pair_balance.png から直接抽出した顔枠・画面・二重目・口・胸ロゴ「いい-ch」
     prof_face = extract_pair_face_profile_from_ref(
@@ -1287,6 +1292,9 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
     )
 
     body_obj.data.materials.append(mat_body_green)
+    if not fuse_arms:
+        arm_l_obj.data.materials.append(mat_body_green)
+        arm_r_obj.data.materials.append(mat_body_green)
     logo_obj.data.materials.append(mat_logo_yellow)
     logo_obj.data.materials.append(mat_logo_side)
     frame_obj.data.materials.append(mat_frame_blue)
@@ -1299,11 +1307,14 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
     ant_obj.data.materials.append(mat_stem_blue)
     globe_obj.data.materials.append(mat_globe)
 
-    all_meshes = [
-        body_obj, logo_obj, screen_obj, frame_obj,
+    all_meshes = [body_obj]
+    if not fuse_arms:
+        all_meshes.extend([arm_l_obj, arm_r_obj])
+    all_meshes.extend([
+        logo_obj, screen_obj, frame_obj,
         eye_l_obj, eye_r_obj, mouth_obj,
         ant_obj, globe_obj,
-    ]
+    ])
 
     rename_map = [
         (body_obj, "IICh_Body"),
@@ -1316,6 +1327,11 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
         (ant_obj, "IICh_Antenna"),
         (globe_obj, "IICh_Globe"),
     ]
+    if not fuse_arms:
+        rename_map.extend([
+            (arm_l_obj, "IICh_Arm.L"),
+            (arm_r_obj, "IICh_Arm.R"),
+        ])
     for obj, new_name in rename_map:
         obj.name = new_name
         obj.data.name = new_name + "_Mesh"
@@ -1386,6 +1402,9 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
                 z_leg_top=0.16, z_leg_span=0.13,
                 z_arm_min=0.245 * sz, z_arm_max=0.555 * sz
             )
+        elif short_name in ("Arm.L", "Arm.R"):
+            vg = obj.vertex_groups.new(name=short_name)
+            vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
         elif short_name in ("Face_Screen", "Face_Frame", "Eye.L", "Eye.R", "Mouth", "Logo_LILI_ch"):
             vg = obj.vertex_groups.new(name="Body")
             vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
@@ -1406,7 +1425,7 @@ def build_iich_character(coll_iich, mat_globe, im_ref):
     return arm_obj, all_meshes
 
 
-def build_iinet_character(coll_iinet, mat_globe, im_ref):
+def build_iinet_character(coll_iinet, mat_globe, im_ref, fuse_arms=True):
     data_iinet = mod_iinet.extract_textures_and_profiles()
     surf_iinet = mod_iinet.IINetSurfaceModel(data_iinet)
 
@@ -1442,17 +1461,22 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
         surf_iinet, sx_iinet, 1.0, sz_iinet, z_min_raw,
         z_min=0.2820, z_armpit=0.3460, z_peak=0.3727, z_max=0.6680,
         x_tip_bot=0.8680, x_armpit=0.6850, x_peak=0.9823,
-        base_half_y=0.130, root_flare_gain=0.98, mid_y_base=0.048,
+        base_half_y=0.130, root_flare_gain=(0.98 if fuse_arms else 0.0), mid_y_base=0.048,
         prefix="IINet"
     )
 
-    fuse_body_and_arms_seamless(
-        body_obj, arm_l_obj, arm_r_obj,
-        surf_scaled, zs_test_iinet, xs_test_iinet,
-        z_arm_min=0.2820, z_armpit=0.3460, z_arm_peak=0.3727, z_arm_max=0.6680,
-        x_tip_bot=0.8680, x_peak=0.9823,
-        x_safe_margin=0.095, mid_y_equator=0.040
-    )
+    if fuse_arms:
+        fuse_body_and_arms_seamless(
+            body_obj, arm_l_obj, arm_r_obj,
+            surf_scaled, zs_test_iinet, xs_test_iinet,
+            z_arm_min=0.2820, z_armpit=0.3460, z_arm_peak=0.3727, z_arm_max=0.6680,
+            x_tip_bot=0.8680, x_peak=0.9823,
+            x_safe_margin=0.095, mid_y_equator=0.040
+        )
+    else:
+        for arm_part in (arm_l_obj, arm_r_obj):
+            if hasattr(arm_part, "visible_shadow"):
+                arm_part.visible_shadow = False
 
     # 原画 ref_20261110_pair_balance.png から直接抽出した顔枠・画面・目・スマイル口・胸ロゴ「いい-net」
     prof_face = extract_pair_face_profile_from_ref(
@@ -1473,11 +1497,14 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
 
     ant_obj, globe_obj = create_iinet_pair_antenna_and_globe(data_iinet, sz_iinet=sz_iinet)
 
-    all_meshes = [
-        body_obj, logo_obj, screen_obj, frame_obj,
+    all_meshes = [body_obj]
+    if not fuse_arms:
+        all_meshes.extend([arm_l_obj, arm_r_obj])
+    all_meshes.extend([
+        logo_obj, screen_obj, frame_obj,
         eye_l_obj, eye_r_obj, mouth_obj,
         ant_obj, globe_obj,
-    ]
+    ])
 
     mat_body_pink = create_micro_grain_material(
         "IINet_Mat_Body_Pink", (245, 82, 164),
@@ -1516,6 +1543,9 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
     )
 
     body_obj.data.materials.append(mat_body_pink)
+    if not fuse_arms:
+        arm_l_obj.data.materials.append(mat_body_pink)
+        arm_r_obj.data.materials.append(mat_body_pink)
     logo_obj.data.materials.append(mat_logo_yellow)
     logo_obj.data.materials.append(mat_logo_side)
     frame_obj.data.materials.append(mat_frame_blue)
@@ -1537,6 +1567,11 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
         (ant_obj, "IINet_Antenna"),
         (globe_obj, "IINet_Globe"),
     ]
+    if not fuse_arms:
+        rename_map.extend([
+            (arm_l_obj, "IINet_Arm.L"),
+            (arm_r_obj, "IINet_Arm.R"),
+        ])
     for obj, new_name in rename_map:
         obj.name = new_name
         obj.data.name = new_name + "_Mesh"
@@ -1612,6 +1647,9 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref):
                 z_leg_top=0.24, z_leg_span=0.16,
                 z_arm_min=0.2820, z_arm_max=0.6680
             )
+        elif short_name in ("Arm.L", "Arm.R"):
+            vg = obj.vertex_groups.new(name=short_name)
+            vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
         elif short_name in ("Face_Screen", "Face_Frame", "Eye.L", "Eye.R", "Mouth", "Logo_LILI_net"):
             vg = obj.vertex_groups.new(name="Body")
             vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
