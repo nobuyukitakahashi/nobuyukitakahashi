@@ -6,7 +6,13 @@ Write-Host "=== [1/6] Detecting Workspace & Google Drive Paths ==="
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WorkspaceRoot = (Resolve-Path (Join-Path $ScriptDir "..\..\..\..")).Path
 $DriveRoot = Split-Path -Parent (Split-Path -Parent $WorkspaceRoot)
-$ObsidianVaultPath = Join-Path $DriveRoot "obsidian\nobuyukitakahashi\nobuyukitakahashi"
+$ObsidianVaultPath = Join-Path $DriveRoot "obsidian"
+if (-not (Test-Path (Join-Path $ObsidianVaultPath ".obsidian"))) {
+    $AltVaultPath = Join-Path $DriveRoot "obsidian\nobuyukitakahashi\nobuyukitakahashi"
+    if (Test-Path $AltVaultPath) {
+        $ObsidianVaultPath = $AltVaultPath
+    }
+}
 
 Write-Host "  Workspace : $WorkspaceRoot"
 Write-Host "  DriveRoot : $DriveRoot"
