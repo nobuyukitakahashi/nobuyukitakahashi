@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$env:PATH = "$env:LOCALAPPDATA\Programs\nodejs;$env:USERPROFILE\.local\bin;$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env:PATH"
+$env:PATH = "$env:LOCALAPPDATA\Programs\nodejs;$env:APPDATA\npm;$env:LOCALAPPDATA\Programs\Git\cmd;$env:USERPROFILE\.local\bin;$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env:PATH"
 
 Write-Host "=== [1/6] Detecting Workspace & Google Drive Paths ==="
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -281,8 +281,16 @@ foreach ($cfgPath in $McpConfigPaths) {
         New-Item -ItemType Directory -Path $cfgDir -Force | Out-Null
     }
     if (Test-Path $cfgPath) {
-        $json = Get-Content -Path $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $rawCfg = Get-Content -Path $cfgPath -Raw -Encoding UTF8
+        if ($rawCfg -and $rawCfg.Trim()) {
+            $json = $rawCfg | ConvertFrom-Json
+        } else {
+            $json = $null
+        }
     } else {
+        $json = $null
+    }
+    if (-not $json) {
         $json = [PSCustomObject]@{ mcpServers = [PSCustomObject]@{} }
     }
     if (-not $json.mcpServers) {
@@ -295,7 +303,11 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "obsidian" -Value $obsidianEntry -Force
 
-    $DetectedBlenderExe = Get-ChildItem "C:\Program Files\Blender Foundation" -Recurse -Filter "blender.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    $DetectedBlenderExe = @("C:\Program Files\Blender Foundation", "$env:LOCALAPPDATA\Programs\Blender Foundation") |
+        Where-Object { Test-Path $_ } |
+        ForEach-Object { Get-ChildItem $_ -Recurse -Filter "blender.exe" -ErrorAction SilentlyContinue } |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
     if (-not $DetectedBlenderExe) {
         $DetectedBlenderExe = "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe"
     }
