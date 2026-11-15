@@ -79,3 +79,11 @@
 | 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
 | :--- | :--- | :--- | :--- | :--- |
 | （随時追記） | — | — | `.ggsk` / HTML5出力一式 / `.ggpkg` | 専任スキル [`.agents/skills/pano2vr/SKILL.md`](../../.agents/skills/pano2vr/SKILL.md) により管理 |
+
+---
+
+## 🥽 krpano 1.24（360°VRツアー・WebXR・ThreeJS・3D Gaussian Splatting／単体スキル `/krpano`） — `outputs/krpano/`
+
+| 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| （随時追記） | — | — | HTML5 VRツアー一式（`tour.html` / `tour.js` / `tour.xml` / `panos/` 等） | 専任スキル [`.agents/skills/krpano/SKILL.md`](../../.agents/skills/krpano/SKILL.md) により管理 |
