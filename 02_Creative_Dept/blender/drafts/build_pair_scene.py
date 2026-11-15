@@ -1208,7 +1208,7 @@ def build_iich_character(coll_iich, mat_globe, im_ref, fuse_arms=True):
         surf_iich, sx, sy, sz, z_min_raw,
         z_min=0.245 * sz, z_armpit=0.315 * sz, z_peak=0.320 * sz, z_max=0.555 * sz,
         x_tip_bot=0.905 * sx, x_armpit=0.695 * sx, x_peak=1.048 * sx,
-        base_half_y=0.130 * sy, root_flare_gain=(0.92 if fuse_arms else 0.0), mid_y_base=0.040 * sy,
+        base_half_y=0.130 * sy, root_flare_gain=(0.92 if fuse_arms else 0.48), mid_y_base=0.040 * sy,
         prefix="IICh"
     )
 
@@ -1461,7 +1461,7 @@ def build_iinet_character(coll_iinet, mat_globe, im_ref, fuse_arms=True):
         surf_iinet, sx_iinet, 1.0, sz_iinet, z_min_raw,
         z_min=0.2820, z_armpit=0.3460, z_peak=0.3727, z_max=0.6680,
         x_tip_bot=0.8680, x_armpit=0.6850, x_peak=0.9823,
-        base_half_y=0.130, root_flare_gain=(0.98 if fuse_arms else 0.0), mid_y_base=0.048,
+        base_half_y=0.130, root_flare_gain=(0.98 if fuse_arms else 0.52), mid_y_base=0.048,
         prefix="IINet"
     )
 

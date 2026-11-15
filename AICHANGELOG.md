@@ -1,5 +1,135 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-14 (v26): アカウント共通・最優先マスタールール「タスク難易度に応じた最適モデル逆提案ゲート（Model Adequacy & Counter-Proposal Gate）」の全プロジェクト・全エージェント適用、および `/pc-env-sync` 自動同期対応
+
+### 変更理由
+1. オーナーからの「より最適なモデルがある場合に逆提案して切り替えを促す仕組みを、ジン（本プロジェクト）に限らず契約アカウント全体のすべてのプロジェクト・すべてのエージェントに最優先ルールとして組み込んでほしい」との指示に基づき、Antigravity のグローバルルール機構（`~/.gemini/config/AGENTS.md`、`~/.gemini/config/rules/AGENTS.md`、`~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md`）へ最優先マスタールールを配置し、どのワークスペースを開いても全エージェントが作業着手前にモデル適正を判定・逆提案する体制を構築するため。
+2. 別PCやMac環境でも `/pc-env-sync` 一発で同じグローバルマスタールールが完全再現されるよう、ワークスペース内の `.agents/plugins/global-master-rules/` および環境同期スクリプト（`sync_pc_env.ps1` / `sync_mac_env.sh`）に統合するため。
+
+### Before / After
+- **Before (v25)**:
+  - タスクの難易度に対して現在の選択モデル（`Model Selection`）がアンダースペックまたはオーバースペックであっても、エージェントがそのまま作業を開始してしまうケースがあり、アカウント全体の全ワークスペースに共通適用されるグローバルなモデル逆提案ルールは未整備だった。
+- **After (v26)**:
+  - **① アカウント共通・最優先マスタールール「最適モデル逆提案ゲート」のグローバル導入**:
+    - **パターンA（アンダースペック警告）**: 現在が `Hydrogen` 等の軽量モデルで、高難度タスク（長尺動画・音声精密解析、複雑なBlender 3D造形・リグ、大容量資料横断照合・公的議事録・法務契約書作成、大規模設計・デバッグ等）を依頼された場合、作業着手前に一時停止し、`Argon (Medium以上)` への切り替えまたはサブエージェントのみ上位モデル（`Model: "pro"`）を指定する選択肢を逆提案する。
+    - **パターンB（オーバースペック・クォータ節約提案）**: 現在が `Argon` 等の高精度モデルで、定型・軽作業（`/pc-env-sync` 等の定型スクリプト実行、単純なファイル整理、軽微なテキスト修正等）を依頼された場合、クォータ節約のため `Hydrogen`（またはサブエージェント `Model: "flash"`）への切り替えを提案する。
+    - **パターンC（適正一致）**: 現在のモデルがタスク難易度に最適な場合は、逆提案で止めずに速やかに作業を開始する。
+  - **② グローバル3階層への常駐配置と `/pc-env-sync` 自動同期化**:
+    - `~/.gemini/config/AGENTS.md`（`RULE[user_global]`）、`~/.gemini/config/rules/AGENTS.md`、および `~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md` の3箇所すべてに配置し、本プロジェクト以外のあらゆるワークスペースでも常時 `<user_rules>` として強制注入されることを確認。
+    - リポジトリ内の [`.agents/plugins/global-master-rules/`](.agents/plugins/global-master-rules/) にマスターを保存し、[`sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1) / [`sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh) で別PCへも自動同期されるよう更新。
+
+### 影響範囲
+- 新規追加・更新:
+  - `C:\Users\nobuy\.gemini\config\AGENTS.md`
+  - `C:\Users\nobuy\.gemini\config\rules\AGENTS.md`
+  - `C:\Users\nobuy\.gemini\config\plugins\global-master-rules\plugin.json`, `C:\Users\nobuy\.gemini\config\plugins\global-master-rules\rules\AGENTS.md`
+  - [`.agents/plugins/global-master-rules/plugin.json`](.agents/plugins/global-master-rules/plugin.json), [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md)
+  - [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1), [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh)
+  - [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md), [`00_COO/AGENTS.md`](00_COO/AGENTS.md), [`AGENTS.md`](AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261114_global_model_gate.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261114_global_model_gate.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
+## 2026-11-14 (v25): 「2026-11-13 南信州広域連合議会 全員協議会（`PB130017/18/19.MOV` × 別録りMP3音声群）」無音欠落区間のミリ秒特定・完全同期合成、暗所議場の `SetCDL` 明るさ大幅改善（`+55.5%〜+57.4%`）、全78区間（1時間27分）発言者肩書き・氏名・質疑テーマ透過ネームプレート `V2` 合成完パケ、および長尺議会映像編集パイプラインの標準化
+
+### 変更理由
+1. `H:\2026-11-13_南信州広域連合_連合長へ_要望書提出_録音一式\` 内の全員協議会動画3本（`PB130017.MOV`、`PB130018.MOV`、`PB130019.MOV`）の音声欠落（無音）状況を秒・フレーム単位で特定し、サブフォルダ内の別録りICレコーダー音声（`.mp3` / `.m4a`）から対応区間をミリ秒精度で割り出して DaVinci Resolve Studio 21.2.0.6 新規プロジェクト「`2026-11-13 南信州広域連合議会 全員協議会`」で同期結合するとともに、さらに**①暗い議場映像の大幅な明るさ改善（`+55〜57%`）**および**②全発言者（前半6区間＋後半72区間＝全78区間）の公式肩書き・選出市町村・氏名・発言テーマのネームプレートテロップ（`V2` トラック）合成**を完遂するため。
+2. 確立した「無音欠落動画と別録り音声の2段階同期手法」および「長尺議会映像における議員名簿クロスチェックASR校正＋32bit RGBA透過ネームプレート `V2` 区間配置＋`SetCDL` 暗所議場露出ブースト（`+55〜57%`）」の技術知見を [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に標準化するため。
+
+### Before / After
+- **Before (v24)**:
+  - 全員協議会の動画3本（`PB130017.MOV` 10分15秒、`PB130018.MOV` 0.5秒、`PB130019.MOV` 1時間17分15秒）は外部マイク電源OFFにより無音区間が発生しており、また会場（はにかむべーす多目的ホール）の天井照明逆光により議場フロアの人物・資料が暗く沈み（平均輝度 `Y = 85.3〜88.9`）、誰がどの立場で何の質疑・答弁を行っているかを示すテロップも未付与だった。
+- **After (v25)**:
+  - **① 動画3本の無音区間特定と別録り音声の10ms・1フレーム精度同期の完遂**:
+    - **`PB130017.MOV`（`10分15.12秒` / `18,435フレーム`）**: 全編無音（`-69.8 dBFS`）。QuickTime `mvhd` 内部結晶クロック差分×ICレコーダータイムスタンプ差分からの逆算および映像内の起立・一礼・着席ランドマーク照合により、`11月13日（13-28）南信州広域連合議会 第2回 全員協議会.mp3` の **`00:00:36.63 〜 00:10:51.75`（フレーム `1,098 〜 19,533`）** と完全一致することを特定。
+    - **`PB130018.MOV`（`0.50秒` / `15フレーム`）**: 全編無音の誤操作クリップ。`13-28.mp3` の **`00:10:54.63 〜 00:10:55.13`（フレーム `19,619 〜 19,634`）** に該当。
+    - **`PB130019.MOV`（`1時間17分15.13秒` / `138,915フレーム`）**: 冒頭 **`00:00:00.00 〜 00:17:44.59`（フレーム `0 〜 31,905`）が無音**、`00:17:44.60`（フレーム `31,906`）で外部マイク電源ONとなり以降 `59分30.53秒` は有音。後半有音区間と `11月13日（14-12）…資料3 桐林クリーンセンター解体について.mp3` の100Hz振幅エンベロープ正規化相互相関（`r = 0.9325`）により、MP3の **`00:00:12.63 〜 01:17:27.76`（フレーム `379 〜 139,294`）** とクロックドリフトなし（1時間で `0.6フレーム` 未満）で完全一致することを特定。
+  - **② 暗所議場の `SetCDL` 明るさ大幅改善（`+55.5%〜+57.4%`）と全78区間 発言者肩書き・氏名ネームプレート（`V2` トラック）合成**:
+    - `SetCDL`（`Slope: 1.38 1.36 1.32`, `Offset: 0.04 0.04 0.05`, `Power: 0.65 0.65 0.65`, `Saturation: 1.14`）により、`PB130017` の平均輝度を `Y=88.9 ➔ 138.2`（**`+55.5%`**）、`PB130019` の平均輝度を `Y=85.3 ➔ 134.3`（**`+57.4%`**）へ大幅に明るく改善。
+    - 南信州広域連合議会 議員名簿（全33名・選出市町村・役職）とのクロスチェックでASR誤変換（「広島刑事」→木下啓爾議員、「ディーラーの席でもいい」→関島百合議員 等）を100%校正し、前半6区間＋後半72区間（計78区間）の32bit RGBA透過ネームプレートPNGを `V2` トラックへ配置して Full-HD MP4 2本および `.drp` を元フォルダと AGY 案件別サブフォルダへ出力。
+  - **③ DaVinci Resolve 長尺議会編集＆音声同期ベストプラクティスのスキル・ルール標準化**:
+    - [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に無音動画×別録り音声同期手法および長尺議会ネームプレート `V2` 区間配置・暗所議場 `SetCDL` ブースト手法を追記。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`00_COO/task_logs/log_20261114_council_video_audio_sync.md`](00_COO/task_logs/log_20261114_council_video_audio_sync.md)
+  - [`02_Creative_Dept/davinci/drafts/2026-11-13_南信州広域連合議会_全員協議会/`](02_Creative_Dept/davinci/drafts/2026-11-13_南信州広域連合議会_全員協議会/)
+  - [`02_Creative_Dept/davinci/final_outputs/2026-11-13_南信州広域連合議会_全員協議会/`](02_Creative_Dept/davinci/final_outputs/2026-11-13_南信州広域連合議会_全員協議会/)
+  - [`04_Delivery_Dept/outputs/davinci/2026-11-13_南信州広域連合議会_全員協議会/`](04_Delivery_Dept/outputs/davinci/2026-11-13_南信州広域連合議会_全員協議会/)（`output_20261114_council_video_audio_sync_full.md`, `PB130017_全員協議会_前半_音声同期済_FullHD.mp4`, `PB130019_全員協議会_資料3_桐林クリーンセンター解体_音声同期済_FullHD.mp4`, `2026-11-13 南信州広域連合議会 全員協議会.drp`, `council_bright_telop_audit_board.png`, `council_sync_audit_board.png`）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md), [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261114_davinci_and_subfolder_rule.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261114_davinci_and_subfolder_rule.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
+## 2026-11-14 (v24): DaVinci Resolve Studio 21.2.0.6 実機自動制御による「2026-11-13 南信州広域連合へ要望書提出（`PB130002.MOV`）」映像編集・全35カット放送品質テロップ合成・音声ノイズ除去＆音量ブースト（`+5.62 dB`）完パケ、および AGY 案件別サブフォルダ管理規約の標準化
+
+### 変更理由
+1. `H:\2026-11-13_南信州広域連合_連合長へ_要望書提出_録音一式\PB130002.MOV`（4K 29.97fps、170.17秒）に対し、DaVinci Resolve Studio 21.2.0.6 で新規プロジェクト「`2026-11-13 南信州広域連合へ要望書提出`」を立ち上げ、①明るさ・色味調整、②動きのブレ調整（スタビライズ）、③前後の余計な部分の精密カット、④全発言（35カット）の放送品質テロップ合成（`V2` トラック＆`.srt`）、⑤空調ノイズ軽減＆発話音量ブースト（`A1` トラック：`+5.62 dB`）を行い、Full-HD（`1920×1080`）MP4 として元フォルダおよび AGY 側の案件別サブフォルダへ納品するため。
+2. オーナーからの「AGY側もサブフォルダにして分けて管理して」との方針指示に基づき、`02_Creative_Dept/<genre>/{drafts,final_outputs}/<案件サブフォルダ>/` および `04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/` による案件単位のサブフォルダ分離管理規約を全組織ルール・スキルに標準化するため。
+
+### Before / After
+- **Before (v23)**:
+  - `04_Delivery_Dept/outputs/davinci/` には実案件の納品実績がなく、[`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md) にも Windows 環境での DaVinci Resolve Studio 21.2 Scripting API 接続設定や、移動パンを含む実写映像のセクション分割スタビライズ・逆光暗転区間の CDL 露出統一・`V2` 透過連番テロップ合成・`A1` 音声ノイズ除去＆音量ブースト手法が未記載だった。
+  - 各ジャンルの `drafts/`・`final_outputs/`・`outputs/<genre>/` における案件別サブフォルダ分離ルールが明文化されていなかった。
+- **After (v24)**:
+  - **① DaVinci Resolve Studio 21.2.0.6 実機による自動編集・グレーディング・全35カットテロップ合成・音声強化 Full-HD MP4 完パケ**:
+    - 映像フレームサンプリングと音声 RMS 波形解析により、冒頭（`0.00〜7.14秒`：床映り・カメラ角度調整・AFボケ）および末尾（`169.50〜170.17秒`：停止ボタン操作音・微動）を除外し、`f=215〜5080`（計 `4,865フレーム` / `162.33秒`）に精密トリミング。
+    - カメラ移動パン区間（`f=485〜810`）を分離保護した上で、定点手持ち3セクション（`215..485`, `810..1845`, `1845..5080`）に `TimelineItem.Stabilize()` を個別適用し、画角見切れゼロの滑らかな手ブレ補正を実現。
+    - 逆光カーテンによる前半暗転（平均輝度 `Y=67.3 ➔ 115.8`、+72%改善）および後半露出（`Y=112.5 ➔ 140.2`）を区間別 ASC CDL（`SetCDL`）で自然かつ明るいスキントーンへ補正。
+    - 全発言（35カット：検証会議 代表 小林 伸 氏、南信州広域連合長 佐藤 健 飯田市長）を話者別カラーアクセント付き透過連番PNG（`telop_[0000-4864].png`）として `V2` トラックに合成し、`.srt` 字幕ファイルも同時生成。
+    - 100Hz HPF ＋ STFT ソフト・スペクトルゲート（Floor `0.45`）＋ `2.3 kHz` 明瞭度EQ ＋ ソフトニー・コンプレッサー ＋ `-1.00 dBFS` リミッターにより、発話平均RMSを `-20.26 dBFS ➔ -14.63 dBFS`（`+5.62 dB`、SN比 `+4.78 dB` 改善）へ引き上げて `A1` トラックに配置し、Full-HD (`1920×1080`) H.264 MP4 および `.drp` を元フォルダと AGY 案件別サブフォルダの双方へ出力。
+  - **② AGY 案件別サブフォルダ管理規約と DaVinci Resolve ベストプラクティスの標準化**:
+    - [`00_COO/AGENTS.md`](00_COO/AGENTS.md)、[`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)、[`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md)、および [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md) を更新し、`<genre>/<案件サブフォルダ>/` 分離管理規約と DaVinci Resolve Studio 21.2 自動制御知見（`V1` セクション分割スタビライズ＆CDL、`V2` 透過連番テロップ、`A1` 音声マスタリング）を明文化。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`00_COO/task_logs/log_20261114_minamishinsyu_petition_video.md`](00_COO/task_logs/log_20261114_minamishinsyu_petition_video.md)
+  - [`02_Creative_Dept/davinci/drafts/2026-11-13_南信州広域連合へ要望書提出/`](02_Creative_Dept/davinci/drafts/2026-11-13_南信州広域連合へ要望書提出/)
+  - [`02_Creative_Dept/davinci/final_outputs/2026-11-13_南信州広域連合へ要望書提出/`](02_Creative_Dept/davinci/final_outputs/2026-11-13_南信州広域連合へ要望書提出/)
+  - [`04_Delivery_Dept/outputs/davinci/2026-11-13_南信州広域連合へ要望書提出/`](04_Delivery_Dept/outputs/davinci/2026-11-13_南信州広域連合へ要望書提出/)（`output_20261114_minamishinsyu_petition_video_full.md`, `PB130002_編集済_FullHD.mp4`, `PB130002_編集済_テロップ付_FullHD.mp4`, `PB130002_編集済_FullHD.srt`, `PB130002_編集済_音声ノイズ除去_音量調整済.wav`, `2026-11-13 南信州広域連合へ要望書提出.drp`, `keyframes_audit_board.png`, `keyframes_telop_audit_board.png`）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`00_COO/AGENTS.md`](00_COO/AGENTS.md), [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md), [`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md), [`.agents/skills/davinci/SKILL.md`](.agents/skills/davinci/SKILL.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261114_davinci_and_subfolder_rule.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261114_davinci_and_subfolder_rule.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
+## 2026-11-12 (v23): 株式会社CVN「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体ペア15秒3Dアニメーション v6 完成版改修（開放リム型スライディング2次ベジェフィレットスカート＋カスタム法線 `0.00°` 一致による腕とボディのシームレス一体化、`1920×1080` Full HD @ `30fps` 全450フレーム化、`ケーブル兄弟アニメーション/` 専用サブフォルダ分離整理）、および Blender スキル・ルールの最新化
+
+### 変更理由
+1. v5 の「腕ひれゼロ・足歪みゼロ・ボディ無変形」を100%維持しつつ、閉曲面パドル腕の単純埋め込みで生じていた「腕とボディの交差境界のV字陰影線（別パーツ感）」を完全に消滅させ、400%拡大でもソフビ一体成型に見えるシームレスな腕根元変形・法線同期（v6）を実装するため。
+2. 動画フォーマットを **`1920×1080`（Full HD 16:9）・`30 fps`（15.0秒＝全450フレーム）** へ高画質・高フレームレート化し（縦方向クロップ防止レンズ補正込み）、さらに最終納品フォルダ内に **`04_Delivery_Dept/outputs/blender/ケーブル兄弟アニメーション/`** を新設して他の静止画3Dモデル・ロゴ3D成果物と明確に分離整理するため。
+3. 確立した「開放リム型スライディング2次ベジェフィレットスカート＋カスタム法線 `0.00°` 一致」および「`4:3 ➔ 16:9` アスペクト変更時の縦切れ防止（`lens * 0.75`）」の知見を [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) と [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に標準化するため。
+
+### Before / After
+- **Before (v22 / v5)**:
+  - 閉曲面パドル腕を純粋タマゴ胴体へ埋め込む方式により胴体ひれはゼロとなったが、閉曲面同士の交差線上にV字谷の陰影境界が残り、拡大時に別パーツ感が見えていた。
+  - 動画仕様が `1280×960`（4:3）・`24 fps`（360フレーム）であり、また納品ファイルが `04_Delivery_Dept/outputs/blender/` 直下に静止画3Dモデルと同居していた。
+- **After (v23 / v6)**:
+  - **① 開放リム型スライディング2次ベジェフィレットスカート ＋ カスタム法線 `0.00°` 完全一致（v6）**:
+    - ボディ本体は無変形保護（ひれ0%）したまま、腕を開放リム型構造化メッシュ（6,273頂点・全450fトポロジ固定＝フリッカーゼロ）へ刷新し、先端〜中間は純粋剛体 `SO(3)` 回転を維持しつつ、根元スカート部のみ毎フレームのボディ表面へ2次ベジェ曲線（$\mathbf{B}_0 \to \mathbf{B}_1 \to \mathbf{B}_2$、脇下タイト幅でひれ防止）で滑らかにR架橋。
+    - `normals_split_custom_set_from_vertices` によりリム外縁法線をボディ変形後法線と角度差 `0.00°`・位置誤差 `0.0000mm` で完全一致させ、400%拡大6ポーズ監査シート（`output_20261112_cvn_pair_arm_seam_closeup.png`）でも境界線ゼロのソフビ一体成型を達成。
+  - **② `1920×1080` Full HD @ `30fps`（全450フレーム・15.0秒）レンダリング完遂**:
+    - 焦点距離を `70mm ➔ 52.5mm`（`×0.75`）に補正しスタジオ背景横幅を拡張することで、頭上の地球儀から足元までの上下余白バランスを100%維持したまま16:9ワイド Full HD 30fps MP4を生成。
+  - **③ 専用サブフォルダ `04_Delivery_Dept/outputs/blender/ケーブル兄弟アニメーション/` 分離整理とスキル・ルール更新**:
+    - アニメーション成果物一式を専用サブフォルダへ分離集約し、[`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) を `1-A. ケーブル兄弟アニメーション` / `1-B. 3Dモデリング・静止画CG・ロゴ3D` に体系化。
+    - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に上記確定ベストプラクティスを反映。
+
+### 影響範囲
+- 新規追加・移動整理・更新:
+  - [`00_COO/task_logs/log_20261112_cvn_pair_anim_seamless_arm_root.md`](00_COO/task_logs/log_20261112_cvn_pair_anim_seamless_arm_root.md)
+  - [`04_Delivery_Dept/outputs/blender/ケーブル兄弟アニメーション/`](04_Delivery_Dept/outputs/blender/ケーブル兄弟アニメーション/) 配下の v6 成果物一式（`output_20261112_cvn_pair_mascot_anim_full.md`, `output_20261112_cvn_pair_run_bow_wave.mp4`, `output_20261112_cvn_pair_anim_keyframes.png`, `output_20261112_cvn_pair_walk_cycle_8frames.png`, `output_20261112_cvn_pair_arm_seam_closeup.png`, `output_20261112_cvn_pair_anim.blend`、互換シンボリック名一式、旧アーカイブ一式）
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261112.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261112.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
 ## 2026-11-12 (v22): 株式会社CVN「ケーブル兄弟（いい-ch ＆ いい-NETくん）」2体ペア15秒3Dアニメーション v5 完成版改修（Blender 5.3移行・腕付け根の「ひれ」完全根絶・超短足のねじれ解消・ボディ保護制御）、および Blender 5.3 対応＆手足リグ変形知見のスキル・ルール標準化
 
 ### 変更理由

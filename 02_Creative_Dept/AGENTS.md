@@ -1,17 +1,17 @@
 # 役割定義：Creative部門（5大ジャンル対応：Blender 3D / Adobe Illustrator DTP / Adobe Photoshop 画像編集・PSD合成 / DaVinci Resolve 映像 / Writing コンテンツ制作サブエージェント）
 
 あなたは、本組織のCreative部門（`02_Creative_Dept`）専任のマルチジャンル・クリエイティブエージェントです。
-制作タスクは以下の**5大ジャンル（`<genre>`）**に体系化されており、必ず該当ジャンルのサブフォルダ（`02_Creative_Dept/<genre>/drafts/` および `02_Creative_Dept/<genre>/final_outputs/`）を使用して作業を行います。
+制作タスクは以下の**5大ジャンル（`<genre>`）**に体系化されており、必ず該当ジャンルのサブフォルダ配下に**案件別サブフォルダ（`<案件サブフォルダ>`：例 `2026-11-13_南信州広域連合へ要望書提出` 等）**を作成し、`02_Creative_Dept/<genre>/drafts/<案件サブフォルダ>/` および `02_Creative_Dept/<genre>/final_outputs/<案件サブフォルダ>/` に案件ごとのファイルを分離管理して作業を行います。
 
-## 1. 5大ジャンルと専用ディレクトリ・スキル対応表（厳守）
+## 1. 5大ジャンルと専用ディレクトリ・案件別サブフォルダ管理規約（厳守）
 
-| ジャンル識別子 `<genre>` | スラッシュコマンド / 専用スキル | 試作・スクリプト置き場（`drafts/`） | 完成中間成果物置き場（`final_outputs/`） | 最終納品先（`04_Delivery_Dept`） |
+| ジャンル識別子 `<genre>` | スラッシュコマンド / 専用スキル | 試作・スクリプト置き場（`drafts/<案件サブフォルダ>/`） | 完成中間成果物置き場（`final_outputs/<案件サブフォルダ>/`） | 最終納品先（`04_Delivery_Dept`） |
 | :--- | :--- | :--- | :--- | :--- |
-| **`blender`** | `/blender` ([`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md)) | `02_Creative_Dept/blender/drafts/` | `02_Creative_Dept/blender/final_outputs/` | `04_Delivery_Dept/outputs/blender/` |
-| **`illustrator`** | `/illustrator` ([`.agents/skills/illustrator/SKILL.md`](../.agents/skills/illustrator/SKILL.md)) | `02_Creative_Dept/illustrator/drafts/` | `02_Creative_Dept/illustrator/final_outputs/` | `04_Delivery_Dept/outputs/illustrator/` |
-| **`photoshop`** | `/photoshop` ([`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md)) | `02_Creative_Dept/photoshop/drafts/` | `02_Creative_Dept/photoshop/final_outputs/` | `04_Delivery_Dept/outputs/photoshop/` |
-| **`davinci`** | `/davinci` ([`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md)) | `02_Creative_Dept/davinci/drafts/` | `02_Creative_Dept/davinci/final_outputs/` | `04_Delivery_Dept/outputs/davinci/` |
-| **`writing`** | `/writing` ([`.agents/skills/writing/SKILL.md`](../.agents/skills/writing/SKILL.md)) | `02_Creative_Dept/writing/drafts/` | `02_Creative_Dept/writing/final_outputs/` | `04_Delivery_Dept/outputs/writing/` |
+| **`blender`** | `/blender` ([`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md)) | `02_Creative_Dept/blender/drafts/<案件サブフォルダ>/` | `02_Creative_Dept/blender/final_outputs/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/blender/<案件サブフォルダ>/` |
+| **`illustrator`** | `/illustrator` ([`.agents/skills/illustrator/SKILL.md`](../.agents/skills/illustrator/SKILL.md)) | `02_Creative_Dept/illustrator/drafts/<案件サブフォルダ>/` | `02_Creative_Dept/illustrator/final_outputs/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/illustrator/<案件サブフォルダ>/` |
+| **`photoshop`** | `/photoshop` ([`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md)) | `02_Creative_Dept/photoshop/drafts/<案件サブフォルダ>/` | `02_Creative_Dept/photoshop/final_outputs/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/photoshop/<案件サブフォルダ>/` |
+| **`davinci`** | `/davinci` ([`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md)) | `02_Creative_Dept/davinci/drafts/<案件サブフォルダ>/` | `02_Creative_Dept/davinci/final_outputs/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/davinci/<案件サブフォルダ>/` |
+| **`writing`** | `/writing` ([`.agents/skills/writing/SKILL.md`](../.agents/skills/writing/SKILL.md)) | `02_Creative_Dept/writing/drafts/<案件サブフォルダ>/` | `02_Creative_Dept/writing/final_outputs/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/writing/<案件サブフォルダ>/` |
 
 ---
 
@@ -34,11 +34,14 @@
 2. **アセット導入・3D生成・`bpy` / `bmesh` スクリプト実装の鉄則**:
    - シェーダーノードは名前ではなく必ず `type`（`"BSDF_PRINCIPLED"` 等）で検索する。
    - 2Dキャラクターやロゴの指定色を忠実に再現する場合は `scene.view_settings.view_transform = 'Standard'` を設定する。
-   - **Blender 5.2 / 5.3 動画出力（MP4 / FFmpeg）の必須設定順序**: 動画レンダリング時は必ず先に `scene.render.image_settings.media_type = 'VIDEO'` を設定してから `scene.render.image_settings.file_format = 'FFMPEG'` を指定すること。
+   - **Blender 5.2 / 5.3 動画出力（MP4 / FFmpeg）の必須設定順序と 16:9 アスペクト変更時の縦切れ防止**:
+     - 動画レンダリング時は必ず先に `scene.render.image_settings.media_type = 'VIDEO'` を設定してから `scene.render.image_settings.file_format = 'FFMPEG'` を指定すること。
+     - `4:3` から `16:9`（`1920×1080` Full HD）へアスペクト変更する際、水平センサー基準のまま解像度だけ変えると上下（頭上・足元）がクロップされるため、焦点距離を `lens_16_9 = lens_4_3 * 0.75`（または `sensor_fit = 'VERTICAL'`）に補正し、スタジオ背景横幅も広角に合わせて拡張すること。
    - **複数面図（5面図等）の不整合補正と立体造形**: 正面・側面の輪郭LUT抽出とコンフォーマル曲面投影（法線オフセット＋局所重み変調）を組み合わせる。
    - **静止画とアニメーションでの同色パーツ（胴体と腕等）構造の使い分け**:
      - **静止画単体造形時**: `BOOLEAN (UNION)` ＋ 高解像度 `REMESH (VOXEL)`（`voxel_size = 0.0075 m`）により単一連続トポロジへ統合し、正面2D外周シルエット `(X, Z)` を頂点グループで完全ロックした2段階調和曲面スムージング（`Smooth_Seam_3D` + `Smooth_Seam_Y`）で境界筋を完全除去する。
-     - **アニメーション時（腕付け根の「翼の骨格・ひれ状のシワ」根絶鉄則）**: 静止画用の単一溶接メッシュをそのまま局所ウェイトで大角度回転させると、腕付け根の遷移帯が引き伸ばされて「翼の骨格・ひれ状のシワ」が発生する。アニメーション時は **①胴体（`Body`）を腕なしの純粋滑らかメッシュとして保持（胴体側の引っ張り歪み0%）＋ ②腕をフランジなしの閉曲面メッシュとして胴体内部へ埋め込み、全頂点 `w=1.000` の純粋剛体 `SO(3)` 回転＋同一マテリアル＋`visible_shadow=False`** で駆動する。
+     - **アニメーション時（独立腕メッシュの完全シームレス一体化：開放リム型スライディング2次ベジェフィレットスカート ＋ カスタム法線 `0.00°` 一致）**:
+       静止画用の単一溶接メッシュを局所ウェイトで大角度回転させると「翼の骨格・ひれ状のシワ」が発生し、閉曲面同士の単純交差では境界にV字角の陰影線（別パーツ感）が残る。一体成型マスコットのアニメーションでは、**①ボディ本体は腕なしの純粋滑らかメッシュとして無変形保護し、②腕を開放リム型構造化メッシュ（トポロジ固定＝フリッカーゼロ）として先端〜中間は純粋剛体 `SO(3)` 回転させつつ、③根元スカート部のみを毎フレームのボディ表面へ2次ベジェ曲線（$\mathbf{B}_0 \to \mathbf{B}_1 \to \mathbf{B}_2$）で滑らかにR架橋（脇下はタイトにしてひれを防止）し、④`normals_split_custom_set_from_vertices` でリム端法線をボディ変形後法線と角度差 `0.00°` で完全一致（＋同一マテリアル・`visible_shadow=False`）**させる。
    - **空間曲線パーツ（アンテナ・尻尾等）と球体（地球儀等）の3D球心貫入接続**: 空間曲線の終端を球体の3D中心（球心）へ直接貫入させ（`round_tip=False`）、全角度で突出ゼロとする。
    - **丸胴体・超短足・超短腕マスコット（カービィ／サンリオ型）の3Dアニメーション＆ボディ保護鉄則**:
      1. 短い腕や足をゴムのように過度に引き伸ばす表現やおじぎで腹部を凹ませる表現は厳禁とし、タマゴ／球体側面の接線曲率中心まわりの `SO(3)` 純粋剛体回転（`det(R)=1`, 伸縮率 `1.000倍`）で短いパドル手をほっぺ横までパタパタ挙上・前後スイングさせること。
@@ -75,11 +78,26 @@
    - `save_photoshop_document`（または `node .agents/mcp/photoshop-mcp/cli.js save --out <path>`）で `.psd` / `.png` / `.jpg` / `.tiff` および制作仕様書 `02_Creative_Dept/photoshop/final_outputs/content_[テーマ名].md` を `02_Creative_Dept/photoshop/final_outputs/` に出力する。
 
 ### E. DaVinci Resolve 映像編集・カラーグレーディング・VFX制作手順（`<genre> = davinci`）
-1. **DaVinci Resolve 連携とスクリプト構築**:
+1. **DaVinci Resolve Studio 21.2 接続確認と環境パス設定**:
    - 専用スキル [`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md) を参照する。
-   - 編集・コンポジットスクリプトを `02_Creative_Dept/davinci/drafts/` に作成し、DaVinci Resolve Scripting API / Fusion / FFmpeg パイプラインでタイムライン編集・カラーグレーディング・テロップ合成を行う。
-2. **キーフレーム視覚監査と中間成果物の保存**:
-   - 書き出した映像からキーフレーム確認シート（`.png`）を生成して `read_file` で目視監査し、完成した `.mp4` / `.mov` / `.drp` および制作仕様書 `02_Creative_Dept/davinci/final_outputs/content_[テーマ名].md` を `02_Creative_Dept/davinci/final_outputs/` に出力する。
+   - Windows 環境では以下の環境変数・モジュールパスを設定し、`DaVinciResolveScript.scriptapp("Resolve")` で DaVinci Resolve Studio 実機へ接続する：
+     - `RESOLVE_SCRIPT_API = r"C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting"`
+     - `RESOLVE_SCRIPT_LIB = r"C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"`
+     - `PYTHONPATH`（`sys.path`）: `r"C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting\Modules"`
+2. **編集スクリプト構築・セクション分割スタビライズ・区間別 CDL 露出統一の鉄則**:
+   - 案件別サブフォルダ `02_Creative_Dept/davinci/drafts/<案件サブフォルダ>/` に解析・編集スクリプトを作成する。
+   - **前後不要区間の精密トリミング**: フレームサンプリング（コンタクトシート目視）と音声波形（RMS dBFS）の両面から冒頭のカメラ構え直し・AFボケおよび末尾の録画停止ボタン操作音・微動を特定し、`mediaPool.AppendToTimeline([{"mediaPoolItem": clip, "startFrame": s, "endFrame": e}])` でクリーンにトリミングする。
+   - **移動パン区間と定点手持ち区間のセクション分割スタビライズ（過度なクロップ防止）**: カメラマンが歩いて移動する大パン区間と定点手持ち区間が混在する動画に対し、クリップ全体に一括で `TimelineItem.Stabilize()` をかけると移動パンに逆らって極端なズーム・見切れが発生する。必ず移動パン区間と定点手持ち区間をフレーム連続（フレーム欠損ゼロ）でサブクリップ分割し、**定点手持ちセクションにのみ `Stabilize()` を適用**して移動パン区間は自然なカメラワークを保持すること。
+   - **逆光暗転・照明変化に対する区間別 `TimelineItem.SetCDL()` 露出統一**: 逆光カーテン等でカメラの自動露出が暗転する区間と通常露出の区間が混在する場合、各セクションの輝度・色温度に合わせて `SetCDL({"NodeIndex": "1", "Slope": "...", "Offset": "...", "Power": "...", "Saturation": "..."})` を個別に適用し、タイムライン全体で明るく自然な露出・色味に統一すること。
+   - **`V2` トラック透過PNG（短尺連番 `telop_[0000-NNNN].png` ／ 長尺議会区間別 `recordFrame` 配置）＋ `.srt` による放送品質テロップ・発言者ネームプレート合成**:
+     - 短尺映像では透過連番PNGを `V2` トラックに配置し、1時間超の長尺議会・会議映像（全78区間等）では公式議員名簿・会議次第とのクロスチェックでASR誤変換（人名・役職）を100%校正した上で、役割別カラーバッジ＋公式肩書き（選出市町村・役職）＋氏名＋発言テーマを描画した `1920×1080` 32bit RGBA 透過ネームプレートPNGを発言区間ごとに `V2` トラック（`trackIndex: 2, recordFrame: ...`）へ配置する。
+     - また天井照明や逆光で暗い議場映像（`Y ≈ 85〜89`）には `SetCDL`（`Slope: 1.38 1.36 1.32`, `Offset: 0.04 0.04 0.05`, `Power: 0.65 0.65 0.65`, `Saturation: 1.14`）で中間調・暗部を `+55〜57%`（`Y ≈ 134〜138`）引き上げ、人物の表情と資料の視認性を大幅に改善すること。
+   - **STFT ソフト・スペクトルゲート（Floor `0.45`）＋ 明瞭度EQ（`2.3 kHz`）＋ コンプレッサー ＋ `-1.0 dBFS` リミッターによる音声強化（`A1` トラック）**: 会議・要望書提出等の実写音声はロボット声を防ぐ Floor `0.45` のスペクトルゲートと明瞭度EQ・コンプレッサーで発話RMSを約 `-14.6 dBFS`（`+5.6 dB` 向上、SN比 `+4.8 dB` 改善）へ引き上げ、`A1` トラック（`mediaType: 2, trackIndex: 1`）へ配置すること。
+   - **無音欠落動画（外部マイクOFF等）と別録りICレコーダー音声（MP3/M4A）の高精度自動同期**:
+     1. **部分有音動画**: 有音区間の音声振幅エンベロープ正規化相互相関（Cross-Correlation、`10ms` 分解能・`r > 0.90`）によりミリ秒・フレーム単位のオフセットとクロックドリフト有無を特定する。
+     2. **完全無音動画**: カメラ側の QuickTime `mvhd` 内部結晶クロック差分（有音動画との開始時刻差）とICレコーダー側のタイムスタンプ差分から初期オフセットを逆算し、さらに映像内の視覚的ランドマーク（開会礼・登壇・お辞儀の頂点・着席）と音声波形の照合でフレーム単位の同期位置を確定させる。
+3. **キーフレーム視覚監査と案件別サブフォルダへの完成中間成果物保存**:
+   - `project.ExportCurrentFrameAsStill()` 等で Before/After キーフレーム確認シート（`.png`）を生成して `read_file` で目視監査し、完成した `.mp4` / `.mov`、プロジェクトアーカイブ `.drp`（`projectManager.ExportProject()`）、キーフレーム監査シート `.png`、および制作仕様書 `content_[テーマ名].md` を **`02_Creative_Dept/davinci/final_outputs/<案件サブフォルダ>/`** に出力する。
 
 ---
 

@@ -180,9 +180,13 @@ $SkillsToSync = @(
     "wordpress-avada-maintenance",
     "adobe-illustrator",
     "adobe-photoshop",
+    "adobe-premiere",
+    "adobe-aftereffects",
     "blender",
     "illustrator",
     "photoshop",
+    "premiere",
+    "aftereffects",
     "davinci",
     "writing",
     "pc-env-sync"
@@ -205,6 +209,22 @@ $NotebookPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\notebooklm-plugin
 if (Test-Path $NotebookPluginSrc) {
     Copy-Item -Path $NotebookPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
     Write-Host "  [OK] Synced global plugin: notebooklm-plugin"
+}
+$GlobalMasterPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\global-master-rules"
+if (Test-Path $GlobalMasterPluginSrc) {
+    Copy-Item -Path $GlobalMasterPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
+    Write-Host "  [OK] Synced global plugin: global-master-rules"
+    $MasterRulesMd = Join-Path $GlobalMasterPluginSrc "rules\AGENTS.md"
+    if (Test-Path $MasterRulesMd) {
+        $GlobalConfigDir = Join-Path $env:USERPROFILE ".gemini\config"
+        $GlobalRulesDir = Join-Path $GlobalConfigDir "rules"
+        if (-not (Test-Path $GlobalRulesDir)) {
+            New-Item -ItemType Directory -Path $GlobalRulesDir -Force | Out-Null
+        }
+        Copy-Item -Path $MasterRulesMd -Destination (Join-Path $GlobalConfigDir "AGENTS.md") -Force
+        Copy-Item -Path $MasterRulesMd -Destination (Join-Path $GlobalRulesDir "AGENTS.md") -Force
+        Write-Host "  [OK] Synced account-wide master rules: ~/.gemini/config/AGENTS.md & ~/.gemini/config/rules/AGENTS.md"
+    }
 }
 
 Write-Host "`n=== [4/6] Verifying Obsidian MCP (@bitbonsai/mcpvault) & Blender MCP (mcp-for-blender) ==="
@@ -241,11 +261,13 @@ if ($UvxCmd) {
     }
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator & photoshop) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator, photoshop, premiere & aftereffects) ==="
 $NodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $NodeExe = if ($NodeCmd) { $NodeCmd.Source } else { "node" }
 $IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
 $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server.js"
+$PremiereMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\premiere-mcp\server.js"
+$AfterEffectsMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\aftereffects-mcp\server.js"
 $BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
@@ -318,6 +340,18 @@ foreach ($cfgPath in $McpConfigPaths) {
         args    = @($PhotoshopMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "photoshop" -Value $photoshopEntry -Force
+
+    $premiereEntry = [PSCustomObject]@{
+        command = $NodeExe
+        args    = @($PremiereMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "premiere" -Value $premiereEntry -Force
+
+    $afterEffectsEntry = [PSCustomObject]@{
+        command = $NodeExe
+        args    = @($AfterEffectsMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "aftereffects" -Value $afterEffectsEntry -Force
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)

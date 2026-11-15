@@ -35,9 +35,13 @@ SKILLS_TO_SYNC=(
   "wordpress-avada-maintenance"
   "adobe-illustrator"
   "adobe-photoshop"
+  "adobe-premiere"
+  "adobe-aftereffects"
   "blender"
   "illustrator"
   "photoshop"
+  "premiere"
+  "aftereffects"
   "davinci"
   "writing"
   "pc-env-sync"
@@ -50,6 +54,16 @@ for skill in "${SKILLS_TO_SYNC[@]}"; do
     echo "  [OK] Synced skill: $skill"
   fi
 done
+
+GLOBAL_PLUGINS_DIR="$HOME/.gemini/config/plugins"
+mkdir -p "$GLOBAL_PLUGINS_DIR"
+if [ -d "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" ]; then
+  cp -R "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" "$GLOBAL_PLUGINS_DIR/"
+  mkdir -p "$HOME/.gemini/config/rules"
+  cp "$WORKSPACE_ROOT/.agents/plugins/global-master-rules/rules/AGENTS.md" "$HOME/.gemini/config/AGENTS.md"
+  cp "$WORKSPACE_ROOT/.agents/plugins/global-master-rules/rules/AGENTS.md" "$HOME/.gemini/config/rules/AGENTS.md"
+  echo "  [OK] Synced account-wide master rules (~/.gemini/config/rules/AGENTS.md & plugin)"
+fi
 
 echo ""
 echo "=== [4/7] Verifying DaVinci Resolve MCP (davinci-resolve-mcp) ==="
@@ -156,9 +170,17 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
       command: nodeBin,
       args: [process.argv[9]]
     };
+    json.mcpServers["premiere"] = {
+      command: nodeBin,
+      args: [process.argv[10]]
+    };
+    json.mcpServers["aftereffects"] = {
+      command: nodeBin,
+      args: [process.argv[11]]
+    };
 
     fs.writeFileSync(cfgPath, JSON.stringify(json, null, 2) + "\n", "utf8");
-  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$BLENDER_MCP_DIR" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js"
+  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$BLENDER_MCP_DIR" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
 

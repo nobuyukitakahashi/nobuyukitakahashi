@@ -1,0 +1,20 @@
+# Python cache & Blender backup files
+**/__pycache__/
+*.pyc
+*.blend1
+
+# Large rendered DaVinci Resolve full-length video/audio files (>100MB, synced via Google Drive)
+02_Creative_Dept/davinci/**/PB130002_編集済*.mp4
+04_Delivery_Dept/outputs/davinci/**/PB130002_編集済*.mp4
+02_Creative_Dept/davinci/**/PB130017_*.mp4
+04_Delivery_Dept/outputs/davinci/**/PB130017_*.mp4
+02_Creative_Dept/davinci/**/PB130019_*.mp4
+04_Delivery_Dept/outputs/davinci/**/PB130019_*.mp4
+02_Creative_Dept/davinci/**/enhanced_audio_48k.wav
+02_Creative_Dept/davinci/**/PB130002_編集済_音声ノイズ除去_音量調整済.wav
+04_Delivery_Dept/outputs/davinci/**/PB130002_編集済_音声ノイズ除去_音量調整済.wav
+
+# Uncompressed DPX stills & unpacked DB duplicate (ZIP archive and .drp files are tracked in Git; full folder is on Google Drive & D:)
+04_Delivery_Dept/outputs/davinci/**/02_Resolve_Project_Library_丸ごとバックアップ/Resolve Project Library/
+04_Delivery_Dept/outputs/davinci/**/03_Custom_Settings_LUT_Templates/Gallery_Stills_D_Drive/
+04_Delivery_Dept/outputs/davinci/**/04_Cドライブ参照素材退避/**/*.mp4

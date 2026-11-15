@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
 """
 CVN公式マスコットキャラクター「いい-ch（LILI-ch）＆ いい-NETくん（LILI-net）」
-2体ペア3Dアニメーション動画（15.0秒 / 360フレーム @ 24fps）
-【Blender 5.3 対応・腕ひれ完全ゼロ（独立パドル手 SO(3) 純粋剛体回転）＆
-  超短足ねじれゼロ（股関節振り子回転＋心地よい弾性伸縮＋胸ロゴ完全同期）全面改修版】
+2体ペア3Dアニメーション動画（15.0秒 / 450フレーム @ 30fps / Full HD 1920x1080 16:9）
+【v6: Blender 5.3 対応・腕根元スライディング吸盤フィレットスカート＆法線完全一致制御
+  ＋ 腕ひれ完全ゼロ（パドル手 SO(3) 純粋剛体回転）
+  ＋ 超短足ねじれゼロ（股関節振り子回転＋心地よい弾性伸縮＋ボディ＆胸ロゴ完全保護）全面改修版】
 
-  Phase 1 (Frame 1〜128 / 0.00s〜5.33s):
-    リファレンス（Kirby walk cycle 24fps: 1歩=8f / 1サイクル=16f）準拠の
+  Phase 1 (Frame 1〜160 / 0.00s〜5.33s @ 30fps):
+    リファレンス（Kirby walk cycle: 1歩=10f / 1サイクル=20f @ 30fps）準拠の
     超短足「トコトコ／ポテポテ」ウォーク（Y=+4.35m ➔ 0.0m、1歩≈0.272m）。
     歩き出しは斜め前3/4カメラアングルで前後の足運び・足の心地よい弾性伸縮・短い手の逆位相スイングを
-    立体的に見せ、Frame 76〜132 で完成静止画の正面カメラへ滑らかに回り込む。
-  Phase 2 (Frame 129〜168 / 5.33s〜7.00s):
-    定位置 Y=0.0m に到着した瞬間、両足を揃えて小さく「ピョコン！」と可愛い着地ホップ（+4.5cm）➔
-    「ポテッ」と自然な3%クッションで正面スマイル構図にピタッと静止（Frame 156 で静止画と100%一致）。
-  Phase 3 (Frame 169〜240 / 7.00s〜10.00s):
+    立体的に見せ、Frame 95〜165 で完成静止画の正面カメラ（16:9 ワイド構図）へ滑らかに回り込む。
+  Phase 2 (Frame 161〜210 / 5.33s〜7.00s @ 30fps):
+    定位置 Y=0.0m に到着した瞬間、両足を揃えて小さく「ピョコン！」と可愛い着地ホップ（+4.6cm）➔
+    「ポテッ」と自然なクッションで正面スマイル構図にピタッと静止（Frame 195 で静止画と完全一致）。
+  Phase 3 (Frame 211〜300 / 7.00s〜10.00s @ 30fps):
     お腹の凹み・ロゴ歪みゼロ！ぷっくり丸いタマゴ体型のまま、短いパドル手をちょこんと後ろ外側へ添えて
     前へ約21°綺麗に「ペコリ！」とおじぎし、アンテナと地球儀も可愛く前へ揺れる。
-  Phase 4 (Frame 241〜360 / 10.00s〜15.00s):
-    腕の伸縮ゼロ（常時1.00倍・完全剛体回転）！外側の短いパドル手をほっぺの横へグイッと持ち上げ、
-    周期10フレームで「パタパタパタッ！」と元気に振りながら、小首傾げ＆片足ちょこん浮きリズムを刻み、
-    最後は正面静止構図（Frame 360）にピタッと収まる。
+  Phase 4 (Frame 301〜450 / 10.00s〜15.00s @ 30fps):
+    腕の伸縮ゼロ・ひれゼロ・切れ目ゼロ！外側の短いパドル手をほっぺの横へグイッと持ち上げ、
+    元気に「パタパタパタッ！」と振りながら、小首傾げ＆片足ちょこん浮きリズムを刻み、
+    最後は正面静止構図（Frame 450）にピタッと収まる。
 
 Usage:
-  1) 視覚監査シート2枚（歩行8コマ連続＋全フェーズ6コマ）高速監査モード:
+  1) 視覚監査シート3枚（腕根元400%拡大シート＋歩行8コマ連続＋全フェーズ6コマ）高速監査モード:
      blender.exe --background --python build_pair_animation.py -- --check-only
-  2) 全360フレーム（15.0秒）MP4動画＋最終成果物一括出力モード:
+  2) 全450フレーム（15.0秒 @ 30fps, 1920x1080）MP4動画＋最終成果物一括出力モード:
      blender.exe --background --python build_pair_animation.py
 """
 
@@ -36,11 +37,14 @@ import numpy as np
 import bpy
 import bmesh
 from mathutils import Vector, Matrix
+from mathutils.bvhtree import BVHTree
+from mathutils.geometry import barycentric_transform
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+import build_iich_kun as mod_iich
 import build_iinet_kun as mod_iinet
 import build_pair_scene as mod_pair
 
@@ -48,19 +52,23 @@ DEPT_DIR = os.path.dirname(SCRIPT_DIR)
 FINAL_DIR = os.path.join(DEPT_DIR, "final_outputs")
 os.makedirs(FINAL_DIR, exist_ok=True)
 
+AUDIT_ARM_SEAM_CLOSEUP_PATH = os.path.join(SCRIPT_DIR, "audit_arm_seam_closeup.png")
 AUDIT_WALK_8_PATH = os.path.join(SCRIPT_DIR, "audit_walk_cycle_8frames.png")
 CHECK_SHEET_DRAFT_PATH = os.path.join(SCRIPT_DIR, "anim_keyframes_check.png")
 KEYFRAMES_FINAL_PATH = os.path.join(FINAL_DIR, "pair_iich_and_iinet_anim_keyframes.png")
 ANIM_BLEND_PATH = os.path.join(FINAL_DIR, "cvn_iich_and_iinet_pair_anim.blend")
 ANIM_MP4_PATH = os.path.join(FINAL_DIR, "pair_iich_and_iinet_run_bow_wave.mp4")
 
-FPS = 24
+FPS = 30
 FRAME_START = 1
-FRAME_END = 360
+FRAME_END = 450
+
+# 16:9 Full HD (1920x1080) において 4:3 (lens=70.0mm) と上下画角（頭上・足元余白）を100%一致させる焦点距離
+LENS_16_9 = 52.5
 
 
 # ==========================================
-# 数学ユーティリティ（C^1 / C^2 イージング）
+# 数学・平滑化ユーティリティ（C^1 / C^2 イージング ＆ ガウシアンフィルタ）
 # ==========================================
 def smoothstep_scalar(t):
     t = float(np.clip(t, 0.0, 1.0))
@@ -82,13 +90,670 @@ def smootherstep_np(t):
     return t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 
 
+def frame30_to_f24(frame_idx):
+    """
+    30fps のフレーム番号 (1..450, 15.0秒) を、
+    24fps 基準の連続フレーム時刻 f_24 (1.0..360.2) に正確に変換する。
+    これにより実時間（秒単位のテンポ・1歩=10f=1/3秒・1サイクル=20f=2/3秒）が100%維持される。
+    """
+    return 1.0 + (float(frame_idx) - 1.0) * (24.0 / 30.0)
+
+
+def make_gaussian_kernel_1d(sigma, radius=None):
+    if sigma <= 1e-5:
+        return np.array([1.0], dtype=np.float64)
+    if radius is None:
+        radius = max(1, int(math.ceil(3.0 * sigma)))
+    x = np.arange(-radius, radius + 1, dtype=np.float64)
+    k = np.exp(-0.5 * (x / sigma) ** 2)
+    return k / np.sum(k)
+
+
+def gaussian_smooth_periodic_1d(arr, sigma, axis=-1):
+    """周期境界（角度 θ 方向）に沿った1Dガウシアン平滑化"""
+    if sigma <= 1e-5:
+        return arr.copy()
+    k = make_gaussian_kernel_1d(sigma)
+    rad = (len(k) - 1) // 2
+    pad_width = [(0, 0)] * arr.ndim
+    pad_width[axis] = (rad, rad)
+    padded = np.pad(arr, pad_width, mode='wrap')
+    return np.apply_along_axis(lambda m: np.convolve(m, k, mode='valid'), axis, padded)
+
+
+def gaussian_smooth_edge_1d(arr, sigma, axis=0):
+    """端値保持境界（半径 u / 座標 y, z 方向）に沿った1Dガウシアン平滑化"""
+    if sigma <= 1e-5:
+        return arr.copy()
+    k = make_gaussian_kernel_1d(sigma)
+    rad = (len(k) - 1) // 2
+    pad_width = [(0, 0)] * arr.ndim
+    pad_width[axis] = (rad, rad)
+    padded = np.pad(arr, pad_width, mode='edge')
+    return np.apply_along_axis(lambda m: np.convolve(m, k, mode='valid'), axis, padded)
+
+
 # ==========================================
-# 1. キャラクター初期頂点＆変形パラメータ事前計算
+# 1. ボディ円筒放射曲面 S_body(φ, z) 高精度ルックアップ＆スライディング吸盤フィレット構築
+# ==========================================
+def build_body_lateral_surface_grid(body_obj, is_iich=True):
+    """
+    Body メッシュの実ポリゴンと頂点法線から BVHTree を構築し、
+    背骨中心軸 (x=0, y=0, z) まわりの円筒方位角 φ = atan2(y, |x|) ∈ [-0.48π, +0.48π] と
+    高さ z の2Dグリッド上で、正確な円筒表面半径 R_surf(φ, z) = sqrt(X^2 + Y^2) と
+    重心補間された滑らかな3D単位法線 N_surf(φ, z) を事前計算する。
+    ※ 卵型胴体は中心軸に対して100%星状凸であるため、全レイが表面とほぼ直角に交差し、
+       前面胸部や背面へスカートが回り込んでもグレージング段差（棚状アーティファクト）が一切発生しない。
+    """
+    body_obj.data.update()
+    verts = [v.co.copy() for v in body_obj.data.vertices]
+    vnorms = [v.normal.copy() for v in body_obj.data.vertices]
+    tris = []
+    for p in body_obj.data.polygons:
+        vs = p.vertices[:]
+        tris.append((vs[0], vs[1], vs[2]))
+        if len(vs) == 4:
+            tris.append((vs[0], vs[2], vs[3]))
+    bvh = BVHTree.FromPolygons(verts, tris)
+
+    nphi, nz = 180, 240
+    phi_min, phi_max = -0.48 * math.pi, 0.48 * math.pi
+    z_min, z_max = (0.12, 1.38) if is_iich else (0.16, 1.68)
+    phis = np.linspace(phi_min, phi_max, nphi)
+    zs = np.linspace(z_min, z_max, nz)
+
+    R_grid = np.zeros((nphi, nz), dtype=np.float64)
+    N_grid = np.zeros((nphi, nz, 3), dtype=np.float64)
+    valid_mask = np.zeros((nphi, nz), dtype=bool)
+
+    for iz, zv in enumerate(zs):
+        for ip, phiv in enumerate(phis):
+            cp, sp = math.cos(float(phiv)), math.sin(float(phiv))
+            ray_orig = Vector((2.2 * cp, 2.2 * sp, float(zv)))
+            ray_dir = Vector((-cp, -sp, 0.0))
+            loc, norm, tidx, dist = bvh.ray_cast(ray_orig, ray_dir)
+            if loc is not None and loc.x > 0.005:
+                R_grid[ip, iz] = math.hypot(float(loc.x), float(loc.y))
+                i0, i1, i2 = tris[tidx]
+                n_interp = barycentric_transform(
+                    loc, verts[i0], verts[i1], verts[i2], vnorms[i0], vnorms[i1], vnorms[i2]
+                ).normalized()
+                N_grid[ip, iz] = (float(n_interp.x), float(n_interp.y), float(n_interp.z))
+                valid_mask[ip, iz] = True
+
+        val_idx = np.where(valid_mask[:, iz])[0]
+        if len(val_idx) > 0:
+            first_i, last_i = int(val_idx[0]), int(val_idx[-1])
+            if first_i > 0:
+                R_grid[:first_i, iz] = R_grid[first_i, iz]
+                N_grid[:first_i, iz] = N_grid[first_i, iz]
+            if last_i < nphi - 1:
+                R_grid[last_i + 1:, iz] = R_grid[last_i, iz]
+                N_grid[last_i + 1:, iz] = N_grid[last_i, iz]
+
+    # ポリゴン分割の微細ファセット量子化を除去する微小ガウシアンフィルタ
+    R_grid = gaussian_smooth_edge_1d(gaussian_smooth_edge_1d(R_grid, 0.85, axis=0), 0.85, axis=1)
+    N_grid = gaussian_smooth_edge_1d(gaussian_smooth_edge_1d(N_grid, 1.05, axis=0), 1.05, axis=1)
+    n_len = np.linalg.norm(N_grid, axis=-1, keepdims=True)
+    N_grid = N_grid / np.maximum(n_len, 1e-8)
+
+    return {
+        "phis": phis,
+        "zs": zs,
+        "phi0": phi_min,
+        "z0": z_min,
+        "dphi": (phi_max - phi_min) / (nphi - 1),
+        "dz": (z_max - z_min) / (nz - 1),
+        "nphi": nphi,
+        "nz": nz,
+        "R_grid": R_grid,
+        "N_grid": N_grid,
+        "R_ref": 0.62,
+    }
+
+
+def eval_body_cyl_surface(surf_grid, phi_arr, z_arr, side_sign=+1.0):
+    """
+    任意の円筒方位角・高さ配列 (phi_arr, z_arr) に対して Body の円筒半径 R_surf (>0) と
+    3D単位法線ベクトル (side_sign * Nx, Ny, Nz) を高速双線形補間で返す。
+    """
+    nphi = surf_grid["nphi"]
+    nz = surf_grid["nz"]
+    up = np.clip((phi_arr - surf_grid["phi0"]) / surf_grid["dphi"], 0.0, nphi - 1.0001)
+    uz = np.clip((z_arr - surf_grid["z0"]) / surf_grid["dz"], 0.0, nz - 1.0001)
+    ip0 = up.astype(np.int32)
+    iz0 = uz.astype(np.int32)
+    fp = up - ip0
+    fz = uz - iz0
+
+    w00 = (1.0 - fp) * (1.0 - fz)
+    w10 = fp * (1.0 - fz)
+    w01 = (1.0 - fp) * fz
+    w11 = fp * fz
+
+    Rg = surf_grid["R_grid"]
+    Ng = surf_grid["N_grid"]
+
+    r_val = (
+        w00 * Rg[ip0, iz0]
+        + w10 * Rg[ip0 + 1, iz0]
+        + w01 * Rg[ip0, iz0 + 1]
+        + w11 * Rg[ip0 + 1, iz0 + 1]
+    )
+    n_val = (
+        w00[..., None] * Ng[ip0, iz0]
+        + w10[..., None] * Ng[ip0 + 1, iz0]
+        + w01[..., None] * Ng[ip0, iz0 + 1]
+        + w11[..., None] * Ng[ip0 + 1, iz0 + 1]
+    )
+    n_val = n_val.copy()
+    n_val[..., 0] *= side_sign
+    n_len = np.linalg.norm(n_val, axis=-1, keepdims=True)
+    n_val = n_val / np.maximum(n_len, 1e-8)
+    return r_val, n_val
+
+
+def rotate_rigid_arm_so3(x, y, z, char_state, side_sign, flap_deg, swing_fwd_deg):
+    """
+    パドル手（Arm.L / Arm.R）に対する純粋剛体 SO(3) 直交回転（det(R)=1、伸縮・せん断歪み厳密ゼロ）。
+      1) 胴体肩ソケット内部ピボット (u_sh, y_sh) を中心とする前後スイング（du_s > 0 を常に保ち逆振りシーソー現象を防止）
+      2) タマゴ型胴体側面の曲率中心 (u_flap_piv, z_flap_piv) まわりの上下パタパタ挙上
+    """
+    if abs(flap_deg) < 1e-5 and abs(swing_fwd_deg) < 1e-5:
+        return x.copy(), y.copy(), z.copy()
+
+    u_out = side_sign * x
+    u_sh = char_state["u_sh"]
+    y_sh = char_state["y_sh"]
+    u_fp = char_state["u_flap_piv"]
+    z_fp = char_state["z_flap_piv"]
+
+    # 1) 肩ソケット内部ピボット (u_sh, y_sh) を中心とする前後スイング（Azimuth: 純粋剛体 SO(2) 回転）
+    beta = math.radians(swing_fwd_deg)
+    cb = math.cos(beta)
+    sb = math.sin(beta)
+    du_s = u_out - u_sh
+    dy_s = y - y_sh
+    u_1 = u_sh + du_s * cb + dy_s * sb
+    y_1 = y_sh - du_s * sb + dy_s * cb
+
+    # 2) タマゴ側面曲率中心 (u_fp, z_fp) まわりの上下パタパタ挙上（Flap: 純粋剛体 SO(2) 回転）
+    alpha = math.radians(flap_deg)
+    ca = math.cos(alpha)
+    sa = math.sin(alpha)
+    du_f = u_1 - u_fp
+    dz_f = z - z_fp
+    u_2 = u_fp + du_f * ca - dz_f * sa
+    z_2 = z_fp + du_f * sa + dz_f * ca
+
+    x_out = side_sign * u_2
+    return x_out, y_1, z_2
+
+
+def find_first_crossing_continuous(arr_2d, thresh_1d, m_min=45, m_max=182):
+    """
+    外側パドル (m = m_max, 常に h > thresh) から内側 (m -> m_min) へ向かって探索し、
+    外側から見て最初に h < thresh となる交差位置 m_cross[k] を連続線形補間で求める。
+    これにより内側極キャップ (m < m_min) が大角度回転時に反対側へ動いても100%無視される。
+    """
+    n_u, n_theta = arr_2d.shape
+    m_hi_lim = min(int(m_max), n_u - 1)
+    m_lo_lim = max(int(m_min), 1)
+    sub = arr_2d[m_lo_lim:m_hi_lim + 1, :] - thresh_1d[None, :]
+    below = sub < 0.0
+    rev_idx = np.argmax(below[::-1, :], axis=0)
+    has_below = np.any(below, axis=0)
+    idx_lo_sub = np.where(has_below, (sub.shape[0] - 1) - rev_idx, 0)
+    idx_lo = np.clip(m_lo_lim + idx_lo_sub, m_lo_lim, m_hi_lim - 1)
+    idx_hi = idx_lo + 1
+
+    k_idx = np.arange(n_theta)
+    v_lo = arr_2d[idx_lo, k_idx] - thresh_1d
+    v_hi = arr_2d[idx_hi, k_idx] - thresh_1d
+    denom = np.maximum(v_hi - v_lo, 1e-8)
+    frac = np.clip(-v_lo / denom, 0.0, 1.0)
+    return idx_lo.astype(np.float64) + frac
+
+
+def interp_along_u_table(table_3d, m_float_2d):
+    """
+    table_3d[n_u, n_theta, 3] に対して、任意の連続行インデックス配列 m_float_2d[..., n_theta] で
+    各列 k ごとに線形補間した 3D 座標配列 [..., n_theta, 3] を返す。
+    """
+    n_u, n_theta, _ = table_3d.shape
+    m_clamped = np.clip(m_float_2d, 0.0, n_u - 1.0001)
+    m0 = m_clamped.astype(np.int32)
+    fm = (m_clamped - m0)[..., None]
+    k_idx = np.arange(n_theta)
+    return (1.0 - fm) * table_3d[m0, k_idx] + fm * table_3d[m0 + 1, k_idx]
+
+
+def evaluate_arm_fillet_skirt_pose(skirt_meta, char_state, side_sign, flap_deg, swing_fwd_deg):
+    """
+    【v6 コアアルゴリズム：円筒表面追従座標系 (h, φ, Z) 吸盤フィレットスカート＋ネックC^2平滑化】
+    1) 事前計算された滑らかなパドル曲面テーブル C_rest_uyz[n_u, n_theta, 3] を
+       rotate_rigid_arm_so3 で純粋剛体 SO(3) 回転させる。
+    2) 背骨中心軸 (0, 0, Z) まわりの円筒座標 (R_rot, φ_rot, Z_rot) と
+       Body 表面半径 R_surf(φ_rot, Z_rot) から放射高さ h_rot = R_rot - R_surf を計算し、
+       交差ループ P_x (h = 0) とフィレットネックループ B_2 (h = H(θ)) を連続サブインデックス精度で特定する。
+    3) 円筒表面弧長座標 (S_φ = R_ref*φ, Z) 上で交差ループから外向き法線方向へスカート幅 W(θ) だけ
+       スライドさせた吸盤リム点 B_0 を配置し、s=0 で Body 表面に完全 G^1 接線連続となる 3次ベジェスカートと
+       カラー遷移帯を結合した上で、ネック境界 (j ≈ n_skirt) に C^2 ガウシアン平滑化を適用する。
+    4) これにより、どの角度に腕を振っても・高く持ち上げても、
+       ・以前の翼状のひれ（ウェビング）は 100% ゼロ
+       ・Body との V字交差境界線（切れ目）およびネックの折れ線も 100% ゼロ
+       ・前面胸部への棚状段差ゼロ、胸ロゴへの干渉ゼロ
+       ・パドル外縁と下端の可愛いシルエットは 100% 純粋剛体維持
+       を達成する。
+    """
+    surf_grid = char_state["surf_grid"]
+    R_ref = surf_grid["R_ref"]
+    is_iich = char_state["is_iich"]
+    C_rest_uyz = skirt_meta["C_rest_uyz"]
+    pole_rest_uyz = skirt_meta["pole_rest_uyz"]
+    thetas = skirt_meta["thetas"]
+    n_u = skirt_meta["n_u"]
+    n_theta = skirt_meta["n_theta"]
+    n_skirt = skirt_meta["n_skirt"]
+    n_collar = skirt_meta["n_collar"]
+    n_tip = skirt_meta["n_tip"]
+    m_lock = skirt_meta["m_lock"]
+
+    # Step A: パドル曲面テーブル全体を純粋剛体 SO(3) 回転
+    X_rest = side_sign * C_rest_uyz[:, :, 0]
+    Y_rest = C_rest_uyz[:, :, 1]
+    Z_rest = C_rest_uyz[:, :, 2]
+    X_rot, Y_rot, Z_rot = rotate_rigid_arm_so3(
+        X_rest.ravel(), Y_rest.ravel(), Z_rest.ravel(),
+        char_state, side_sign, flap_deg, swing_fwd_deg,
+    )
+    X_rot = X_rot.reshape(n_u, n_theta)
+    Y_rot = Y_rot.reshape(n_u, n_theta)
+    Z_rot = Z_rot.reshape(n_u, n_theta)
+    U_rot = np.maximum(side_sign * X_rot, 1e-5)
+
+    px_r, py_r, pz_r = rotate_rigid_arm_so3(
+        np.array([side_sign * pole_rest_uyz[0]]),
+        np.array([pole_rest_uyz[1]]),
+        np.array([pole_rest_uyz[2]]),
+        char_state, side_sign, flap_deg, swing_fwd_deg,
+    )
+    pole_rot = np.array([float(px_r[0]), float(py_r[0]), float(pz_r[0])], dtype=np.float64)
+
+    # Step B: 円筒座標 (R_rot, Phi_rot, Z_rot) と Body 表面からの放射高さ h_rot = R_rot - R_surf
+    R_rot = np.hypot(U_rot, Y_rot)
+    Phi_rot = np.arctan2(Y_rot, U_rot)
+    S_rot = R_ref * Phi_rot
+    R_surf_rot, _ = eval_body_cyl_surface(surf_grid, Phi_rot, Z_rot, side_sign=side_sign)
+    h_rot = R_rot - R_surf_rot
+
+    # Step C: 方位角 θ に応じた異方性フィレット高さ H(θ) ＆ コンパクトな吸盤スカート幅 W(θ)
+    # θ = 0: 肩上端(+Z), θ = π/2: 背面(+Y), θ = π: 脇下(-Z), θ = 3π/2: 前面(-Y)
+    w_pit = (np.maximum(0.0, -np.cos(thetas))) ** 2.2
+    w_fb = (np.sin(thetas)) ** 2
+    u_lift = smoothstep_scalar(flap_deg / 34.0)
+    u_swing = smoothstep_scalar(abs(swing_fwd_deg) / 34.0)
+    u_motion = max(u_lift, 0.45 * u_swing)
+
+    if is_iich:
+        H_top, W_top = 0.032, 0.045
+        H_fb, W_fb = 0.052, 0.068
+        H_pit = 0.0095 + 0.0160 * u_motion
+        W_pit = 0.0130 + 0.0220 * u_motion
+    else:
+        H_top, W_top = 0.035, 0.048
+        H_fb, W_fb = 0.056, 0.074
+        H_pit = 0.0105 + 0.0180 * u_motion
+        W_pit = 0.0145 + 0.0240 * u_motion
+
+    H_upper = (1.0 - w_fb) * H_top + w_fb * H_fb
+    W_upper = (1.0 - w_fb) * W_top + w_fb * W_fb
+    H_k = (1.0 - w_pit) * H_upper + w_pit * H_pit
+    W_k = (1.0 - w_pit) * W_upper + w_pit * W_pit
+
+    # Step D: 交差インデックス m_zero (h=0) とネックインデックス m_neck (h=H_k) の連続特定＆周期平滑化
+    m_zero = find_first_crossing_continuous(h_rot, np.zeros(n_theta, dtype=np.float64), m_min=32, m_max=182)
+    m_neck = find_first_crossing_continuous(h_rot, H_k, m_min=35, m_max=186)
+    m_zero = gaussian_smooth_periodic_1d(m_zero, sigma=3.2, axis=0)
+    m_neck = gaussian_smooth_periodic_1d(m_neck, sigma=3.2, axis=0)
+    m_neck = np.clip(m_neck, m_zero + 3.5, m_lock - 8.0)
+
+    # Step E: (h, S_phi, Z) 空間における交差ループ P_x とネックループ B_2
+    table_hsz = np.stack([h_rot, S_rot, Z_rot], axis=-1)
+    P_zero_hsz = interp_along_u_table(table_hsz, m_zero)
+    P_neck_hsz = interp_along_u_table(table_hsz, m_neck)
+
+    S_x = gaussian_smooth_periodic_1d(P_zero_hsz[:, 1], sigma=2.5, axis=0)
+    Z_x = gaussian_smooth_periodic_1d(P_zero_hsz[:, 2], sigma=2.5, axis=0)
+
+    h_2 = np.maximum(gaussian_smooth_periodic_1d(P_neck_hsz[:, 0], sigma=2.4, axis=0), 0.005)
+    S_2 = gaussian_smooth_periodic_1d(P_neck_hsz[:, 1], sigma=2.4, axis=0)
+    Z_2 = gaussian_smooth_periodic_1d(P_neck_hsz[:, 2], sigma=2.4, axis=0)
+
+    # Step F: (S_phi, Z) 表面チャート上の交差ループ外向き単位法線 (v_s, v_z) と吸盤リム座標 (S_0, Z_0)
+    Sc = float(np.mean(S_x))
+    Zc = float(np.mean(Z_x))
+    rs = S_x - Sc
+    rz = Z_x - Zc
+    r_len = np.hypot(rs, rz)
+    rs_u = rs / np.maximum(r_len, 1e-6)
+    rz_u = rz / np.maximum(r_len, 1e-6)
+
+    dS_dth = np.roll(S_x, -1) - np.roll(S_x, 1)
+    dZ_dth = np.roll(Z_x, -1) - np.roll(Z_x, 1)
+    ns_c = dZ_dth
+    nz_c = -dS_dth
+    dot_rc = ns_c * rs_u + nz_c * rz_u
+    flip_sign = np.where(dot_rc >= 0.0, 1.0, -1.0)
+    ns_c *= flip_sign
+    nz_c *= flip_sign
+    c_len = np.hypot(ns_c, nz_c)
+    ns_u = ns_c / np.maximum(c_len, 1e-6)
+    nz_u = nz_c / np.maximum(c_len, 1e-6)
+
+    vs = gaussian_smooth_periodic_1d(0.60 * rs_u + 0.40 * ns_u, sigma=3.8, axis=0)
+    vz = gaussian_smooth_periodic_1d(0.60 * rz_u + 0.40 * nz_u, sigma=3.8, axis=0)
+    v_len = np.hypot(vs, vz)
+    vs /= np.maximum(v_len, 1e-6)
+    vz /= np.maximum(v_len, 1e-6)
+
+    # 鋭角側でも常にリム P_0 がネック P_2 より +W_k 以上外側にあることを厳密保証し、V字の影溝や折り返しを100%防ぐ
+    d_neck_out = np.maximum(0.0, (S_2 - S_x) * vs + (Z_2 - Z_x) * vz)
+    W_eff = gaussian_smooth_periodic_1d(d_neck_out + W_k, sigma=3.0, axis=0)
+
+    S_0 = gaussian_smooth_periodic_1d(S_x + W_eff * vs, sigma=2.6, axis=0)
+    Z_0 = gaussian_smooth_periodic_1d(Z_x + W_eff * vz, sigma=2.6, axis=0)
+
+    # Step G: (h, S_phi, Z) 空間における 3次ベジェスカート (j = 0 .. n_skirt)
+    # ネック側制御点 P_12 をパドル接線と整合させ、さらに Step H でネック境界を C^2 平滑化する
+    dm_ring = (m_lock - m_neck) / float(n_collar)
+    P_neck_up = interp_along_u_table(table_hsz, m_neck + 2.0 * dm_ring)
+    dP_ring = 0.5 * (P_neck_up - P_neck_hsz)
+
+    delta_0 = 0.00018
+    h_0 = np.full(n_theta, delta_0, dtype=np.float64)
+    h_01 = delta_0 + 0.04 * h_2
+    h_12_tan = h_2 - (0.22 * n_skirt) * dP_ring[:, 0]
+    h_12 = np.clip(h_12_tan, 0.38 * h_2, 0.68 * h_2)
+
+    S_01 = S_0 + 0.35 * (S_2 - S_0)
+    Z_01 = Z_0 + 0.35 * (Z_2 - Z_0)
+    S_12 = S_0 + 0.68 * (S_2 - S_0)
+    Z_12 = Z_0 + 0.68 * (Z_2 - Z_0)
+
+    s_vals = np.linspace(0.0, 1.0, n_skirt + 1)[:, None]
+    oms = 1.0 - s_vals
+    b0 = oms ** 3
+    b1 = 3.0 * (oms ** 2) * s_vals
+    b2 = 3.0 * oms * (s_vals ** 2)
+    b3 = s_vals ** 3
+
+    h_skirt = b0 * h_0[None, :] + b1 * h_01[None, :] + b2 * h_12[None, :] + b3 * h_2[None, :]
+    S_skirt = b0 * S_0[None, :] + b1 * S_01[None, :] + b2 * S_12[None, :] + b3 * S_2[None, :]
+    Z_skirt = b0 * Z_0[None, :] + b1 * Z_01[None, :] + b2 * Z_12[None, :] + b3 * Z_2[None, :]
+
+    # Step H: カラー遷移帯 (j = n_skirt+1 .. n_skirt+n_collar) と結合し、ネック境界を C^2 平滑化
+    t_collar = np.linspace(0.0, 1.0, n_collar + 1)[1:, None]
+    m_collar = m_neck[None, :] + t_collar * (m_lock - m_neck[None, :])
+    P_collar_hsz = interp_along_u_table(table_hsz, m_collar)
+
+    H_sc = np.vstack([h_skirt, P_collar_hsz[:, :, 0]])
+    S_sc = np.vstack([S_skirt, P_collar_hsz[:, :, 1]])
+    Z_sc = np.vstack([Z_skirt, P_collar_hsz[:, :, 2]])
+
+    # リム端 (j=0, 1) と外側ロック端 (j >= n_skirt+n_collar-2) を 100% 固定したまま、
+    # ネック接合部 (j ≈ n_skirt) の傾き変化を (h, S_phi, Z) 空間で C^2 ガウシアン平滑化して折れ線を完全消滅させる
+    n_sc = H_sc.shape[0]
+    j_idx = np.arange(n_sc, dtype=np.float64)
+    w_neck_j = np.exp(-0.5 * ((j_idx - float(n_skirt)) / 4.2) ** 2)
+    w_neck_j[:2] = 0.0
+    w_neck_j[-2:] = 0.0
+    w_neck_2d = w_neck_j[:, None]
+
+    H_sm = gaussian_smooth_periodic_1d(gaussian_smooth_edge_1d(H_sc, sigma=2.2, axis=0), sigma=1.4, axis=1)
+    S_sm = gaussian_smooth_periodic_1d(gaussian_smooth_edge_1d(S_sc, sigma=2.2, axis=0), sigma=1.4, axis=1)
+    Z_sm = gaussian_smooth_periodic_1d(gaussian_smooth_edge_1d(Z_sc, sigma=2.2, axis=0), sigma=1.4, axis=1)
+
+    H_sc = (1.0 - w_neck_2d) * H_sc + w_neck_2d * H_sm
+    S_sc = (1.0 - w_neck_2d) * S_sc + w_neck_2d * S_sm
+    Z_sc = (1.0 - w_neck_2d) * Z_sc + w_neck_2d * Z_sm
+
+    # s < 1 のスカート内部も θ 方向に滑らかに整える（j=0 リム高さ delta_0 は厳密維持）
+    H_sc[1:-2] = gaussian_smooth_periodic_1d(H_sc[1:-2], sigma=1.1, axis=1)
+    S_sc[:-2] = gaussian_smooth_periodic_1d(S_sc[:-2], sigma=1.1, axis=1)
+    Z_sc[:-2] = gaussian_smooth_periodic_1d(Z_sc[:-2], sigma=1.1, axis=1)
+    H_sc[0, :] = delta_0
+
+    Phi_sc = S_sc / R_ref
+    R_surf_sc, N_body_sc = eval_body_cyl_surface(surf_grid, Phi_sc, Z_sc, side_sign=side_sign)
+    R_tot_sc = R_surf_sc + H_sc
+    X_sc = side_sign * R_tot_sc * np.cos(Phi_sc)
+    Y_sc = R_tot_sc * np.sin(Phi_sc)
+    P_sc_xyz = np.stack([X_sc, Y_sc, Z_sc], axis=-1)
+
+    # Step I: 外側純粋剛体パドル先端 (j > n_skirt+n_collar)
+    t_tip = np.linspace(0.0, 1.0, n_tip + 1)[1:-1, None]
+    m_tip = np.broadcast_to(m_lock + t_tip * ((n_u - 1.0) - m_lock), (n_tip - 1, n_theta))
+    table_xyz = np.stack([X_rot, Y_rot, Z_rot], axis=-1)
+    P_tip_xyz = interp_along_u_table(table_xyz, m_tip)
+
+    Phi_tip = np.arctan2(P_tip_xyz[:, :, 1], np.maximum(side_sign * P_tip_xyz[:, :, 0], 1e-5))
+    _, N_body_tip = eval_body_cyl_surface(surf_grid, Phi_tip, P_tip_xyz[:, :, 2], side_sign=side_sign)
+
+    phi_pole = math.atan2(float(pole_rot[1]), max(float(side_sign * pole_rot[0]), 1e-5))
+    _, N_body_pole = eval_body_cyl_surface(
+        surf_grid, np.array([phi_pole]), np.array([pole_rot[2]]), side_sign=side_sign
+    )
+
+    all_rings_xyz = np.vstack([P_sc_xyz, P_tip_xyz]).reshape(-1, 3)
+    all_verts_xyz = np.vstack([all_rings_xyz, pole_rot[None, :]])
+
+    all_rings_nbody = np.vstack([N_body_sc, N_body_tip]).reshape(-1, 3)
+    all_verts_nbody = np.vstack([all_rings_nbody, N_body_pole.reshape(1, 3)])
+
+    return (
+        all_verts_xyz[:, 0].copy(),
+        all_verts_xyz[:, 1].copy(),
+        all_verts_xyz[:, 2].copy(),
+        all_verts_nbody,
+    )
+
+
+def rebuild_arm_as_polar_skirt_mesh(arm_part_obj, char_state, side_sign=+1.0):
+    """
+    build_pair_scene.py が生成した滑らかなパドル腕メッシュ（ラプラシアン平滑化済み 8,216 頂点）を
+    単位球面 S^2 上の BVHTree 重心補間でサンプリングし、
+    ・外側パドル先端 (u >= m_lock): 100% 純粋剛体回転
+    ・根元スカートリム (j = 0, s = 0): Body 表面に 0.18mm オフセット＆法線角度差 0.00° で密着する開境界ループ
+    を持つ極座標構造化メッシュ（6,273 頂点）に再構築する。
+    """
+    surf_grid = char_state["surf_grid"]
+    is_iich = char_state["is_iich"]
+
+    # 1) 元の平滑化済み Cube-Sphere 頂点と S^2 単位球座標の対応構築
+    orig_mesh = arm_part_obj.data
+    p3d_verts = [Vector((side_sign * v.co.x, v.co.y, v.co.z)) for v in orig_mesh.vertices]
+
+    bm_ref = bmesh.new()
+    bmesh.ops.create_cube(bm_ref, size=2.0)
+    bmesh.ops.subdivide_edges(bm_ref, edges=bm_ref.edges[:], cuts=36, use_grid_fill=True)
+    bm_ref.verts.ensure_lookup_table()
+    bm_ref.faces.ensure_lookup_table()
+    coords_c = np.array([v.co[:] for v in bm_ref.verts], dtype=np.float64)
+    tan_c = np.tan(coords_c * (math.pi / 4.0))
+    unit_p = tan_c / np.linalg.norm(tan_c, axis=1, keepdims=True)
+
+    tris_s2 = []
+    for f in bm_ref.faces:
+        vs = [v.index for v in f.verts]
+        tris_s2.append((vs[0], vs[1], vs[2]))
+        if len(vs) == 4:
+            tris_s2.append((vs[0], vs[2], vs[3]))
+    bm_ref.free()
+
+    s2_verts = [Vector(u) for u in unit_p]
+    bvh_s2 = BVHTree.FromPolygons(s2_verts, tris_s2)
+
+    # 2) 内側肩根元極 p_in から外側パドル頂点 p_out へ向かう極座標グリッド (psi, theta) サンプリング
+    alpha0 = 0.24
+    p_in = np.array([-math.cos(alpha0), 0.0, math.sin(alpha0)], dtype=np.float64)
+    e1 = np.array([math.sin(alpha0), 0.0, math.cos(alpha0)], dtype=np.float64)
+    e2 = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+
+    n_u = 240
+    n_theta = 112
+    psis = np.linspace(0.0, math.pi, n_u)
+    thetas = np.linspace(0.0, 2.0 * math.pi, n_theta, endpoint=False)
+
+    C_raw = np.zeros((n_u, n_theta, 3), dtype=np.float64)
+    for m, psi in enumerate(psis):
+        cp, sp = math.cos(psi), math.sin(psi)
+        # 内側極キャップ (psi < 0.24*pi) のみ Body 内部へ深く引き込み、大角度スイング時の根元抜けを完全防止
+        deep_pull = 0.055 * (math.cos(0.5 * math.pi * min(psi / (0.24 * math.pi), 1.0)) ** 2)
+        for k, th in enumerate(thetas):
+            u_vec = cp * p_in + sp * (math.cos(th) * e1 + math.sin(th) * e2)
+            loc, _, tidx, _ = bvh_s2.find_nearest(Vector(u_vec))
+            i0, i1, i2 = tris_s2[tidx]
+            p_int = barycentric_transform(
+                loc, s2_verts[i0], s2_verts[i1], s2_verts[i2],
+                p3d_verts[i0], p3d_verts[i1], p3d_verts[i2],
+            )
+            C_raw[m, k, 0] = float(p_int.x) - deep_pull
+            C_raw[m, k, 1] = float(p_int.y)
+            C_raw[m, k, 2] = float(p_int.z)
+
+    # 微小平滑化でポリゴン補間ファセットを除去
+    C_raw[:-4] = gaussian_smooth_edge_1d(C_raw[:-4], sigma=0.85, axis=0)
+    C_raw[:-1] = gaussian_smooth_periodic_1d(C_raw[:-1], sigma=0.85, axis=1)
+    pole_rest_uyz = np.mean(C_raw[-1, :, :], axis=0)
+
+    # 3) 静止状態での交差位置を u=0.35, ネック位置を u=0.45 に揃える正規化ワープ
+    R_raw_0 = np.hypot(np.maximum(C_raw[:, :, 0], 1e-5), C_raw[:, :, 1])
+    Phi_raw_0 = np.arctan2(C_raw[:, :, 1], np.maximum(C_raw[:, :, 0], 1e-5))
+    R_surf_0, _ = eval_body_cyl_surface(surf_grid, Phi_raw_0, C_raw[:, :, 2], side_sign=+1.0)
+    h_0 = R_raw_0 - R_surf_0
+    w_pit = (np.maximum(0.0, -np.cos(thetas))) ** 2.2
+    H_rest = (1.0 - w_pit) * (0.024 if is_iich else 0.026) + w_pit * (0.0085 if is_iich else 0.0095)
+
+    m_zero_0 = gaussian_smooth_periodic_1d(
+        find_first_crossing_continuous(h_0, np.zeros(n_theta), m_min=5, m_max=210), sigma=3.0, axis=0
+    )
+    m_neck_0 = gaussian_smooth_periodic_1d(
+        find_first_crossing_continuous(h_0, H_rest, m_min=8, m_max=215), sigma=3.0, axis=0
+    )
+    m_neck_0 = np.maximum(m_neck_0, m_zero_0 + 3.5)
+
+    u_norm = np.linspace(0.0, 1.0, n_u)
+    C_rest_uyz = np.zeros_like(C_raw)
+    idx_src = np.arange(n_u, dtype=np.float64)
+    for k in range(n_theta):
+        m_warp = np.interp(
+            u_norm,
+            [0.0, 0.35, 0.45, 1.0],
+            [0.0, float(m_zero_0[k]), float(m_neck_0[k]), float(n_u - 1)],
+        )
+        for c in range(3):
+            C_rest_uyz[:, k, c] = np.interp(m_warp, idx_src, C_raw[:, k, c])
+
+    n_skirt = 18
+    n_collar = 16
+    n_tip = 22
+    n_rings = (n_skirt + 1) + n_collar + (n_tip - 1)  # 19 + 16 + 21 = 56 rings + 1 pole = 6,273 verts
+    m_lock = 0.76 * (n_u - 1)
+
+    # 法線ブレンド重み w_norm_blend(j, k):
+    # リム端 (j=0, s=0) では w=1.000 で Body のシェーディング法線と100.0%一致（角度差 0.00°）させ、
+    # ベジェフィレットスカート領域 (0 <= s <= 1.0) で幾何法線 n_geom へ滑らかに C2 遷移させる。
+    ring_s = (np.arange(n_rings, dtype=np.float64) / float(n_skirt))[:, None]
+    sin2_th = (np.sin(thetas) ** 2)[None, :]
+    s_max_theta = 0.55 + 0.45 * sin2_th
+    w_norm_2d = 1.0 - smootherstep_np(ring_s / s_max_theta)
+    w_norm_2d[0, :] = 1.0
+    vert_w_norm = np.append(w_norm_2d.ravel(), 0.0)
+    vert_ring_s = np.append(np.repeat(ring_s[:, 0], n_theta), 3.0)
+
+    skirt_meta = {
+        "C_rest_uyz": C_rest_uyz,
+        "pole_rest_uyz": pole_rest_uyz,
+        "thetas": thetas,
+        "n_u": n_u,
+        "n_theta": n_theta,
+        "n_skirt": n_skirt,
+        "n_collar": n_collar,
+        "n_tip": n_tip,
+        "n_rings": n_rings,
+        "m_lock": m_lock,
+        "vert_w_norm": vert_w_norm,
+        "vert_ring_s": vert_ring_s,
+    }
+
+    # 4) 静止ポーズ座標を計算して BMesh トポロジを構築
+    vx, vy, vz, _ = evaluate_arm_fillet_skirt_pose(
+        skirt_meta, char_state, side_sign=side_sign, flap_deg=0.0, swing_fwd_deg=0.0
+    )
+
+    bm_new = bmesh.new()
+    bm_verts = [bm_new.verts.new((float(vx[i]), float(vy[i]), float(vz[i]))) for i in range(len(vx))]
+    bm_new.verts.ensure_lookup_table()
+
+    for j in range(n_rings - 1):
+        row0 = j * n_theta
+        row1 = (j + 1) * n_theta
+        for k in range(n_theta):
+            k_next = (k + 1) % n_theta
+            v00 = bm_verts[row0 + k]
+            v01 = bm_verts[row0 + k_next]
+            v11 = bm_verts[row1 + k_next]
+            v10 = bm_verts[row1 + k]
+            if side_sign > 0.0:
+                f = bm_new.faces.new((v00, v10, v11, v01))
+            else:
+                f = bm_new.faces.new((v00, v01, v11, v10))
+            f.smooth = True
+
+    # 外側パドル頂点キャップ
+    last_row = (n_rings - 1) * n_theta
+    v_pole = bm_verts[n_rings * n_theta]
+    for k in range(n_theta):
+        k_next = (k + 1) % n_theta
+        v0 = bm_verts[last_row + k]
+        v1 = bm_verts[last_row + k_next]
+        if side_sign > 0.0:
+            f = bm_new.faces.new((v0, v_pole, v1))
+        else:
+            f = bm_new.faces.new((v0, v1, v_pole))
+        f.smooth = True
+
+    bmesh.ops.recalc_face_normals(bm_new, faces=bm_new.faces[:])
+    # 外側極の法線が正しく外側 (side_sign * +X) を向いていることを保証
+    if v_pole.normal.x * side_sign < 0.0:
+        bmesh.ops.reverse_faces(bm_new, faces=bm_new.faces[:])
+        bmesh.ops.recalc_face_normals(bm_new, faces=bm_new.faces[:])
+
+    bm_new.to_mesh(orig_mesh)
+    bm_new.free()
+    for poly in orig_mesh.polygons:
+        poly.use_smooth = True
+    orig_mesh.update()
+
+    # 頂点グループ再登録
+    short_name = "Arm.L" if side_sign > 0.0 else "Arm.R"
+    vg = arm_part_obj.vertex_groups.get(short_name)
+    if vg is None:
+        vg = arm_part_obj.vertex_groups.new(name=short_name)
+    vg.add(list(range(len(orig_mesh.vertices))), 1.0, 'REPLACE')
+
+    return skirt_meta
+
+
+# ==========================================
+# 2. キャラクター初期頂点＆変形パラメータ事前計算
 # ==========================================
 def capture_character_rest_state(arm_obj, meshes, is_iich=True):
     """
     各キャラクターの全メッシュ初期座標（Rest Coords）と、
-    ・独立パドル手（Arm.L / Arm.R）の SO(3) 完全剛体回転用ピボット座標
+    ・Body 側面曲面の高精度2Dグリッド (X_surf, N_surf)
+    ・パドル手（Arm.L / Arm.R）の極座標スライディング吸盤フィレットスカート構造
     ・超短足のねじれゼロ股関節振り子回転＆心地よい弾性伸縮用パラメータ
     を事前計算してキャッシュする。
     """
@@ -101,42 +766,65 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
     if is_iich:
         u_sh, y_sh, z_sh = 0.655, 0.0334, 0.345
         u_flap_piv, z_flap_piv = 0.285, 0.705
-        z_hip_piv = 0.145
-        z_leg_solid = 0.085
+        z_hip_piv = 0.135
+        z_leg_solid = 0.035
         z_leg_top = 0.165
         x_foot_center = 0.255
         base_loc = Vector((-0.946, -0.025, 0.0036))
     else:
         u_sh, y_sh, z_sh = 0.725, 0.0460, 0.465
         u_flap_piv, z_flap_piv = 0.440, 0.790
-        z_hip_piv = 0.215
-        z_leg_solid = 0.130
-        z_leg_top = 0.255
+        z_hip_piv = 0.185
+        z_leg_solid = 0.045
+        z_leg_top = 0.245
         x_foot_center = 0.265
         base_loc = Vector((+0.881, +0.025, 0.0000))
 
     z_min_rest = float(np.min(body_co[:, 2]))
     ground_ref_z = float(base_loc.z) + z_min_rest
 
+    surf_grid = build_body_lateral_surface_grid(body_obj, is_iich=is_iich)
+
+    char_state = {
+        "arm_obj": arm_obj,
+        "is_iich": is_iich,
+        "base_loc": base_loc,
+        "ground_ref_z": ground_ref_z,
+        "surf_grid": surf_grid,
+        "meshes": [],
+        "u_sh": u_sh,
+        "y_sh": y_sh,
+        "z_sh": z_sh,
+        "u_flap_piv": u_flap_piv,
+        "z_flap_piv": z_flap_piv,
+        "z_hip_piv": z_hip_piv,
+        "z_leg_solid": z_leg_solid,
+        "z_leg_top": z_leg_top,
+        "x_foot_center": x_foot_center,
+    }
+
     mesh_entries = []
     for obj in meshes:
-        nv = len(obj.data.vertices)
-        co = np.empty(nv * 3, dtype=np.float64)
-        obj.data.vertices.foreach_get("co", co)
-        co = co.reshape(-1, 3)
-
+        # Armature モディファイアが有効だと Cycles Depsgraph 評価時にカスタム分割法線
+        # (normals_split_custom_set_from_vertices) が上書き再計算されるため、完全に除去する
+        obj.modifiers.clear()
         is_body = obj.name.endswith("_Body")
         is_arm_l = obj.name.endswith("_Arm.L")
         is_arm_r = obj.name.endswith("_Arm.R")
         is_logo = "_Logo_" in obj.name
         is_ant_or_globe = obj.name.endswith("_Antenna") or obj.name.endswith("_Globe")
 
-        # Body の超短足重み関数（3D楕円体ソケット・股関節局所フォールオフ制御）：
-        # 1) ボディ本体の完全保護ゾーン（歪みゼロ保証）:
-        #    胸ロゴ下端より下（IICh: z >= 0.165m, IINet: z >= 0.255m）より上のボディ本体
-        #    （胸ロゴ・お腹・脇腹・タマゴ型側面輪郭・顔枠すべて）は厳密に w_leg = 0.000 にロック！
-        # 2) 足先〜足首下部（IICh: z <= 0.085m, IINet: z <= 0.130m）は足の外縁まで均一に w_leg = 1.000 とし、
-        #    足の付け根の関節リング帯（z_leg_solid -> z_leg_top）で smootherstep により 1.0 -> 0.0 へ滑らかに減衰させる。
+        skirt_meta = None
+        if is_arm_l:
+            skirt_meta = rebuild_arm_as_polar_skirt_mesh(obj, char_state, side_sign=+1.0)
+        elif is_arm_r:
+            skirt_meta = rebuild_arm_as_polar_skirt_mesh(obj, char_state, side_sign=-1.0)
+
+        nv = len(obj.data.vertices)
+        co = np.empty(nv * 3, dtype=np.float64)
+        obj.data.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+
         if is_body:
             vx, vz = co[:, 0], co[:, 2]
             w_leg = 1.0 - smootherstep_np((vz - z_leg_solid) / (z_leg_top - z_leg_solid))
@@ -155,71 +843,16 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
             "is_ant_or_globe": is_ant_or_globe,
             "w_leg": w_leg,
             "s_leg_l": s_leg_l,
+            "skirt_meta": skirt_meta,
         })
 
-    return {
-        "arm_obj": arm_obj,
-        "is_iich": is_iich,
-        "base_loc": base_loc,
-        "ground_ref_z": ground_ref_z,
-        "meshes": mesh_entries,
-        "u_sh": u_sh,
-        "y_sh": y_sh,
-        "z_sh": z_sh,
-        "u_flap_piv": u_flap_piv,
-        "z_flap_piv": z_flap_piv,
-        "z_hip_piv": z_hip_piv,
-        "z_leg_solid": z_leg_solid,
-        "z_leg_top": z_leg_top,
-        "x_foot_center": x_foot_center,
-    }
+    char_state["meshes"] = mesh_entries
+    return char_state
 
 
 # ==========================================
-# 2. 独立パドル腕の完全剛体 SO(3) 回転 ＆ 超短足の振り子回転＋弾性伸縮
+# 3. 超短足の振り子回転＋弾性伸縮 ＆ カービィお手本準拠ウォーク関数
 # ==========================================
-def rotate_rigid_arm_so3(x, y, z, char_state, side_sign, flap_deg, swing_fwd_deg):
-    """
-    独立メッシュ化されたパドル手（Arm.L / Arm.R）に対する全頂点一律 w = 1.000 の
-    純粋剛体 SO(3) 直交回転（det(R)=1、メッシュ伸縮・せん断歪み厳密ゼロ）。
-      - 胴体メッシュ（Body）とは分離されているため、腕を ±46° 前後スイングさせても
-        +60° ほっぺ横まで持ち上げても、胴体側面に「ひれ」や「翼状の筋」が一切発生しない！
-      - タマゴ型胴体側面の曲率中心 (u_flap_piv, z_flap_piv) ＆ 肩ピボット (u_sh, y_sh) の
-        まわりで剛体回転するため、どの角度でも腕の根元がタマゴ胴体に深く滑らかに密着する。
-    """
-    if abs(flap_deg) < 1e-4 and abs(swing_fwd_deg) < 1e-4:
-        return x, y, z
-
-    u_out = side_sign * x
-    u_sh = char_state["u_sh"]
-    y_sh = char_state["y_sh"]
-    z_sh = char_state["z_sh"]
-    u_fp = char_state["u_flap_piv"]
-    z_fp = char_state["z_flap_piv"]
-
-    # 1) 上下パタパタ挙上（Flap: タマゴ側面曲率中心まわりの純粋剛体 SO(2) 回転）
-    alpha = math.radians(flap_deg)
-    ca = math.cos(alpha)
-    sa = math.sin(alpha)
-    du_f = u_out - u_fp
-    dz_f = z - z_fp
-    u_1 = u_fp + du_f * ca - dz_f * sa
-    z_1 = z_fp + du_f * sa + dz_f * ca
-
-    # 2) 回転後の肩ピボット u_sh_1 を中心とする前後スイング（Azimuth: 純粋剛体 SO(2) 回転）
-    u_sh_1 = u_fp + (u_sh - u_fp) * ca - (z_sh - z_fp) * sa
-    beta = math.radians(swing_fwd_deg)
-    cb = math.cos(beta)
-    sb = math.sin(beta)
-    du_s = u_1 - u_sh_1
-    dy_s = y - y_sh
-    u_2 = u_sh_1 + du_s * cb + dy_s * sb
-    y_2 = y_sh - du_s * sb + dy_s * cb
-
-    x_out = side_sign * u_2
-    return x_out, y_2, z_1
-
-
 def deform_stubby_legs_pendulum_stretch(
     x, y, z, w_leg, s_leg_l, char_state,
     leg_l_rx_deg, leg_r_rx_deg,
@@ -229,14 +862,8 @@ def deform_stubby_legs_pendulum_stretch(
 ):
     """
     超短足の可愛い丸い造形を100%保ったまま前後にトコトコ動かす「股関節振り子回転＋滑走並進＋自然な弾性伸縮」：
-      1) 横幅カットオフ (u_leg_x_out) と前後非対称クリフ (w_front_chest) を全廃し、
-         足先〜足首 (z <= z_leg_solid) は重み 1.0 で足の外縁まで一体として動くため、
-         足のねじれやカギ鼻状の潰れが100%発生しない。
-      2) 股関節高さ (z_leg_top) を胸ロゴ下端直下に設定しているため、胸ロゴ（LILI-ch / LILI-net）は
-         1ミリも歪まずシャープな形状を100%維持する。
-      3) 股関節ピボット (y=0, z=z_hip_piv) まわりの心地よい縦弾性伸縮（stretch: ±8%〜10%の体積保存伸縮）と
-         適度な振り子回転（rx_deg: ±13°）＋前後グライド並進（dy: ±4.5cm）を組み合わせ、
-         丸い足が自然にぷっくり伸び縮みしながら前後にトコトコ歩く。
+      - ボディ本体（z >= z_leg_top: お腹・胸ロゴ LILI-ch / LILI-net・側面輪郭）は w_leg = 0.000 で完全保護。
+      - 足先〜足首 (z <= z_leg_solid) は重み 1.0 で足の外縁まで一体として動くためねじれ・形崩れゼロ。
     """
     if (
         abs(leg_l_rx_deg) < 1e-4 and abs(leg_r_rx_deg) < 1e-4
@@ -260,18 +887,14 @@ def deform_stubby_legs_pendulum_stretch(
     z_hip = char_state["z_hip_piv"]
     x_fc = char_state["x_foot_center"]
 
-    # Step A: 足の軸方向に沿った心地よい弾性伸縮（±8〜10%程度、体積保存で丸みを維持）
     st_eff = wm * (leg_l_stretch * sl + leg_r_stretch * sr)
-    kz_leg = 1.0 + st_eff
-    kxy_leg = 1.0 / np.sqrt(np.maximum(kz_leg, 0.85))
+    kz_leg = 1.0 + 0.55 * st_eff
 
     dz_from_hip = zm - z_hip
     zm_st = z_hip + dz_from_hip * kz_leg
-    x_leg_axis = x_fc * (sl - sr)
-    xm_st = x_leg_axis + (xm - x_leg_axis) * kxy_leg
-    ym_st = ym * kxy_leg
+    xm_st = xm
+    ym_st = ym
 
-    # Step B: 股関節ピボット (y_piv = 0.0, z_piv = z_hip) まわりの純粋振り子回転 ＋ 前後グライド
     rx_rad = wm * (math.radians(leg_l_rx_deg) * sl + math.radians(leg_r_rx_deg) * sr)
     dy_glide = wm * (leg_l_dy * sl + leg_r_dy * sr)
     ca = np.cos(rx_rad)
@@ -279,11 +902,14 @@ def deform_stubby_legs_pendulum_stretch(
     dy_rel = ym_st
     dz_rel = zm_st - z_hip
 
-    y_rot = dy_rel * ca - dz_rel * sa + dy_glide
-    z_rot = z_hip + dy_rel * sa + dz_rel * ca
+    # 足裏先端のみ自然なピッチ傾きを与え、下腹部前面が上方に押し上げられて段差を作る現象を100%防止する
+    w_sole_tilt = 1.0 - smootherstep_np((zm - 0.010) / 0.055)
+    dy_foot = np.clip(dy_rel, -0.09, 0.09) * w_sole_tilt
 
-    # Step C: 遊脚（前へ振り出す足・片足ちょこん浮き）の自然な垂直リフト
-    dz_lift = wm * (leg_l_lift_z * sl + leg_r_lift_z * sr)
+    y_rot = dy_rel + (-dz_rel * sa + dy_glide)
+    z_rot = z_hip + dy_foot * sa + dz_rel * ca
+
+    dz_lift = 0.45 * wm * (leg_l_lift_z * sl + leg_r_lift_z * sr)
     z_final = z_rot + dz_lift
 
     x_out = x.copy()
@@ -295,35 +921,27 @@ def deform_stubby_legs_pendulum_stretch(
     return x_out, y_out, z_out
 
 
-# ==========================================
-# 3. カービィお手本準拠 16フレーム周期ウォーク関数
-# ==========================================
-def evaluate_kirby_walk_cycle(f, is_iich=True):
+def evaluate_kirby_walk_cycle(f_24, is_iich=True):
     """
-    リファレンス動画（Kirby walk cycle 24fps）準拠：
-      - 1歩 = 8.0フレーム、左右1サイクル = 16.0フレーム
-      - 2体は3.0フレームの自然な位相差で仲良くトコトコ歩く
-      - 股関節振り子回転（±13°）＋前後グライド（±4.8cm）＋足の心地よい弾性伸縮（+9%伸び / -6%縮み）
-      - 左足(+X)が前(-Y)のとき、右手(-X)が前(-Y)・左手(+X)が後ろ(+Y)の逆位相スイング
+    リファレンス動画（Kirby walk cycle）準拠：
+      - 30fps にて 1歩 = 10.0フレーム（1/3秒）、左右1サイクル = 20.0フレーム（2/3秒）
+      - 2体は自然な位相差で仲良くトコトコ歩く
+      - 股関節振り子回転＋足の心地よい弾性伸縮＋パドル手の逆位相スイング
     """
     phase_offset = 0.0 if is_iich else 3.0
-    phase = 2.0 * math.pi * ((f - 1.0 - phase_offset) / 16.0)
+    phase = 2.0 * math.pi * ((f_24 - 1.0 - phase_offset) / 16.0)
 
     s = math.sin(phase)
 
-    # 1歩（8フレーム）ごとの「トコ・ピョコ！」と弾む軽快な上下バウンス（z_air_hop ≈ 0.042m）と控えめなクッション
     step_bounce = math.sin(2.0 * phase - 0.35 * math.pi)
     z_air_hop = (0.042 if is_iich else 0.040) * (max(0.0, step_bounce) ** 1.35)
     squash_z = 0.015 * step_bounce
 
-    # 身体の自然な前傾・前に出た肩側への可愛いツイスト(±7.0°)・最小限の傾き(±3.5°)
     torso_pitch_deg = 3.2 - 1.6 * max(0.0, step_bounce)
-    torso_yaw_deg = 7.0 * s       # s=+1(左足+Xが前)のとき右肩(-X)が前(-Y)へ出る逆位相ツイスト
+    torso_yaw_deg = 7.0 * s
     torso_roll_deg = 3.5 * s
     dx_sway = 0.024 * s
 
-    # 左右の超短足軌道：
-    # 付け根支点 z_hip_piv (0.145m / 0.215m) まわりの素直な振り子回転（±19°〜20.5°）＋ ごく微小なグライド（±1.2cm）
     max_swing_deg = 19.0 if is_iich else 20.5
     stride_glide = 0.012 if is_iich else 0.014
 
@@ -333,13 +951,11 @@ def evaluate_kirby_walk_cycle(f, is_iich=True):
         rx_deg = -max_swing_deg * su - 1.5 * cu
         dy_l = -stride_glide * su
 
-        # 足の心地よい弾性伸縮（+8.5%伸び / -6.0%クッション縮み）：
         ext_swing = (su * su)
         kick_push = max(0.0, -su)
         stance_comp = max(0.0, -cu) * (1.0 - su * su)
         stretch = +0.075 * ext_swing + 0.020 * kick_push - 0.060 * stance_comp
 
-        # 後ろ蹴り出し後半〜前へ振り戻す遊脚フェーズ（cu > 0）で足が床から可愛く浮く
         swing_lift = max(0.0, math.sin(u_ph + 0.35 * math.pi)) ** 1.6
         lift_z = (0.036 if is_iich else 0.042) * swing_lift
         return rx_deg, dy_l, stretch, lift_z
@@ -347,7 +963,6 @@ def evaluate_kirby_walk_cycle(f, is_iich=True):
     leg_l_rx, leg_l_dy, leg_l_stretch, leg_l_lift = single_leg_motion(phase)
     leg_r_rx, leg_r_dy, leg_r_stretch, leg_r_lift = single_leg_motion(phase + math.pi)
 
-    # 短い独立パドル手の逆位相前後スイング（完全剛体回転のため胴体ひれゼロ！）
     swing_amp = 38.0 if is_iich else 37.0
     arm_r_swing = +swing_amp * s
     arm_l_swing = -swing_amp * s
@@ -361,8 +976,7 @@ def evaluate_kirby_walk_cycle(f, is_iich=True):
         arm_l_flap = outer_base_flap + 10.5 * max(0.0, -s) + 3.5 * abs(s)
         arm_r_flap = inner_base_flap + 8.5 * max(0.0, s) + 2.0 * abs(s)
 
-    # 3フレーム遅れのアンテナ＆地球儀の二次バウンス
-    phase_lag = 2.0 * math.pi * ((f - 4.0 - phase_offset) / 16.0)
+    phase_lag = 2.0 * math.pi * ((f_24 - 4.0 - phase_offset) / 16.0)
     ant_pitch_extra = -3.5 + 7.5 * math.sin(2.0 * phase_lag - 0.35 * math.pi)
     ant_roll_extra = -6.5 * math.sin(phase_lag)
 
@@ -383,16 +997,12 @@ def evaluate_kirby_walk_cycle(f, is_iich=True):
 
 
 # ==========================================
-# 4. 全フェーズ統合（Phase 1〜4）フレーム評価＆メッシュ更新
+# 4. 全フェーズ統合（Phase 1〜4）フレーム評価＆メッシュ・法線更新
 # ==========================================
-def get_walk_forward_y(f):
-    """
-    Phase 1 (Frame 1..128): Y = +4.35m から Y = 0.0m へ自然な一定歩幅（約0.272m/歩）で前進し、
-    到着直前のみ滑らかに減速して Phase 2 の着地ホップへ繋ぐ。
-    """
-    if f >= 128.0:
+def get_walk_forward_y(f_24):
+    if f_24 >= 128.0:
         return 0.0
-    u = np.clip((f - 1.0) / 127.0, 0.0, 1.0)
+    u = np.clip((f_24 - 1.0) / 127.0, 0.0, 1.0)
     if u <= 0.86:
         prog = u / (0.86 + 0.14 * 0.5)
     else:
@@ -403,31 +1013,31 @@ def get_walk_forward_y(f):
 
 def update_camera_for_frame(cam_obj, frame_idx):
     """
-    Phase 1 序盤〜中盤（Frame 1〜76）は可愛い斜め前3/4アングルで
-    2体が重ならず短い手足の前後スイングと足の弾性伸縮がバッチリ見える構図とし、
-    Frame 76〜132 にかけて smootherstep で完成静止画と完全一致する正面カメラへ回り込む。
+    16:9 Full HD (1920x1080) にて lens = 52.5mm を使用し、
+    頭上（地球儀上端）と足元の縦方向余白バランスを従来の完成構図と100%一致させつつ、
+    左右に開放的な16:9スタジオ空間を広げる。
     """
-    f = float(frame_idx)
+    f_24 = frame30_to_f24(frame_idx)
     final_pos = Vector((0.0, -8.45, 1.22))
     final_fwd = Vector((0.0, 1.0, 0.0))
 
-    if f >= 132.0:
+    if f_24 >= 132.0:
         mod_pair.set_pair_camera_pose(
             cam_obj,
             pos=final_pos,
             forward=final_fwd,
             up_hint=(0.0, 0.0, 1.0),
             ortho=False,
-            lens=70.0,
+            lens=LENS_16_9,
         )
         return
 
-    y_pair = get_walk_forward_y(f)
-    u_walk_cam = smoothstep_scalar(min(max(f - 1.0, 0.0) / 72.0, 1.0))
-    if f <= 72.0:
+    y_pair = get_walk_forward_y(f_24)
+    u_walk_cam = smoothstep_scalar(min(max(f_24 - 1.0, 0.0) / 72.0, 1.0))
+    if f_24 <= 72.0:
         w_to_front = 0.0
     else:
-        w_to_front = smootherstep_scalar((f - 72.0) / (132.0 - 72.0))
+        w_to_front = smootherstep_scalar((f_24 - 72.0) / (132.0 - 72.0))
 
     azim_deg = (36.0 - 3.5 * u_walk_cam) * (1.0 - w_to_front)
     azim_rad = math.radians(azim_deg)
@@ -451,7 +1061,7 @@ def update_camera_for_frame(cam_obj, frame_idx):
         forward=cam_fwd,
         up_hint=(0.0, 0.0, 1.0),
         ortho=False,
-        lens=70.0,
+        lens=LENS_16_9,
     )
     light_y = (1.0 - w_to_front) * (y_pair * 0.75) + 0.10
     right = cam_fwd.cross(Vector((0.0, 0.0, 1.0))).normalized()
@@ -470,17 +1080,61 @@ def update_camera_for_frame(cam_obj, frame_idx):
             lobj.rotation_euler = (target_l - lpos).normalized().to_track_quat('-Z', 'Y').to_euler()
 
 
+def transform_body_normal_steps_2_to_4(n_arr, squash_z, bow_deg, torso_pitch_deg, torso_roll_deg, torso_yaw_deg):
+    """
+    Step 1B 時点の Body 表面法線ベクトル配列 n_arr[N, 3] に対して、
+    Step 2 (squash_z)・Step 3 (bow_deg)・Step 4 (torso_pitch/roll/yaw) と
+    100%同一の法線変換を適用し、最終フレーム空間での正確な Body 単位法線を返す。
+    """
+    nx = n_arr[:, 0].copy()
+    ny = n_arr[:, 1].copy()
+    nz = n_arr[:, 2].copy()
+
+    if abs(squash_z) > 1e-5:
+        kz = 1.0 + squash_z
+        kxy = 1.0 / math.sqrt(max(kz, 0.85))
+        nx = nx / kxy
+        ny = ny / kxy
+        nz = nz / kz
+
+    if abs(bow_deg) > 1e-4:
+        p_bow = math.radians(bow_deg)
+        cb, sb = math.cos(p_bow), math.sin(p_bow)
+        ny, nz = (ny * cb - nz * sb), (ny * sb + nz * cb)
+
+    if (
+        abs(torso_pitch_deg) > 1e-4
+        or abs(torso_roll_deg) > 1e-4
+        or abs(torso_yaw_deg) > 1e-4
+    ):
+        p_rad = math.radians(torso_pitch_deg)
+        r_rad = math.radians(torso_roll_deg)
+        yw_rad = math.radians(torso_yaw_deg)
+
+        cp, sp = math.cos(p_rad), math.sin(p_rad)
+        ny, nz = (ny * cp - nz * sp), (ny * sp + nz * cp)
+
+        cr, sr = math.cos(r_rad), math.sin(r_rad)
+        nx, nz = (nx * cr + nz * sr), (-nx * sr + nz * cr)
+
+        cy, sy_r = math.cos(yw_rad), math.sin(yw_rad)
+        nx, ny = (nx * cy - ny * sy_r), (nx * sy_r + ny * cy)
+
+    out = np.column_stack([nx, ny, nz])
+    n_len = np.linalg.norm(out, axis=-1, keepdims=True)
+    return out / np.maximum(n_len, 1e-8)
+
+
 def apply_character_kirby_motion_at_frame(char_state, frame_idx):
     """
-    指定フレーム f (1..360) における超短足マスコットの可愛い仕草を計算し、
-    全メッシュの頂点座標を更新＋足底厳密接地ロックを適用する。
+    指定フレーム frame_idx (1..450 @ 30fps) における仕草を計算し、
+    全メッシュの頂点座標更新・腕スカートの法線完全一致ブレンド・足底厳密接地ロックを適用する。
     """
-    f = float(frame_idx)
+    f = frame30_to_f24(frame_idx)
     is_iich = char_state["is_iich"]
     arm_obj = char_state["arm_obj"]
     base_loc = char_state["base_loc"]
 
-    # --- 変数のゼロ初期化（静止フレームでは完全無変形 = 原画シルエットと100%一致） ---
     dy_walk = 0.0
     dx_lane = 0.0
     dx_sway = 0.0
@@ -504,8 +1158,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
     ant_roll_extra = 0.0
 
     # =========================================================================
-    # Phase 1 (Frame 1〜128 / 0.00s〜5.33s):
-    # カービィお手本準拠（1歩=8f / 1サイクル=16f）の超短足トコトコウォーク
+    # Phase 1 (f_24 <= 128.0 / Frame 1〜160 @ 30fps): 超短足トコトコウォーク
     # =========================================================================
     if f <= 128.0:
         w_lane = 1.0 - smootherstep_scalar(np.clip((f - 72.0) / 54.0, 0.0, 1.0))
@@ -541,8 +1194,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
         ant_roll_extra = w["ant_roll_extra"] * amp_walk
 
     # =========================================================================
-    # Phase 2 (Frame 129〜168 / 5.33s〜7.00s):
-    # ちょこんと両足ジャンプ着地（「ピョコン・ピタッ！」）＆正面スマイル静止
+    # Phase 2 (128.0 < f_24 <= 168.0 / Frame 161〜210 @ 30fps): 着地ホップ＆正面静止
     # =========================================================================
     elif f <= 168.0:
         dy_walk = 0.0
@@ -552,7 +1204,6 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             hop_arc = math.sin(math.pi * uh)
             z_air_hop = 0.046 * hop_arc
             squash_z = +0.015 * hop_arc
-            # ジャンプ中は短い両足がちょこんと下へ伸びて揃い、短い両手を横にパタッと開く
             leg_l_rx = +6.0 * hop_arc
             leg_r_rx = +6.0 * hop_arc
             leg_l_stretch = +0.065 * hop_arc
@@ -584,8 +1235,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             ant_pitch_extra = -2.0 * math.sin(math.pi * us) * (1.0 - us)
 
     # =========================================================================
-    # Phase 3 (Frame 169〜240 / 7.00s〜10.00s):
-    # 短い2本の足でしっかり踏ん張り、丸いタマゴ体型のまま「ペコリ！」とする可愛いおじぎ
+    # Phase 3 (168.0 < f_24 <= 240.0 / Frame 211〜300 @ 30fps): 可愛いおじぎ
     # =========================================================================
     elif f <= 240.0:
         dy_walk = 0.0
@@ -637,8 +1287,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             arm_r_swing = -22.0 * b_pos
 
     # =========================================================================
-    # Phase 4 (Frame 241〜360 / 10.00s〜15.00s):
-    # 独立パドル腕の完全剛体回転！ほっぺの横の高い位置で短い手を「パタパタ！」と元気に振る
+    # Phase 4 (f_24 > 240.0 / Frame 301〜450 @ 30fps): 元気なほっぺ横手振り
     # =========================================================================
     else:
         dy_walk = 0.0
@@ -655,7 +1304,6 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
         mirror_sign = -1.0 if is_iich else +1.0
         char_step = mirror_sign * sw_step
 
-        # 外側の独立パドル手をタマゴ側面に沿ってほっぺの横まで大きく持ち上げてパタパタ振る（ひれゼロ！）
         if is_iich:
             outer_flap = (40.0 + 16.0 * sw10) * w_wave
         else:
@@ -678,7 +1326,6 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
         squash_z = 0.014 * abs(sw10) * w_wave - 0.005 * w_wave
         z_air_hop = 0.008 * max(0.0, abs(sw10) - 0.25) * w_wave
 
-        # 傾いた反対側の短い足がちょこんと前に出て浮き、軸方向に+5%ぷっくり伸びる
         lift_l = max(0.0, +char_step) * w_wave
         lift_r = max(0.0, -char_step) * w_wave
         leg_l_rx = -11.0 * lift_l
@@ -712,12 +1359,13 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
     for entry in char_state["meshes"]:
         obj = entry["obj"]
         rest_co = entry["rest_co"]
-        x = rest_co[:, 0].copy()
-        y = rest_co[:, 1].copy()
-        z = rest_co[:, 2].copy()
+        nbody_rest = None
 
-        # Step 1A: Body の超短足（股関節振り子回転＋滑走並進＋自然な弾性伸縮）
+        # Step 1A / 1B: Body の超短足変形 または 腕の剛体回転＋スライディング吸盤フィレットスカート変形
         if entry["is_body"]:
+            x = rest_co[:, 0].copy()
+            y = rest_co[:, 1].copy()
+            z = rest_co[:, 2].copy()
             x, y, z = deform_stubby_legs_pendulum_stretch(
                 x, y, z,
                 entry["w_leg"], entry["s_leg_l"], char_state,
@@ -726,22 +1374,25 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
                 leg_l_stretch, leg_r_stretch,
                 leg_l_lift, leg_r_lift,
             )
-
-        # Step 1B: 独立パドル腕（Arm.L / Arm.R）の全頂点 w=1.000 純粋剛体 SO(3) 回転
-        if entry["is_arm_l"]:
-            x, y, z = rotate_rigid_arm_so3(
-                x, y, z, char_state,
+        elif entry["is_arm_l"]:
+            x, y, z, nbody_rest = evaluate_arm_fillet_skirt_pose(
+                entry["skirt_meta"], char_state,
                 side_sign=+1.0, flap_deg=arm_l_flap, swing_fwd_deg=arm_l_swing,
             )
         elif entry["is_arm_r"]:
-            x, y, z = rotate_rigid_arm_so3(
-                x, y, z, char_state,
+            x, y, z, nbody_rest = evaluate_arm_fillet_skirt_pose(
+                entry["skirt_meta"], char_state,
                 side_sign=-1.0, flap_deg=arm_r_flap, swing_fwd_deg=arm_r_swing,
             )
+        else:
+            x = rest_co[:, 0].copy()
+            y = rest_co[:, 1].copy()
+            z = rest_co[:, 2].copy()
 
         # Step 2: 着地クッション等のごく控えめな体積保存バウンス（±1.5%以内）
+        # Step 1B 後の z 座標を共通参照することで、スカートリム (s=0) と Body 表面の 0.000mm 一致を完全維持
         if abs(squash_z) > 1e-5:
-            z_ref_sq = z if (entry["is_arm_l"] or entry["is_arm_r"]) else rest_co[:, 2]
+            z_ref_sq = z if (entry["is_arm_l"] or entry["is_arm_r"] or entry["is_body"]) else rest_co[:, 2]
             u_sq = smootherstep_np((z_ref_sq - z_foot_cush) / 0.22)
             kz = 1.0 + squash_z * u_sq
             kxy = 1.0 / np.sqrt(np.maximum(kz, 0.85))
@@ -749,7 +1400,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             y = y * kxy
             z = np.where(z > z_foot_cush, z_foot_cush + (z - z_foot_cush) * kz, z)
 
-        # Step 3: Phase 3 短い両足でしっかり床に踏ん張り、ボディ本体と胸ロゴは100%純粋剛体回転(u_bow=1.0)で「ペコリ！」とおじぎ
+        # Step 3: Phase 3 おじぎ（上部ボディ・胸ロゴ・両腕は u_bow=1.0 の純粋剛体回転）
         if abs(bow_deg) > 1e-4:
             if entry["is_body"]:
                 u_bow = 0.08 + 0.92 * smootherstep_np((rest_co[:, 2] - z_bow_z0) / span_bow)
@@ -775,7 +1426,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
                 y = y_ap + dy_a * ca_a - dz_a * sa_a
                 z = z_ap + dy_a * sa_a + dz_a * ca_a
 
-        # Step 4: 歩行・手振り時の身体の可愛い最小限の傾き・ツイスト ＆ アンテナ二次バウンス
+        # Step 4: 身体の可愛い最小限の傾き・ツイスト ＆ アンテナ二次バウンス
         if (
             abs(torso_pitch_deg) > 1e-4
             or abs(torso_roll_deg) > 1e-4
@@ -813,8 +1464,51 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             z_min_body_current = float(np.min(z))
 
         new_co = np.column_stack([x, y, z]).astype(np.float32)
+        if "custom_normal" in obj.data.attributes:
+            obj.data.attributes.remove(obj.data.attributes["custom_normal"])
         obj.data.vertices.foreach_set("co", new_co.ravel())
         obj.data.update()
+
+        # Step 4B: 腕スカートのカスタム分割法線ブレンド（リム s=0 で Body 法線と角度差 0.00° 完全一致！）
+        if (entry["is_arm_l"] or entry["is_arm_r"]) and nbody_rest is not None:
+            nv_arm = len(obj.data.vertices)
+            n_geom = np.empty(nv_arm * 3, dtype=np.float32)
+            obj.data.vertices.foreach_get("normal", n_geom)
+            n_geom = n_geom.reshape(-1, 3).astype(np.float64)
+
+            n_body_final = transform_body_normal_steps_2_to_4(
+                nbody_rest, squash_z, bow_deg, torso_pitch_deg, torso_roll_deg, torso_yaw_deg
+            )
+            # リム端 (s=0) では n_body_final の3成分すべてに100%一致させつつ、
+            # スカートから腕本体へ向かう領域では卵型胴体下部の下向き法線成分 (Nz < 0) が腕の陰影を暗くしないよう保護
+            s_flat = entry["skirt_meta"]["vert_ring_s"]
+            w_z_lift = smootherstep_np(s_flat / 0.32)
+            n_target = n_body_final.copy()
+            n_target[:, 2] = (1.0 - w_z_lift) * n_body_final[:, 2] + w_z_lift * np.maximum(
+                n_body_final[:, 2], n_geom[:, 2]
+            )
+            n_target_len = np.linalg.norm(n_target, axis=-1, keepdims=True)
+            n_target = n_target / np.maximum(n_target_len, 1e-8)
+
+            w_nb = entry["skirt_meta"]["vert_w_norm"][:, None]
+            n_blend = w_nb * n_target + (1.0 - w_nb) * n_geom
+            n_len = np.linalg.norm(n_blend, axis=-1, keepdims=True)
+            n_blend = n_blend / np.maximum(n_len, 1e-8)
+
+            # 極座標グリッド (n_rings, n_theta) 上で法線ベクトル場を軽く2D平滑化し、
+            # リム端 (j=0) は Body 法線と角度差 0.00° に厳密ロックする
+            n_rings_m = entry["skirt_meta"]["n_rings"]
+            n_theta_m = entry["skirt_meta"]["n_theta"]
+            n_grid_2d = n_blend[:-1].reshape(n_rings_m, n_theta_m, 3)
+            n_rim_exact = n_body_final[:-1].reshape(n_rings_m, n_theta_m, 3)[0].copy()
+            n_grid_sm = gaussian_smooth_periodic_1d(
+                gaussian_smooth_edge_1d(n_grid_2d, sigma=1.0, axis=0), sigma=1.2, axis=1
+            )
+            n_grid_sm[0] = n_rim_exact
+            n_blend[:-1] = n_grid_sm.reshape(-1, 3)
+            n_len2 = np.linalg.norm(n_blend, axis=-1, keepdims=True)
+            n_custom = (n_blend / np.maximum(n_len2, 1e-8)).astype(np.float32)
+            obj.data.normals_split_custom_set_from_vertices(n_custom)
 
     # Step 5: 足底最下点 min(z) の厳密接地ロック（床めり込みゼロ・浮きゼロ・静止時完全一致）
     loc_z = char_state["ground_ref_z"] - z_min_body_current + z_air_hop
@@ -826,7 +1520,7 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
 
 
 # ==========================================
-# 5. スタジオ背景（3/4アングル対応ワイドホリゾント）・照明・カメラ
+# 5. スタジオ背景（16:9 ワイド＆3/4アングル対応ホリゾント）・照明・カメラ
 # ==========================================
 def create_studio_floor_and_backdrop():
     mesh = bpy.data.meshes.new("Studio_Cyclorama_Mesh")
@@ -834,20 +1528,20 @@ def create_studio_floor_and_backdrop():
     bpy.context.collection.objects.link(obj)
 
     bm = bmesh.new()
-    n_x = 36
-    xs = np.linspace(-36.0, 36.0, n_x)
+    n_x = 48
+    xs = np.linspace(-52.0, 52.0, n_x)
 
     profile_yz = []
-    for y in np.linspace(-8.0, 14.5, 24):
+    for y in np.linspace(-10.0, 16.5, 26):
         profile_yz.append((float(y), 0.0))
     for i in range(1, 12):
         ang = (0.5 * math.pi) * (i / 12.0)
-        R_cyc = 3.5
-        y_c = 14.5 + R_cyc * math.sin(ang)
+        R_cyc = 4.0
+        y_c = 16.5 + R_cyc * math.sin(ang)
         z_c = R_cyc * (1.0 - math.cos(ang))
         profile_yz.append((float(y_c), float(z_c)))
-    for z in np.linspace(3.5, 12.0, 9)[1:]:
-        profile_yz.append((18.0, float(z)))
+    for z in np.linspace(4.0, 16.0, 10)[1:]:
+        profile_yz.append((20.5, float(z)))
 
     grid_verts = []
     for y_val, z_val in profile_yz:
@@ -914,7 +1608,7 @@ def setup_animation_lighting_and_camera(scene):
         forward=(0.0, 1.0, 0.0),
         up_hint=(0.0, 0.0, 1.0),
         ortho=False,
-        lens=70.0,
+        lens=LENS_16_9,
     )
     cam_data.clip_start = 0.1
     cam_data.clip_end = 60.0
@@ -935,10 +1629,76 @@ def setup_animation_lighting_and_camera(scene):
 
 
 # ==========================================
-# 6. 視覚監査コンタクトシート出力 ＆ 本番MP4レンダリング
+# 6. 視覚監査コンタクトシート（400%拡大クローズアップ＋歩行8コマ＋全フェーズ6コマ）＆ MP4出力
 # ==========================================
+def render_arm_seam_closeup_sheet(
+    cam_obj, char_states, frame_list, cols, rows, out_path, panel_w=840, panel_h=360
+):
+    """
+    【v6 必須監査】腕の付け根（吸盤フィレットスカート境界）を 400% ズーム（lens=105mm 望遠・横長サブパネル）で
+    左半分＝いい-ch（緑）の両肩・両腕根元、右半分＝いい-NETくん（ピンク）の両肩・両腕根元として並べた
+    6ポーズ拡大視覚監査シート（audit_arm_seam_closeup.png）を出力する。
+    """
+    scene = bpy.context.scene
+    tmp_path = os.path.join(SCRIPT_DIR, "_tmp_closeup_kf.png")
+    half_w = panel_w // 2
+
+    panels = []
+    for f in frame_list:
+        scene.frame_set(f)
+        update_camera_for_frame(cam_obj, f)
+        for cs in char_states:
+            apply_character_kirby_motion_at_frame(cs, f)
+        bpy.context.view_layer.update()
+
+        cam_fwd = (cam_obj.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
+
+        sub_imgs = []
+        for cs in char_states:
+            loc = cs["arm_obj"].location
+            is_iich = cs["is_iich"]
+            # 各キャラクターの両肩・両腕根元〜脇下ゾーン全体が横長サブパネル(420x360)いっぱいに収まるようズーム撮影
+            z_tgt = (0.40 if is_iich else 0.52) + (0.12 if f >= 330 else 0.0)
+            tgt = Vector((loc.x, loc.y, loc.z + z_tgt))
+            c_pos = tgt - 5.20 * cam_fwd
+            lens_zoom = 86.0 if f >= 330 else 102.0
+            mod_pair.set_pair_camera_pose(
+                cam_obj, pos=c_pos, forward=cam_fwd, up_hint=(0.0, 0.0, 1.0), ortho=False, lens=lens_zoom
+            )
+            arr = mod_iinet.render_view_to_array(cam_obj, half_w, panel_h, tmp_path, transparent=False)
+            sub_imgs.append(arr)
+
+        panel = np.concatenate(sub_imgs, axis=1)
+        border_col = (205, 215, 232)
+        panel[:2, :, :3] = border_col
+        panel[-2:, :, :3] = border_col
+        panel[:, :2, :3] = border_col
+        panel[:, -2:, :3] = border_col
+        panel[:, half_w - 1:half_w + 1, :3] = (220, 226, 238)
+        panels.append(panel)
+
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
+    pad = 16
+    sheet_w = cols * panel_w + (cols + 1) * pad
+    sheet_h = rows * panel_h + (rows + 1) * pad
+    sheet = np.full((sheet_h, sheet_w, 4), 240, dtype=np.uint8)
+    sheet[:, :, 3] = 255
+
+    for idx, panel in enumerate(panels):
+        r = idx // cols
+        c = idx % cols
+        y0 = pad + r * (panel_h + pad)
+        x0 = pad + c * (panel_w + pad)
+        sheet[y0:y0 + panel_h, x0:x0 + panel_w] = panel
+
+    mod_iinet.save_rgba_uint8_as_png(sheet, out_path)
+    print(f"Saved 400% arm-seam closeup audit sheet (frames={frame_list}) to: {out_path}")
+
+
 def render_contact_sheet_for_frames(
-    cam_obj, char_states, frame_list, cols, rows, out_paths, width=640, height=480
+    cam_obj, char_states, frame_list, cols, rows, out_paths, width=640, height=360
 ):
     scene = bpy.context.scene
     tmp_path = os.path.join(SCRIPT_DIR, "_tmp_anim_kf.png")
@@ -984,6 +1744,10 @@ def bake_keyframes_for_blend_file(cam_obj, char_states):
     scene.frame_start = FRAME_START
     scene.frame_end = FRAME_END
     scene.render.fps = FPS
+    scene.render.fps_base = 1.0
+    scene.render.resolution_x = 1920
+    scene.render.resolution_y = 1080
+    scene.render.resolution_percentage = 100
 
     cam_obj.rotation_mode = 'XYZ'
     for f in range(FRAME_START, FRAME_END + 1):
@@ -994,13 +1758,14 @@ def bake_keyframes_for_blend_file(cam_obj, char_states):
             apply_character_kirby_motion_at_frame(cs, f)
             cs["arm_obj"].keyframe_insert(data_path="location", frame=f)
 
-    scene.frame_set(156)
-    update_camera_for_frame(cam_obj, 156)
+    # Frame 195 (@30fps = 6.50s) は正面静止ポーズ
+    scene.frame_set(195)
+    update_camera_for_frame(cam_obj, 195)
     for cs in char_states:
-        apply_character_kirby_motion_at_frame(cs, 156)
+        apply_character_kirby_motion_at_frame(cs, 195)
 
 
-def render_full_mp4_animation(scene, cam_obj, char_states, mp4_path, width=1280, height=960):
+def render_full_mp4_animation(scene, cam_obj, char_states, mp4_path, width=1920, height=1080):
     def on_frame_change(scn, depsgraph=None):
         f_cur = scn.frame_current
         update_camera_for_frame(cam_obj, f_cur)
@@ -1014,6 +1779,10 @@ def render_full_mp4_animation(scene, cam_obj, char_states, mp4_path, width=1280,
         scene.render.use_persistent_data = False
 
     scene.camera = cam_obj
+    scene.frame_start = FRAME_START
+    scene.frame_end = FRAME_END
+    scene.render.fps = FPS
+    scene.render.fps_base = 1.0
     scene.render.resolution_x = width
     scene.render.resolution_y = height
     scene.render.resolution_percentage = 100
@@ -1030,14 +1799,14 @@ def render_full_mp4_animation(scene, cam_obj, char_states, mp4_path, width=1280,
     scene.render.ffmpeg.codec = 'H264'
     scene.render.ffmpeg.constant_rate_factor = 'HIGH'
     scene.render.ffmpeg.ffmpeg_preset = 'GOOD'
-    scene.render.ffmpeg.gopsize = 12
+    scene.render.ffmpeg.gopsize = 15
     scene.render.ffmpeg.audio_codec = 'NONE'
 
     t0 = time.time()
     bpy.ops.render.render(animation=True)
     dt = time.time() - t0
     bpy.app.handlers.frame_change_pre.clear()
-    print(f"MP4 animation render (360 frames / 15.0s) completed in {dt:.1f}s -> {mp4_path}")
+    print(f"MP4 animation render (450 frames / 15.0s @ 30fps, 1920x1080) completed in {dt:.1f}s -> {mp4_path}")
 
 
 def main():
@@ -1066,7 +1835,8 @@ def main():
     mat_globe = mod_pair.create_micro_grain_globe_material()
     im_ref = mod_iinet.load_image_rgba_uint8(mod_pair.REF_PAIR_PATH)
 
-    # fuse_arms=False により、胴体（純粋なタマゴ型メッシュ）と両腕（独立した滑らかなパドルメッシュ）を分離構築
+    # fuse_arms=False により、胴体（純粋なタマゴ型メッシュ）と両腕（独立した滑らかなパドルメッシュ）を分離構築し、
+    # capture_character_rest_state 内で腕を極座標スライディング吸盤フィレットスカート構造へ再構築する。
     arm_iich, meshes_iich = mod_pair.build_iich_character(coll_iich, mat_globe, im_ref, fuse_arms=False)
     arm_iinet, meshes_iinet = mod_pair.build_iinet_character(coll_iinet, mat_globe, im_ref, fuse_arms=False)
 
@@ -1077,29 +1847,42 @@ def main():
     create_studio_floor_and_backdrop()
     cam_obj = setup_animation_lighting_and_camera(scene)
 
-    # 監査シートA：歩行1サイクル（16フレーム周期）連続8コマ確認（2フレーム刻みで全位相を網羅）
+    # 監査シート0（v6最優先）：腕根元の400%拡大クローズアップ6ポーズ監査シート
+    # [195: 正面静止, 26: 歩行前振り(+38°), 36: 歩行後ろ振り(-38°), 252: おじぎ(21°), 345: 高い手振りUp(+56°), 351: 手振りDown(+24°)]
+    render_arm_seam_closeup_sheet(
+        cam_obj,
+        char_states,
+        frame_list=[195, 26, 36, 252, 345, 351],
+        cols=3,
+        rows=2,
+        out_path=AUDIT_ARM_SEAM_CLOSEUP_PATH,
+        panel_w=840,
+        panel_h=360,
+    )
+
+    # 監査シートA：歩行1サイクル（30fps 20フレーム周期）連続8コマ確認（16:9 パネル）
     render_contact_sheet_for_frames(
         cam_obj,
         char_states,
-        frame_list=[17, 19, 21, 23, 25, 27, 29, 31],
+        frame_list=[21, 24, 26, 29, 31, 34, 36, 39],
         cols=4,
         rows=2,
         out_paths=[AUDIT_WALK_8_PATH],
         width=560,
-        height=420,
+        height=315,
     )
 
-    # 監査シートB：全4フェーズ代表6コマ一覧
-    # [21: 歩き出し3/4, 77: 歩行中盤, 136: ピョコン着地ホップ(正面), 202: 丸ボディのままペコリおじぎ, 276: ほっぺ横手振りUp, 291: 手振りDown＆片足ちょこん浮き]
+    # 監査シートB：全4フェーズ代表6コマ一覧（16:9 パネル）
+    # [26: 歩き出し3/4, 96: 歩行中盤, 170: ピョコン着地ホップ(正面), 252: 丸ボディのままペコリおじぎ, 345: ほっぺ横手振りUp, 364: 手振りDown＆片足ちょこん浮き]
     render_contact_sheet_for_frames(
         cam_obj,
         char_states,
-        frame_list=[21, 77, 136, 202, 276, 291],
+        frame_list=[26, 96, 170, 252, 345, 364],
         cols=3,
         rows=2,
         out_paths=[CHECK_SHEET_DRAFT_PATH, KEYFRAMES_FINAL_PATH],
         width=640,
-        height=480,
+        height=360,
     )
 
     bake_keyframes_for_blend_file(cam_obj, char_states)
@@ -1107,7 +1890,7 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=ANIM_BLEND_PATH)
 
     if not check_only:
-        render_full_mp4_animation(scene, cam_obj, char_states, ANIM_MP4_PATH, width=1280, height=960)
+        render_full_mp4_animation(scene, cam_obj, char_states, ANIM_MP4_PATH, width=1920, height=1080)
 
     print("ALL PAIR ANIMATION TASKS COMPLETED SUCCESSFULLY.")
 
