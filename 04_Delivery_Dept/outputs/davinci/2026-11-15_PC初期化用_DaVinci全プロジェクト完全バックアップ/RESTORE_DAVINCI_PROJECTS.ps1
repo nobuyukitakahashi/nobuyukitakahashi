@@ -7,6 +7,18 @@
 
 $ErrorActionPreference = "Stop"
 
+function Copy-TreeLongPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    & robocopy $Source $Destination /E /COPY:DAT /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) {
+        throw "robocopy failed with exit code $LASTEXITCODE ($Source -> $Destination)"
+    }
+}
+
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "  DaVinci Resolve 全15プロジェクト＆設定 自動復元ツール" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
@@ -37,7 +49,7 @@ if (Test-Path $LibSrc) {
         Rename-Item -Path $LibDst -NewName $BackupOld -Force
         Write-Host "  -> 既存の初期ライブラリを $BackupOld に退避しました。" -ForegroundColor Gray
     }
-    Copy-Item -Path $LibSrc -Destination $LibDst -Recurse -Force
+    Copy-TreeLongPath -Source $LibSrc -Destination $LibDst
     Write-Host "  -> 完了: $LibDst" -ForegroundColor Green
 } else {
     Write-Host "[!] $LibSrc が見つかりません。ZIPファイルから展開します..." -ForegroundColor Yellow
@@ -55,7 +67,7 @@ foreach ($folder in @("Fusion", ".LUT", "Fairlight")) {
     $s = Join-Path $SettingsSrc $folder
     $d = Join-Path $SupportDst $folder
     if (Test-Path $s) {
-        Copy-Item -Path $s -Destination $SupportDst -Recurse -Force
+        Copy-TreeLongPath -Source $s -Destination $d
         Write-Host "  -> $folder 復元完了" -ForegroundColor Green
     }
 }
@@ -67,7 +79,7 @@ if ((Test-Path $GallerySrc) -and (-not (Test-Path $GalleryDst))) {
     if (Test-Path "D:\") {
         Write-Host "[3/3] D:\DvinchiProject\.gallery (スチルデータ) を復元中..." -ForegroundColor Yellow
         New-Item -ItemType Directory -Path "D:\DvinchiProject" -Force | Out-Null
-        Copy-Item -Path $GallerySrc -Destination $GalleryDst -Recurse -Force
+        Copy-TreeLongPath -Source $GallerySrc -Destination $GalleryDst
         Write-Host "  -> ギャラリースチル復元完了: $GalleryDst" -ForegroundColor Green
     }
 } else {
@@ -78,4 +90,6 @@ Write-Host ""
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host "  すべての復元が完了しました！DaVinci Resolve を起動してください。" -ForegroundColor Green
 Write-Host "================================================================" -ForegroundColor Green
-Read-Host "Enterキーで画面を閉じます"
+if (-not [Console]::IsInputRedirected) {
+    Read-Host "Enterキーで画面を閉じます"
+}
