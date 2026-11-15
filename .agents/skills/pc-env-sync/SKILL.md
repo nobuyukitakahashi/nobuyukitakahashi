@@ -12,26 +12,38 @@ description: >
 # マルチPC環境同期スキル (`/pc-env-sync`)
 
 ## 概要
-複数のPCで同じ `nobuyukitakahashi` プロジェクトを継続利用する際、PCローカル（`C:\Users\<ユーザー名>\` または `~/.gemini/`）に依存する設定を一括で構築・同期します。
+複数のPC（Windows / macOS、別ドライブレターや別ワークスペース含む）で同じ `nobuyukitakahashi` プロジェクトを継続利用する際、PCローカル（`C:\Users\<ユーザー名>\` や `~/`、`~/.gemini/`）に依存する設定を一括で構築・同期します。
+
+スクリプト内部で **`nobuyukitakahashi` ワークスペースの実パス・Google Drive ルート・Obsidian Vault パスを自動探索**するため、PCごとにドライブレター（`G:\`, `H:\`, `D:\` 等）や配置先が異なっても、また別ワークスペースからグローバルスキルとして呼び出された場合でも安全に動作します。
 
 ## 実行手順
 
-1. **同期スクリプトの実行（OS別）**
+1. **同期スクリプトの実行（OS自動判定・ポータブル実行）**
    - **Windows 環境の場合**:
-     以下のPowerShellスクリプトを実行し、Git最新化・グローバルスキル配置（`adobe-illustrator`, `adobe-photoshop`, `adobe-premiere`, `adobe-aftereffects`, 5大ジャンルスキル等を含む）・`@bitbonsai/mcpvault` 導入・Blender MCP & Adobe Illustrator / Photoshop / Premiere / After Effects MCP 登録・`mcp_config.json` 更新・NotebookLM保存先フォルダ作成を一括で行う。
+     カレントディレクトリ内の `.agents\skills\pc-env-sync\scripts\sync_pc_env.ps1`、またはグローバル配置先 `$env:USERPROFILE\.gemini\config\skills\pc-env-sync\scripts\sync_pc_env.ps1` のいずれか存在する方を実行する（見つからない場合は別ドライブ上の `nobuyukitakahashi` を探索して実行する）。
      ```powershell
-     powershell -NoProfile -ExecutionPolicy Bypass -File "g:\マイドライブ\git\nobuyukitakahashi\.agents\skills\pc-env-sync\scripts\sync_pc_env.ps1"
+     $s = @(
+       ".agents\skills\pc-env-sync\scripts\sync_pc_env.ps1",
+       "$env:USERPROFILE\.gemini\config\skills\pc-env-sync\scripts\sync_pc_env.ps1"
+     ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+     if (-not $s) { throw "sync_pc_env.ps1 が見つかりません。nobuyukitakahashi ワークスペースを開いて実行してください。" }
+     powershell -NoProfile -ExecutionPolicy Bypass -File $s
      ```
+     ※ 特定パスを明示したい場合は `-WorkspaceRoot "<パス>"` を付与可能。
    - **macOS 環境の場合**:
-     以下のBashスクリプトを実行し、Mac側のGoogle Driveパス自動検出・Git最新化・グローバルスキル配置・`@bitbonsai/mcpvault` & `notebooklm-mcp` 導入・`mcp_config.json` 更新を一括で行う。
+     カレントディレクトリ内の `.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`、またはグローバル配置先 `~/.gemini/config/skills/pc-env-sync/scripts/sync_mac_env.sh` のいずれか存在する方を実行する。
      ```bash
-     bash .agents/skills/pc-env-sync/scripts/sync_mac_env.sh
+     for s in ".agents/skills/pc-env-sync/scripts/sync_mac_env.sh" "$HOME/.gemini/config/skills/pc-env-sync/scripts/sync_mac_env.sh"; do
+       if [ -f "$s" ]; then bash "$s"; break; fi
+     done
      ```
+     ※ 特定パスを明示したい場合は `--workspace "<パス>"` を付与可能。
 
 2. **NotebookLM MCPの認証状態チェック**
-   - `notebooklm-plugin_notebooklm-research` の `get_health` を呼び出す。
+   - `notebooklm-plugin_notebooklm-research` の `get_health`（または登録済み `notebooklm-research` MCP の `get_health`）を呼び出す。
    - `authenticated: false` の場合のみ、ユーザーに「このPCでの初回Googleログインを行うため `setup_auth` を起動しますか？」と案内する。
    - ※もし `setup_auth` でログイン完了後に `https://notebook.google.com/` へリダイレクトされて待機ループが残った場合は、`chrome_profile` から `AuthManager.saveBrowserState()` で `state.json` を書き出して認証を完了させる。
 
-3. **完了報告**
-   - Git同期状態、Obsidian Vault接続状態、NotebookLM認証状態を簡潔に報告する。
+3. **完了報告・引き継ぎ確認**
+   - 検出された `Workspace` / `VaultPath`、Git同期状態、グローバルスキル／ルール同期状態、SSH鍵の有無（未配置時は案内）、NotebookLM認証状態を簡潔に報告する。
+   - `mcp_config.json` が新規作成・更新された場合は、Antigravity のリロード（または再起動）で新しい MCP サーバーが反映される旨を案内する。

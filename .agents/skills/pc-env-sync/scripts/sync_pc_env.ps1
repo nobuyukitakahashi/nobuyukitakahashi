@@ -1,22 +1,194 @@
+param(
+    [string]$WorkspaceRoot = ""
+)
+
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$env:PATH = "$env:LOCALAPPDATA\Programs\nodejs;$env:APPDATA\npm;$env:LOCALAPPDATA\Programs\Git\cmd;$env:USERPROFILE\.local\bin;$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env:PATH"
 
-Write-Host "=== [1/6] Detecting Workspace & Google Drive Paths ==="
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$WorkspaceRoot = (Resolve-Path (Join-Path $ScriptDir "..\..\..\..")).Path
-$DriveRoot = Split-Path -Parent (Split-Path -Parent $WorkspaceRoot)
-$ObsidianVaultPath = Join-Path $DriveRoot "obsidian"
-if (-not (Test-Path (Join-Path $ObsidianVaultPath ".obsidian"))) {
-    $AltVaultPath = Join-Path $DriveRoot "obsidian\nobuyukitakahashi\nobuyukitakahashi"
-    if (Test-Path $AltVaultPath) {
-        $ObsidianVaultPath = $AltVaultPath
+$CandidatePaths = @(
+    "$env:LOCALAPPDATA\Programs\nodejs",
+    "$env:ProgramFiles\nodejs",
+    "$env:APPDATA\npm",
+    "$env:LOCALAPPDATA\Programs\Git\cmd",
+    "$env:ProgramFiles\Git\cmd",
+    "$env:USERPROFILE\.local\bin",
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
+) | Where-Object { $_ -and (Test-Path $_) }
+if ($CandidatePaths.Count -gt 0) {
+    $env:PATH = ($CandidatePaths -join ";") + ";" + $env:PATH
+}
+
+function Test-AgyWorkspace {
+    param([string]$PathToCheck)
+    if ([string]::IsNullOrWhiteSpace($PathToCheck)) { return $false }
+    if (-not (Test-Path $PathToCheck)) { return $false }
+    $skillFile = Join-Path $PathToCheck ".agents\skills\pc-env-sync\SKILL.md"
+    return (Test-Path $skillFile)
+}
+
+function Resolve-AgyWorkspaceRoot {
+    param([string]$ExplicitPath, [string]$ScriptDirectory)
+
+    if ($ExplicitPath -and (Test-AgyWorkspace $ExplicitPath)) {
+        return (Resolve-Path $ExplicitPath).Path
+    }
+    if ($env:AGY_WORKSPACE_ROOT -and (Test-AgyWorkspace $env:AGY_WORKSPACE_ROOT)) {
+        return (Resolve-Path $env:AGY_WORKSPACE_ROOT).Path
+    }
+
+    # 1) Relative to script location (when invoked inside repository)
+    $scriptCandidate = Join-Path $ScriptDirectory "..\..\..\.."
+    if (Test-Path $scriptCandidate) {
+        $resolvedScriptCandidate = (Resolve-Path $scriptCandidate).Path
+        if ((Test-AgyWorkspace $resolvedScriptCandidate) -and (Test-Path (Join-Path $resolvedScriptCandidate ".git"))) {
+            return $resolvedScriptCandidate
+        }
+    }
+
+    # 2) Walk up from current working directory
+    $cur = (Get-Location).Path
+    while ($cur) {
+        if (Test-AgyWorkspace $cur) {
+            return (Resolve-Path $cur).Path
+        }
+        $parent = Split-Path -Parent $cur
+        if (-not $parent -or $parent -eq $cur) { break }
+        $cur = $parent
+    }
+
+    # 3) Extract from existing mcp_config.json entries
+    $existingConfigs = @(
+        (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json"),
+        (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json")
+    )
+    foreach ($cfg in $existingConfigs) {
+        if (Test-Path $cfg) {
+            try {
+                $cfgJson = Get-Content -Path $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($cfgJson -and $cfgJson.mcpServers) {
+                    foreach ($prop in $cfgJson.mcpServers.PSObject.Properties) {
+                        $argsList = $prop.Value.args
+                        if ($argsList) {
+                            foreach ($a in $argsList) {
+                                if ($a -is [string] -and $a -match '^(.+?)[\\/]\.agents[\\/]mcp[\\/]') {
+                                    $extracted = $Matches[1]
+                                    if (Test-AgyWorkspace $extracted) {
+                                        return (Resolve-Path $extracted).Path
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch {
+                # Ignore malformed JSON during discovery
+            }
+        }
+    }
+
+    # 4) Scan ready drives (root, 1st-level subdirs like My Drive / localized drive folders) and USERPROFILE
+    $searchBases = New-Object System.Collections.Generic.List[string]
+    if ($env:USERPROFILE -and (Test-Path $env:USERPROFILE)) {
+        $searchBases.Add($env:USERPROFILE)
+    }
+    $readyDrives = [System.IO.DriveInfo]::GetDrives() | Where-Object {
+        $_.IsReady -and $_.DriveType -in @("Fixed", "Network", "Removable")
+    }
+    foreach ($drv in $readyDrives) {
+        $searchBases.Add($drv.RootDirectory.FullName)
+    }
+
+    foreach ($base in $searchBases) {
+        $directCandidates = @(
+            (Join-Path $base "git\nobuyukitakahashi"),
+            (Join-Path $base "nobuyukitakahashi")
+        )
+        foreach ($cand in $directCandidates) {
+            if (Test-AgyWorkspace $cand) {
+                return (Resolve-Path $cand).Path
+            }
+        }
+        try {
+            $firstLevelDirs = Get-ChildItem -Path $base -Directory -ErrorAction SilentlyContinue
+            foreach ($dir in $firstLevelDirs) {
+                $subCandidates = @(
+                    (Join-Path $dir.FullName "git\nobuyukitakahashi"),
+                    (Join-Path $dir.FullName "nobuyukitakahashi")
+                )
+                foreach ($cand in $subCandidates) {
+                    if (Test-AgyWorkspace $cand) {
+                        return (Resolve-Path $cand).Path
+                    }
+                }
+            }
+        } catch {
+            # Ignore permission errors on system directories
+        }
+    }
+
+    throw "Could not locate 'nobuyukitakahashi' workspace. Pass -WorkspaceRoot <path> or run inside the repository."
+}
+
+function Resolve-ObsidianVaultPath {
+    param([string]$DriveRootPath)
+
+    $candidates = @(
+        (Join-Path $DriveRootPath "obsidian"),
+        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi\nobuyukitakahashi")
+    )
+    foreach ($cand in $candidates) {
+        if (Test-Path (Join-Path $cand ".obsidian")) {
+            return (Resolve-Path $cand).Path
+        }
+    }
+
+    # Check existing mcp_config.json for a valid vault path
+    $existingConfigs = @(
+        (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json"),
+        (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json")
+    )
+    foreach ($cfg in $existingConfigs) {
+        if (Test-Path $cfg) {
+            try {
+                $cfgJson = Get-Content -Path $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($cfgJson -and $cfgJson.mcpServers -and $cfgJson.mcpServers.obsidian -and $cfgJson.mcpServers.obsidian.args.Count -ge 2) {
+                    $existingVault = $cfgJson.mcpServers.obsidian.args[1]
+                    if ($existingVault -and (Test-Path (Join-Path $existingVault ".obsidian"))) {
+                        return (Resolve-Path $existingVault).Path
+                    }
+                }
+            } catch {
+                # Ignore malformed JSON
+            }
+        }
+    }
+
+    foreach ($cand in $candidates) {
+        if (Test-Path $cand) {
+            return (Resolve-Path $cand).Path
+        }
+    }
+    return $candidates[0]
+}
+
+Write-Host "=== [1/6] Detecting Workspace, Tools & Google Drive Paths ==="
+foreach ($requiredCmd in @("git", "node", "npm")) {
+    if (-not (Get-Command $requiredCmd -ErrorAction SilentlyContinue)) {
+        throw "Required command '$requiredCmd' was not found in PATH. Please install it first."
     }
 }
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WorkspaceRoot = Resolve-AgyWorkspaceRoot -ExplicitPath $WorkspaceRoot -ScriptDirectory $ScriptDir
+$DriveRoot = Split-Path -Parent (Split-Path -Parent $WorkspaceRoot)
+$ObsidianVaultPath = Resolve-ObsidianVaultPath -DriveRootPath $DriveRoot
 
 Write-Host "  Workspace : $WorkspaceRoot"
 Write-Host "  DriveRoot : $DriveRoot"
 Write-Host "  VaultPath : $ObsidianVaultPath"
+if (-not (Test-Path (Join-Path $ObsidianVaultPath ".obsidian"))) {
+    Write-Host "  [WARN] .obsidian directory not found at VaultPath yet (Google Drive sync may still be in progress)"
+}
 
 Write-Host "`n=== [1.5/6] Ensuring Git Global Config, ~/.ssh/config & Local Bin PATH ==="
 $NpmRoamingDir = Join-Path $env:APPDATA "npm"
@@ -150,6 +322,10 @@ Host lolipop-maezawa ssh.lolipop.jp
 } else {
     Write-Host "  [OK] ~/.ssh/config already present ($SshConfigPath)"
 }
+$DefaultSshKey = Join-Path $SshDir "id_ed25519"
+if (-not (Test-Path $DefaultSshKey)) {
+    Write-Host "  [INFO] ~/.ssh/id_ed25519 not found on this PC (copy your SSH private keys if SSH/Git SSH is needed)"
+}
 
 Write-Host "`n=== [2/6] Syncing Latest GitHub Repository (git pull) ==="
 Push-Location $WorkspaceRoot
@@ -188,6 +364,8 @@ $SkillsToSync = @(
     "premiere",
     "aftereffects",
     "davinci",
+    "pano2vr",
+    "krpano",
     "writing",
     "pc-env-sync"
 )
@@ -382,4 +560,4 @@ if (Test-Path $NotebookLmStateFile) {
     Write-Host "  [INFO] NotebookLM state.json not found on this PC yet (run setup_auth when needed)"
 }
 
-Write-Host "`n=== PC Environment Sync Complete ==="
+Write-Host "`n=== PC Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="
