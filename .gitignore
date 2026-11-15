@@ -18,3 +18,13 @@
 04_Delivery_Dept/outputs/davinci/**/02_Resolve_Project_Library_丸ごとバックアップ/Resolve Project Library/
 04_Delivery_Dept/outputs/davinci/**/03_Custom_Settings_LUT_Templates/Gallery_Stills_D_Drive/
 04_Delivery_Dept/outputs/davinci/**/04_Cドライブ参照素材退避/**/*.mp4
+
+# Never commit SSH private keys or encrypted key vaults
+*.agyvault
+_private_backup/
+id_ed25519*
+id_rsa*
+id_ecdsa*
+*.key
+*.pem
+*.ppk

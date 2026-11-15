@@ -182,6 +182,19 @@ git config --global core.quotepath false
 git config --global init.defaultBranch main
 git config --global --replace-all safe.directory "*"
 
+SSH_VAULT_FILE="$DRIVE_ROOT/_private_backup/ssh/ssh_keys_latest.agyvault"
+SSH_VAULT_SCRIPT="$WORKSPACE_ROOT/.agents/skills/pc-env-sync/scripts/ssh_vault.js"
+if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
+  if [[ -f "$SSH_VAULT_FILE" && -f "$SSH_VAULT_SCRIPT" ]]; then
+    echo "  [INFO] ~/.ssh/id_ed25519 not found, but encrypted SSH backup exists:"
+    echo "         $SSH_VAULT_FILE"
+    echo "         To restore all SSH keys, run in your terminal:"
+    echo "         node \"$SSH_VAULT_SCRIPT\" restore"
+  else
+    echo "  [INFO] ~/.ssh/id_ed25519 not found on this Mac (copy keys or run ssh_vault.js restore if backed up)"
+  fi
+fi
+
 echo ""
 echo "=== [2/7] Syncing Latest GitHub Repository (git pull) ==="
 pushd "$WORKSPACE_ROOT" > /dev/null

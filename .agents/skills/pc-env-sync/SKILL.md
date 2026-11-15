@@ -47,3 +47,20 @@ description: >
 3. **完了報告・引き継ぎ確認**
    - 検出された `Workspace` / `VaultPath`、Git同期状態、グローバルスキル／ルール同期状態、SSH鍵の有無（未配置時は案内）、NotebookLM認証状態を簡潔に報告する。
    - `mcp_config.json` が新規作成・更新された場合は、Antigravity のリロード（または再起動）で新しい MCP サーバーが反映される旨を案内する。
+
+4. **SSH秘密鍵の暗号化バックアップ／復元（`ssh_vault.js`）**
+   - 秘密鍵やパスワードは **GitHub・チャットログ・ワークスペース内へ絶対に保存しない**。
+   - ユーザーが「SSH鍵をバックアップしたい」「別PCにSSH鍵を復元したい」と指示した場合は、同梱の `ssh_vault.js` をユーザー自身のターミナルで実行するよう案内する（パスワードは端末上で非表示入力）：
+     - **暗号化バックアップ作成**（Google Drive 上の Git 管理外 `<DriveRoot>/_private_backup/ssh/ssh_keys_latest.agyvault` およびタイムスタンプ付き世代スナップショットを AES-256-GCM で作成）:
+       ```powershell
+       # Windows / macOS 共通（パスはグローバル配置先またはワークスペース内）
+       node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" backup
+       ```
+     - **復元**（既存ファイルは `~/.ssh_pre_restore_<timestamp>/` へ退避した上で復元し、macOS は `chmod 700/600`、Windows は `icacls` で本人限定 ACL を自動設定）:
+       ```powershell
+       node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" restore
+       ```
+     - **中身を確認（書き換えなし）**:
+       ```powershell
+       node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" verify
+       ```

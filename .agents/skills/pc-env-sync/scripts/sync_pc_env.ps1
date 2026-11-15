@@ -323,8 +323,17 @@ Host lolipop-maezawa ssh.lolipop.jp
     Write-Host "  [OK] ~/.ssh/config already present ($SshConfigPath)"
 }
 $DefaultSshKey = Join-Path $SshDir "id_ed25519"
+$SshVaultFile = Join-Path $DriveRoot "_private_backup\ssh\ssh_keys_latest.agyvault"
+$SshVaultScript = Join-Path $WorkspaceRoot ".agents\skills\pc-env-sync\scripts\ssh_vault.js"
 if (-not (Test-Path $DefaultSshKey)) {
-    Write-Host "  [INFO] ~/.ssh/id_ed25519 not found on this PC (copy your SSH private keys if SSH/Git SSH is needed)"
+    if ((Test-Path $SshVaultFile) -and (Test-Path $SshVaultScript)) {
+        Write-Host "  [INFO] ~/.ssh/id_ed25519 not found, but encrypted SSH backup exists:"
+        Write-Host "         $SshVaultFile"
+        Write-Host "         To restore all SSH keys, run in your terminal:"
+        Write-Host "         node `"$SshVaultScript`" restore"
+    } else {
+        Write-Host "  [INFO] ~/.ssh/id_ed25519 not found on this PC (run 'node `"$SshVaultScript`" backup' on your main PC first)"
+    }
 }
 
 Write-Host "`n=== [2/6] Syncing Latest GitHub Repository (git pull) ==="
