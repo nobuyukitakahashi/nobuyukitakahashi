@@ -87,3 +87,11 @@
 | 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
 | :--- | :--- | :--- | :--- | :--- |
 | （随時追記） | — | — | HTML5 VRツアー一式（`tour.html` / `tour.js` / `tour.xml` / `panos/` 等） | 専任スキル [`.agents/skills/krpano/SKILL.md`](../../.agents/skills/krpano/SKILL.md) により管理 |
+
+---
+
+## 📸 PTGui Pro 13（360°パノラマスティッチ・HDR合成・`.pts` 制御／単体スキル `/ptgui`） — `outputs/ptgui/`
+
+| 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| （随時追記） | — | — | 360° Equirectangular パノラマ（`.jpg` / `.tif` / `.psd` / `.exr` / `.dng`）・`.pts` | 専任スキル [`.agents/skills/ptgui/SKILL.md`](../../.agents/skills/ptgui/SKILL.md) およびローカルMCPサーバー `ptgui`（[`.agents/mcp/ptgui-mcp/server.js`](../../.agents/mcp/ptgui-mcp/server.js)）により管理 |

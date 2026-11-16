@@ -375,6 +375,7 @@ $SkillsToSync = @(
     "davinci",
     "pano2vr",
     "krpano",
+    "ptgui",
     "writing",
     "pc-env-sync"
 )
@@ -448,13 +449,14 @@ if ($UvxCmd) {
     }
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator, photoshop, premiere & aftereffects) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator, photoshop, premiere, aftereffects & ptgui) ==="
 $NodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $NodeExe = if ($NodeCmd) { $NodeCmd.Source } else { "node" }
 $IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
 $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server.js"
 $PremiereMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\premiere-mcp\server.js"
 $AfterEffectsMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\aftereffects-mcp\server.js"
+$PtguiMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\ptgui-mcp\server.js"
 $BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
@@ -551,6 +553,12 @@ foreach ($cfgPath in $McpConfigPaths) {
         args    = @($AfterEffectsMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "aftereffects" -Value $afterEffectsEntry -Force
+
+    $ptguiEntry = [PSCustomObject]@{
+        command = $NodeExe
+        args    = @($PtguiMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "ptgui" -Value $ptguiEntry -Force
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)

@@ -4,7 +4,7 @@ description: >
   複数PC間で nobuyukitakahashi プロジェクトのAntigravity実行環境（Git最新化、~/.gitconfig初期設定、全14ホスト統合 ~/.ssh/config 構築、グローバルスキル、
   Obsidian MCPサーバー設定、Blender MCPサーバー設定、Adobe Illustrator MCPサーバー設定、
   Adobe Photoshop MCPサーバー設定、Adobe Premiere Pro MCPサーバー設定、Adobe After Effects MCPサーバー設定、
-  NotebookLM認証ディレクトリ準備）を一言で完全同期・再現するスキル。
+  PTGui Pro 13 MCPサーバー設定、NotebookLM認証ディレクトリ準備）を一言で完全同期・再現するスキル。
   ユーザーが「このPCの環境セットアップをして」「環境同期して」「別PCの初期設定をして」と指示した際、
   または /pc-env-sync 実行時に使用する。
 ---
