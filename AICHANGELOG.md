@@ -1,5 +1,37 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-19 (v29): 統括COO「ジン」× Blender 最適モデル自動判定・提案ゲート ＆ `swarm` 動的切替システム（Gemini 4 Neon / Hydrogen / Argon 対応）の実装
+
+### 変更理由
+1. 2026年11月19日発表の **Gemini 4 Neon**（コーディング・`bpy`/ノード構築・空間推論・科学数学に特化）の環境利用可能化に伴い、Blender操作の難易度に応じてジン（`00_COO`）が最適モデルを判定・提案（**案A**）し、さらに自動委任時は Antigravity ネイティブの `swarm` 機能を用いて実名モデル（`gemini-4-hydrogen-low` / `gemini-4-neon-high` / `gemini-4-neon-xhigh`）を動的に起動・エラー昇格させるハイブリッド運用（**案B**）を確立するため。
+2. なお、先行検討した外部 `ahujasid/blender-mcp` 向けソケットルーターMD案は、現行環境の Blender Lab 公式アドオン（`bl_ext.user_default.mcp`：NULLバイト終端・`"type": "execute"`・`result = {...}` 規約）と非互換かつ追加API課金が発生するため採用せず、Antigravityサブスク枠内で公式26ツールをフル活用できるジン統合方式を採用した。
+
+### Before / After
+- **Before (v28)**:
+  - アカウント共通マスタールールおよび `00_COO/AGENTS.md` の「最適モデル逆提案ゲート」は `Hydrogen` と `Argon` の2択基準のみで、`Gemini 4 Neon` の判定基準および Blender タスクの4段階分類が未定義だった。
+  - タスク実行中のモデル自動切替・エラー時昇格（`Hydrogen` → `Neon High` → `Neon XHigh`）をジンが `swarm` で制御する標準フローが未整備だった。
+- **After (v29)**:
+  - **① Blender 4段階タスク判定マトリクスと `Neon` 基準の導入**:
+    - Tier 1（定型確認・単発操作）➔ `Gemini 4 Hydrogen (Low/Medium)`
+    - Tier 2（`bpy`/`bmesh` 造形・ジオメトリ/シェーダーノード・アニメ・デバッグ）➔ `Gemini 4 Neon (High)`
+    - Tier 3（v7/v8級極限幾何・連続エラー時エスカレーション）➔ `Gemini 4 Neon (XHigh)`
+    - Tier 4（長尺動画・GUI視覚照合中心の複合監査）➔ `Gemini 4 Argon (Medium/High)` / `Carbon`
+  - **② 案A（逆提案ゲート）＋ 案B（`swarm` 動的切替・エラー自動昇格）の統合**:
+    - 通常時は `ask_question` 等で最適モデル切替・`swarm` 委譲・Tier委譲を提案し、自動切替委任時は `swarm(action="add", model=...)` で最適実名モデルを起動し、エラー時は `swarm(action="model")` で `gemini-4-neon-high` → `gemini-4-neon-xhigh` へ自動昇格させる手順を標準化。
+
+### 影響範囲
+- 更新（リポジトリ本体 ＋ グローバル同期先 `~/.gemini/config/`）:
+  - [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md)
+  - [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md)
+  - [`00_COO/AGENTS.md`](00_COO/AGENTS.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md)
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+  - `C:\Users\nobuy\.gemini\config\AGENTS.md`, `C:\Users\nobuy\.gemini\config\rules\AGENTS.md`, `C:\Users\nobuy\.gemini\config\plugins\global-master-rules\rules\AGENTS.md`, `C:\Users\nobuy\.gemini\config\skills\blender\SKILL.md`, `C:\Users\nobuy\.gemini\config\skills\coo-orchestrator\SKILL.md`
+
+---
+
 ## 2026-11-18 (v28): Blender 3Dアニメーション v8「腕の `dR_from_c` クランプ廃止・`m_lock=0.55` 剛体保護・タマゴ表面等高線 `R_surf(z)` 厳密追従肩リフト・`z_crotch` 基準足ドーム変形による極限しわゼロ化」および「数式タイムライン完全同期 48kHz ステレオ効果音（SE）生成 ＆ Blender VSE AAC 統合」の確立とスキル・ルール標準化
 
 ### 変更理由

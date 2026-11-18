@@ -20,8 +20,15 @@ description: >-
 
 ---
 
-## 2. 実行手順（MCP `blender` ＆ Headless CLI ハイブリッド運用）
+## 2. 実行手順（最適モデル選択・MCP `blender` ＆ Headless CLI ハイブリッド運用）
 
+0. **最適モデル判定 ＆ Swarm動的切替（`Hydrogen` / `Neon` / `Argon`）**:
+   - 作業着手前にタスク難易度を判定し、現行モデルと不一致の場合は [`00_COO/AGENTS.md`](../../../00_COO/AGENTS.md) Step 0-A に従って最適モデルを提案または `swarm` で割り当てる：
+     - **Tier 1（シーン一覧確認・単体配置・単純移動/回転/リネーム/単色変更）**: `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low`）
+     - **Tier 2（`bpy`/`bmesh` 造形・ジオメトリ/シェーダーノード・リギング・アニメ・空間計算・デバッグ）**: **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
+     - **Tier 3（v7/v8級極限幾何・連続エラー再試行時のエスカレーション）**: **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
+     - **Tier 4（長尺映像参照やGUI視覚照合中心の複合監査）**: `Gemini 4 Argon (Medium/High)` / `Carbon`
+   - `swarm` 動的切替モードで `Hydrogen`（または `Neon High`）ワーカーがエラー・破綻を起こした場合は、`swarm(action="model", ...)` で `gemini-4-neon-high` → `gemini-4-neon-xhigh` へ昇格させて修正を実行する。
 1. **要件確認と接続チェック（Blender 5.3 優先・5.2 互換）**:
    - [`02_Creative_Dept/AGENTS.md`](../../../02_Creative_Dept/AGENTS.md) の「B. Blender 3D / CG制作手順」に従う。
    - Blender Lab 公式 MCPサーバー `blender`（`blender-mcp.exe` ⇄ `bl_ext.user_default.mcp` `localhost:9876`）の `get_objects_summary` / `execute_blender_code`（戻り値は必ず `result = {...}` の dict 形式）を確認する。GUI未接続時は `execute_blender_code_for_cli` またはローカルの Blender CLI（`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` を最優先検出し、未導入環境では `Blender 5.2\blender.exe` へ互換フォールバック：`--background --python 02_Creative_Dept/blender/drafts/<script.py>`）を実行する。

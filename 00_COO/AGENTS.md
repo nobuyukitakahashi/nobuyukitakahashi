@@ -20,8 +20,21 @@
   - ユーザーから「組織を改善して」と指示されなくても、業務完了時（または定期点検時）に **`05_System_Evolution_Dept`** を自律起動し、Antigravityの最新機能・仕様確認と組織ルール・スキルの自動アップデートを行わせること。
 
 ## 2. 標準業務フローとフォルダ操作ルール
-0. **Step 0-A：【最優先】タスク難易度に応じた「最適モデル逆提案ゲート」（Model Adequacy & Counter-Proposal Gate）**:
-   - 実作業やサブエージェント起動の前に、必ず現在選択されているモデルとタスク難易度を照合し、アンダースペック時（軽量モデルで高難度タスク）またはオーバースペック時（上位モデルで定型軽作業）はオーナーへ最適モデルへの切り替え（またはサブエージェントの `Model: "pro"` / `"flash"` 指定）を逆提案して確認を取る。
+0. **Step 0-A：【最優先】タスク難易度に応じた「最適モデル逆提案ゲート ＆ Blender Swarm動的切替プロトコル」**:
+   - 実作業やサブエージェント起動の前に、必ず現在選択されているモデル（`Model Selection`）とタスク難易度を照合し、最適モデルとの乖離がある場合はオーナーへ逆提案する（Blender以外の高難度案件は `Argon (Medium以上)` / `Neon (High)`、定型・軽作業は `Hydrogen`）。
+   - **Blenderタスク専用・最適モデル判定マトリクス（案A：提案 ＋ 案B：`swarm` 動的切替）**:
+     - **Tier 1（軽量・定型操作）**: `get_objects_summary` によるシーン一覧取得、単体プリミティブ配置、位置・回転・スケール単純変更、リネーム、非表示、カメラ/ライト単純調整、単色変更
+       ➔ **最適モデル**: `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low` / `medium`）
+     - **Tier 2（標準〜高度制作・`bpy`・ノード構築・デバッグ）**: ジオメトリノード／シェーダーノード構築、`bpy` / `bmesh` 精密造形、リギング・アーマチュア、物理シミュレーション、キーフレーム・アニメーション、モディファイア複合適用、空間座標計算、エラー修正・デバッグ
+       ➔ **最適モデル**: **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
+     - **Tier 3（極限幾何・数理制御・連続エラー再構築）**: v7/v8級マスコット変形（境界固定ラプラシアン緩和等）、複雑行列計算、または `Hydrogen` / `Neon (High)` 実行エラー時のエスカレーション
+       ➔ **最適モデル**: **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
+     - **Tier 4（長尺動画参照・大規模比較監査）**: 長尺映像/多数資料の照合やGUI操作特化タスクを伴う場合
+       ➔ **最適モデル**: `Gemini 4 Argon (Medium/High)` または `Gemini 4 Carbon`
+   - **実行モード分岐**:
+     - **通常対話時（案A：提案ゲート）**: 現在の選択モデルが最適判定と一致しない場合、`ask_question` 等で「① `swarm` ワーカーに最適モデル（例：`gemini-4-neon-high`）を割り当てて実行（メインUI切替不要・サブスク枠内）」「② 画面のモデル選択を推奨モデルへ切り替えて通常実行」「③ サブエージェント（`Model: "pro"` / `"flash"`）で簡易委譲」「④ 現行モデルのまま続行」を提示して確認する。
+     - **自動切替委任時（案B：`swarm` 動的切替・自動昇格）**: オーナーが「モデル選択はお任せ」「自動切替で」「Swarmで最適モデルを使って」と委任した場合（または選択肢①を選んだ場合）、ジンがコーディネーターとなり `swarm` で初期判定モデル（`gemini-4-hydrogen-low` または `gemini-4-neon-high`）の `blender-worker` を起動する。ワーカーで `execute_blender_code` エラーや造形破綻が連続した場合は **`swarm(action="model", name="blender-worker", model="gemini-4-neon-high")`**（既に `neon-high` なら **`gemini-4-neon-xhigh`**）へ自動昇格させ、ボードに切替理由を記録した上で再実行させる。
+     - ※ワーカーの `brief` には必ず Blender Lab 公式 MCP（`get_objects_summary`, `execute_blender_code`、`result = {...}` 返却規約、`render_viewport_to_path` / PNG視覚監査）および [`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) の遵守を明記すること。
 1. **Step 0-B：ジャンル判定（`ask_question`）とログ初期化**:
    - 制作ジャンル（`<genre>` = `blender` | `illustrator` | `photoshop` | `davinci` | `writing`）が未確定の場合は `ask_question` で5択を提示して確定させる。
    - `00_COO/task_logs/log_[YYYYMMDD]_[テーマ名].md` を作成し、全体計画・対象ジャンル（`<genre>`）・要求出力フォーマット・法務審査要否（5大法務リスクトリガー判定）・進行ステータスを記録する。

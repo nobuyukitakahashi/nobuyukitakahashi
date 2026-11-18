@@ -16,7 +16,19 @@ description: >-
 
 ---
 
-## Step 0: ジャンル選択ルーティング（`ask_question` UI）
+## Step 0: 最適モデル判定・切替ゲート ＆ ジャンル選択ルーティング（`ask_question` UI）
+
+### 0-A. 最適モデル判定（提案ゲート ＋ Blender Swarm動的切替）
+1. 作業着手前に [`00_COO/AGENTS.md`](../../../00_COO/AGENTS.md) の「Step 0-A」に基づき、現在選択モデルとタスク難易度を照合する。
+2. **Blender案件の場合の判定基準**:
+   - **軽量・定型**（シーン確認、単体移動/回転/リネーム/単色変更）➔ `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low`）
+   - **制作・`bpy`・ノード・アニメ・デバッグ** ➔ **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
+   - **極限幾何・連続エラー再試行** ➔ **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
+3. **モード選択**:
+   - 現行モデルと不一致かつ自動委任未指定時（**案A**）：`ask_question` 等で「① `swarm` ワーカーに最適実名モデルを割り当てて実行」「② 画面のモデル選択を推奨モデルへ切替」「③ サブエージェント（`pro`/`flash`）で簡易委譲」「④ 現行のまま続行」を提案する。
+   - 「自動切替で」「お任せ」または ① 選択時（**案B**）：`swarm(action="title", ...)` ➔ `swarm(action="add", name="blender-worker", model="<最適モデルID>", brief="...")` で実行し、エラー時は `swarm(action="model", name="blender-worker", model="gemini-4-neon-high" / "gemini-4-neon-xhigh")` で昇格再実行する（公式 Blender Lab MCP の `execute_blender_code` / `result = {...}` 規約・視覚監査を `brief` に明記）。
+
+### 0-B. ジャンル選択ルーティング（`ask_question` UI）
 
 1. **5大ジャンル定義**:
    - **`blender`** (`/blender`): `Blender（3Dモデリング・CG・3Dアニメ）`

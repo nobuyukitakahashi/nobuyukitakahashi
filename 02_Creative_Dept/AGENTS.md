@@ -28,6 +28,9 @@
    - 校正・推敲を反映した原稿を `02_Creative_Dept/writing/final_outputs/content_[テーマ名].md` として保存する。
 
 ### B. Blender 3D / CG・アニメーション制作手順（`<genre> = blender`）
+0. **タスク難易度に応じた最適モデル判定・切替**:
+   - 定型確認・単発操作は `Gemini 4 Hydrogen (Low/Medium)`、ノード構築・`bpy`/`bmesh` 造形・アニメ・デバッグは **`Gemini 4 Neon (High)`**、極限幾何やエラー再試行時は **`Gemini 4 Neon (XHigh)`** を最適モデルとする（[`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) および [`00_COO/AGENTS.md`](../00_COO/AGENTS.md) Step 0-A 準拠）。
+   - 不一致時は着手順守の提案ゲートまたは `swarm` ワーカー動的昇格（`hydrogen` → `neon-high` → `neon-xhigh`）を適用する。
 1. **Blender接続確認とヘッドレスCLIフォールバック（Blender 5.3 優先・5.2 互換）**:
    - 専用スキル [`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) を参照する。
    - `call_mcp_tool` で `blender` サーバーの `get_addon_status` / `get_scene_info` を確認し、MCP未起動またはタイムアウト時は直ちにローカルの Blender CLI（`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` を最優先検出し、未導入環境では `Blender 5.2\blender.exe` へ互換フォールバック：`--background --python 02_Creative_Dept/blender/drafts/<script.py>`）によるヘッドレス `bpy` / `bmesh` バッチ実行モードへ切り替える。
