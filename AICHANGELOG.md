@@ -1,5 +1,39 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-19 (v30): アカウント共通・最優先マスタールール拡張（全タスク領域対応モデル提案＆アドバイス＋`swarm(action="models")` による新モデル動的検知＋3重注入重複の解消）
+
+### 変更理由
+1. ジン（`nobuyukitakahashi`）に限らず、オーナーのアカウント配下で稼働するすべてのワークスペース・エージェントにおいて、作業内容に応じた最適モデルの切り替え提案・選定理由のアドバイス、および新モデル導入時の動的チェック・残クォータ確認を最上位ルールとして機能させるため。
+2. 従来は `global-master-rules` が `~/.gemini/config/AGENTS.md`、`~/.gemini/config/rules/AGENTS.md`、`~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md` の3箇所から重複ロードされてグローバルルール予算（20,000トークン上限）を3倍消費していたため、`global-master-rules` プラグイン単一ソースへ一本化し、`/pc-env-sync`（Windows / Mac）でも重複ファイルを自動整理するよう改善するため。
+
+### Before / After
+- **Before (v29)**:
+  - `global-master-rules` はモデル固定記載のみで、新モデルがアカウントに追加された際の動的照会トリガーや残クォータアドバイス手順が未定義だった。
+  - 同一ルールファイルが `~/.gemini/config/` 配下の3箇所にコピーされ、全セッションで3重にコンテキスト注入されていた。
+- **After (v30)**:
+  - **① 全タスク領域対応のモデル選定・アドバイス基準（2026年11月版）をマスタールール化**:
+    - 領域A（コーディング・デバッグ・数理・Blender 3D）➔ `Gemini 4 Neon (High/XHigh)`
+    - 領域B（長尺動画・大容量資料照合・議事録・法務・GUI操作）➔ `Gemini 4 Argon (Medium以上)`
+    - 領域C（高度設計・難関クリエイティブ・最高品質統合推論）➔ `Gemini 4 Carbon` / `Claude Opus/Sonnet 5.5`
+    - 領域D（定型・軽量作業）➔ `Gemini 4 Hydrogen (Low/Medium)`
+  - **② 最新モデル導入チェック機構の統合**:
+    - 未知モデル検知時・モデル相談時・`05_System_Evolution_Dept` 監査時に `swarm(action="models", all=true)` を呼び出して利用可能モデルと残クォータを動的取得し、必要に応じてWeb調査のうえアドバイス＆マスタールール更新を提案する規定を追加（通常チャットへの遅延影響ゼロ）。
+  - **③ 3重注入重複の解消**:
+    - 正本を `~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md` の1箇所へ一本化し、`sync_pc_env.ps1` / `sync_mac_env.sh` にも重複削除処理を組み込んだ。
+
+### 影響範囲
+- 更新:
+  - [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md)
+  - [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md)
+  - [`AGENTS.md`](AGENTS.md)
+  - [`05_System_Evolution_Dept/AGENTS.md`](05_System_Evolution_Dept/AGENTS.md)
+  - [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1)
+  - [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+  - `C:\Users\nobuy\.gemini\config\plugins\global-master-rules\rules\AGENTS.md`（単一ソース同期）、`C:\Users\nobuy\.gemini\config\AGENTS.md`・`C:\Users\nobuy\.gemini\config\rules\AGENTS.md`（重複ファイル削除）
+
+---
+
 ## 2026-11-19 (v29): 統括COO「ジン」× Blender 最適モデル自動判定・提案ゲート ＆ `swarm` 動的切替システム（Gemini 4 Neon / Hydrogen / Argon 対応）の実装
 
 ### 変更理由

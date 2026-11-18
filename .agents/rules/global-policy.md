@@ -3,12 +3,12 @@
 本ファイルは、このプロジェクトに参加するすべてのAIエージェント（統括COOおよび全専門部署のサブエージェント）が行動を開始する前に必ず遵守しなければならない最上位の共通規則です。
 
 ## 0. 【最優先】タスク難易度に応じた「最適モデル逆提案ゲート ＆ Swarm動的切替」（Model Adequacy & Routing Gate）
-- アカウント共通マスタールール（[`~/.gemini/config/rules/AGENTS.md`](../../../.gemini/config/rules/AGENTS.md) および [`.agents/plugins/global-master-rules/rules/AGENTS.md`](../plugins/global-master-rules/rules/AGENTS.md)）に基づき、エージェントは作業着手前に必ず**「現在選択されているモデル（`Model Selection`）」**と**「依頼された作業の難易度・負荷」**を照合すること。
+- アカウント共通マスタールール（[`~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md`](../../../.gemini/config/plugins/global-master-rules/rules/AGENTS.md) および [`.agents/plugins/global-master-rules/rules/AGENTS.md`](../plugins/global-master-rules/rules/AGENTS.md)）に基づき、エージェントは作業着手前に必ず**「現在選択されているモデル（`Model Selection`）」**と**「依頼された作業の難易度・負荷」**を照合し、選定理由のアドバイスとともに最適モデルを提案すること。
 - **アンダースペック警告**: `Hydrogen` 等の軽量モデル選択時に高難度タスクを依頼された場合は、タスク性質に応じて最適上位モデルを逆提案して確認を取ること：
   - **Blender 3D（`bpy` / `bmesh` 造形・ジオメトリ／シェーダーノード・リグ・デバッグ）・コーディング・数理推論** ➔ **`Gemini 4 Neon (High)`**（極限幾何・連続エラー時は **`XHigh`**）
   - **長尺動画・音声精密解析・大容量資料横断照合・公的議事録・法務契約書・GUI視覚操作** ➔ **`Gemini 4 Argon (Medium以上)`**（または `Neon` / `Carbon`）
 - **オーバースペック（クォータ節約）提案**: `Neon` / `Argon` / `Carbon` 等の上位モデル選択時に定型・軽作業（Blenderの単発情報取得・単純移動／リネーム、`/pc-env-sync`、単純なファイル整理等）を依頼された場合は、クォータ節約のため **`Gemini 4 Hydrogen`**（または `swarm` の `gemini-4-hydrogen-low` / サブエージェント `flash`）への切り替えを逆提案すること。
-- **自動切替委任時（`swarm` 動的モデル選択・昇格）**: オーナーが「モデル選択はお任せ」「自動切替モードで」と委任した場合、または提案で `swarm` 実行を選択した場合は、`swarm` ツールで実名モデル（`gemini-4-hydrogen-low` / `gemini-4-neon-high` 等）を割り当てて実行し、エラー発生時は `swarm(action="model")` で `gemini-4-neon-high` → `gemini-4-neon-xhigh` へ自動昇格させること。
+- **最新モデル導入チェック ＆ 自動切替委任時**: 未知モデル検知時やモデル相談時は `swarm(action="models", all=true)` でアカウント内の利用可能モデル・残クォータを動的確認する。またオーナーが「モデル選択はお任せ」「自動切替モードで」と委任した場合（または `swarm` 実行を選択した場合）は、`swarm` ツールで実名モデルを割り当てて実行し、エラー発生時は `swarm(action="model")` で `gemini-4-neon-high` → `gemini-4-neon-xhigh` へ自動昇格させること。
 
 ## 1. ディレクトリ（縄張り）と権限境界の厳守
 - すべてのサブエージェントは、自身に割り当てられた部署フォルダ内、および明確に許可された連携先フォルダ（指定されたインプット読み込み先／アウトプット出力先）以外のファイルを**変更・削除・作成**してはならない。

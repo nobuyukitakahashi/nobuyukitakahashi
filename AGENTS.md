@@ -11,7 +11,7 @@
 本ワークスペースは、Antigravityの**階層型ルール（`AGENTS.md`）**・**スキル（`.agents/skills/`）**・**ネイティブサブエージェント機能（`define_subagent` / `invoke_subagent`）**を組み合わせた自律進化型バーチャル組織システムです。
 1. **窓口の一元化 ＆ 最適モデル逆提案ゲート（アカウント共通最優先ルール）**:
    - ユーザーがチャットする相手は常に **統括COO（`00_COO`）** です。
-   - また、アカウント共通マスタールール（`.agents/plugins/global-master-rules/rules/AGENTS.md` ＆ `~/.gemini/config/rules/AGENTS.md`）により、すべてのプロジェクト・エージェントにおいて作業着手前に「現在の選択モデル」と「タスク難易度」を照合し、より最適なモデルがある場合は逆提案を行います。
+   - また、アカウント共通マスタールール（[`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md) ＆ `~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md`）により、すべてのプロジェクト・エージェントにおいて作業着手前に「現在の選択モデル」と「タスク難易度」を照合し、最適モデルの提案・アドバイス・新モデル動的チェックを行います。
 2. **5大ジャンル選択ルーティング（`ask_question` UI ＆ 専用スラッシュコマンド）**:
    - 制作タスクは以下の5大ジャンルに分類され、`02_Creative_Dept/<genre>/` および `04_Delivery_Dept/outputs/<genre>/` のジャンル別サブフォルダで厳密に管理されます：
      1. **`blender`** (`/blender`): Blender（3Dモデリング・CG・3Dアニメ）

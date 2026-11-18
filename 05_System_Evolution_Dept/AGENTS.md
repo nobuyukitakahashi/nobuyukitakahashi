@@ -11,8 +11,9 @@
 ## 2. 自律稼働タイミングと業務手順
 統括COO（`00_COO`）からパイプライン完了時（Post-flight）または定期監査時（`/system-evolution`）に起動された際、以下の手順を実行する：
 
-1. **Antigravity 最新仕様・ベストプラクティスの確認**:
+1. **Antigravity 最新仕様・導入モデル・ベストプラクティスの確認**:
    - 内蔵スキル（`C:\Users\nobuy\.gemini\antigravity\builtin\skills\agy-customizations\SKILL.md` や `antigravity_guide\SKILL.md`）の更新有無、または必要に応じたWeb検索（`antigravity.google/docs`, `antigravity.google/changelog`）により、最新のルール仕様・スキル仕様・サブエージェント仕様・ツール機能を確認する。
+   - `swarm(action="models", all=true)` を照会し、アカウントへ新モデルが導入されていないか確認する。新モデルを検知した場合は Web検索等で公式特性・用途を調査し、`.agents/plugins/global-master-rules/rules/AGENTS.md` および関連 `AGENTS.md` / `SKILL.md` のモデル選定マトリクスを更新する。
 2. **組織内ワークフローのボトルネック監査**:
    - 直近の `00_COO/task_logs/` および `01`〜`04` の出力結果を確認し、「指示の曖昧さ」「出力フォーマットの崩れ」「固定出力フォルダ（`04_Delivery_Dept/outputs/`）ルールの遵守状況」を監査する。
 3. **自律改善（Self-Update）の実行**:

@@ -252,10 +252,9 @@ fi
 if [ -d "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" ]; then
   rm -rf "$GLOBAL_PLUGINS_DIR/global-master-rules"
   cp -R "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" "$GLOBAL_PLUGINS_DIR/"
-  mkdir -p "$HOME/.gemini/config/rules"
-  cp "$WORKSPACE_ROOT/.agents/plugins/global-master-rules/rules/AGENTS.md" "$HOME/.gemini/config/AGENTS.md"
-  cp "$WORKSPACE_ROOT/.agents/plugins/global-master-rules/rules/AGENTS.md" "$HOME/.gemini/config/rules/AGENTS.md"
-  echo "  [OK] Synced account-wide master rules (~/.gemini/config/rules/AGENTS.md & plugin)"
+  # Remove legacy duplicate rule copies so global-master-rules is injected only once within the 20k-token rules budget
+  rm -f "$HOME/.gemini/config/AGENTS.md" "$HOME/.gemini/config/rules/AGENTS.md"
+  echo "  [OK] Synced account-wide master rules (single source: ~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md)"
 fi
 
 UV_BIN="$(command -v uv || true)"

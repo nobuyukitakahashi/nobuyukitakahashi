@@ -401,18 +401,17 @@ if (Test-Path $NotebookPluginSrc) {
 $GlobalMasterPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\global-master-rules"
 if (Test-Path $GlobalMasterPluginSrc) {
     Copy-Item -Path $GlobalMasterPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
-    Write-Host "  [OK] Synced global plugin: global-master-rules"
-    $MasterRulesMd = Join-Path $GlobalMasterPluginSrc "rules\AGENTS.md"
-    if (Test-Path $MasterRulesMd) {
-        $GlobalConfigDir = Join-Path $env:USERPROFILE ".gemini\config"
-        $GlobalRulesDir = Join-Path $GlobalConfigDir "rules"
-        if (-not (Test-Path $GlobalRulesDir)) {
-            New-Item -ItemType Directory -Path $GlobalRulesDir -Force | Out-Null
+    # Remove legacy duplicate rule copies so global-master-rules is injected only once within the 20k-token rules budget
+    $GlobalConfigDir = Join-Path $env:USERPROFILE ".gemini\config"
+    foreach ($dupPath in @(
+        (Join-Path $GlobalConfigDir "AGENTS.md"),
+        (Join-Path $GlobalConfigDir "rules\AGENTS.md")
+    )) {
+        if (Test-Path $dupPath) {
+            Remove-Item -Path $dupPath -Force -ErrorAction SilentlyContinue
         }
-        Copy-Item -Path $MasterRulesMd -Destination (Join-Path $GlobalConfigDir "AGENTS.md") -Force
-        Copy-Item -Path $MasterRulesMd -Destination (Join-Path $GlobalRulesDir "AGENTS.md") -Force
-        Write-Host "  [OK] Synced account-wide master rules: ~/.gemini/config/AGENTS.md & ~/.gemini/config/rules/AGENTS.md"
     }
+    Write-Host "  [OK] Synced account-wide master rules (single source: ~/.gemini/config/plugins/global-master-rules/rules/AGENTS.md)"
 }
 
 Write-Host "`n=== [4/6] Verifying Obsidian MCP, NotebookLM MCP & Official Blender Lab MCP ==="
