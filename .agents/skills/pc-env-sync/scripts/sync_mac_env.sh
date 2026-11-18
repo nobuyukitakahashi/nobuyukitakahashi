@@ -259,6 +259,7 @@ if [ -d "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" ]; then
 fi
 
 UV_BIN="$(command -v uv || true)"
+UVX_BIN="$(command -v uvx || true)"
 
 echo ""
 echo "=== [4/7] Verifying DaVinci Resolve MCP (davinci-resolve-mcp) ==="
@@ -281,23 +282,53 @@ else
 fi
 
 echo ""
-echo "=== [5/7] Verifying Blender MCP (blender-mcp) ==="
-BLENDER_MCP_DIR="$HOME/.gemini/mcp-servers/blender-mcp"
-if [ ! -d "$BLENDER_MCP_DIR" ]; then
-  echo "  Cloning blender-mcp..."
-  git clone https://github.com/ahujasid/blender-mcp.git "$BLENDER_MCP_DIR"
-fi
-if [ ! -f "$BLENDER_MCP_DIR/venv/bin/mcp-for-blender" ]; then
-  if [ -n "$UV_BIN" ]; then
-    echo "  Setting up Python 3.12 venv for blender-mcp..."
-    "$UV_BIN" venv "$BLENDER_MCP_DIR/venv" --python 3.12
-    "$UV_BIN" pip install --python "$BLENDER_MCP_DIR/venv/bin/python" -e "$BLENDER_MCP_DIR"
-    "$BLENDER_MCP_DIR/venv/bin/mcp-for-blender" setup --yes || true
+echo "=== [5/7] Verifying Official Blender Lab MCP (blender-mcp) ==="
+if [ -z "$UV_BIN" ]; then
+  echo "  [INFO] uv not found; attempting automatic installation..."
+  if command -v brew >/dev/null 2>&1; then
+    brew install uv || true
   else
-    echo "  [WARN] uv not found; skipping blender-mcp venv setup"
+    curl -LsSf https://astral.sh/uv/install.sh | sh || true
   fi
+  export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+  UV_BIN="$(command -v uv || true)"
+  UVX_BIN="$(command -v uvx || true)"
+fi
+
+BLENDER_MCP_BIN="$HOME/.local/bin/blender-mcp"
+IS_OFFICIAL_BLENDER_MCP=0
+if [ -x "$BLENDER_MCP_BIN" ]; then
+  if "$BLENDER_MCP_BIN" --help 2>&1 | grep -q "MCP server for Blender" && ! "$BLENDER_MCP_BIN" --help 2>&1 | grep -q "mcp-for-blender"; then
+    IS_OFFICIAL_BLENDER_MCP=1
+  fi
+fi
+
+if [ "$IS_OFFICIAL_BLENDER_MCP" -eq 0 ] && [ -n "$UV_BIN" ]; then
+  echo "  Installing official Blender Lab blender-mcp via uv tool (--force)..."
+  "$UV_BIN" tool install --force --python 3.12 --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp
+  if [ -x "$BLENDER_MCP_BIN" ] && "$BLENDER_MCP_BIN" --help 2>&1 | grep -q "MCP server for Blender"; then
+    IS_OFFICIAL_BLENDER_MCP=1
+  fi
+fi
+
+if [ "$IS_OFFICIAL_BLENDER_MCP" -eq 1 ]; then
+  echo "  [OK] Official Blender Lab blender-mcp ready: $BLENDER_MCP_BIN"
 else
-  echo "  [OK] blender-mcp venv ready: $BLENDER_MCP_DIR/venv/bin/mcp-for-blender"
+  echo "  [INFO] Will use uvx for official Blender Lab blender-mcp: ${UVX_BIN:-uvx}"
+fi
+
+DETECTED_BLENDER_BIN=""
+for b_cand in \
+  "/Applications/Blender.app/Contents/MacOS/Blender" \
+  "$HOME/Applications/Blender.app/Contents/MacOS/Blender" \
+  "$(command -v blender 2>/dev/null || true)"; do
+  if [ -n "$b_cand" ] && [ -x "$b_cand" ]; then
+    DETECTED_BLENDER_BIN="$b_cand"
+    break
+  fi
+done
+if [ -z "$DETECTED_BLENDER_BIN" ]; then
+  DETECTED_BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender"
 fi
 
 echo ""
@@ -336,7 +367,10 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
     const vaultPath = process.argv[4];
     const nlmScript = process.argv[5];
     const davinciDir = process.argv[6];
-    const blenderDir = process.argv[7];
+    const isOfficialBlender = process.argv[7] === "1";
+    const blenderMcpBin = process.argv[8];
+    const uvxBin = process.argv[9] || "uvx";
+    const blenderBin = process.argv[10];
 
     let json = { mcpServers: {} };
     if (fs.existsSync(cfgPath) && fs.readFileSync(cfgPath, "utf8").trim().length > 0) {
@@ -361,35 +395,86 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
         PYTHONPATH: "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
       }
     };
-    json.mcpServers["blender"] = {
-      command: blenderDir + "/venv/bin/mcp-for-blender",
-      args: []
-    };
+    json.mcpServers["blender"] = isOfficialBlender
+      ? {
+          command: blenderMcpBin,
+          args: [],
+          env: {
+            BLENDER_PATH: blenderBin,
+            BLENDER_MCP_HOST: "localhost",
+            BLENDER_MCP_PORT: "9876"
+          }
+        }
+      : {
+          command: uvxBin,
+          args: ["--python", "3.12", "--from", "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp", "blender-mcp"],
+          env: {
+            BLENDER_PATH: blenderBin,
+            BLENDER_MCP_HOST: "localhost",
+            BLENDER_MCP_PORT: "9876"
+          }
+        };
     json.mcpServers["illustrator"] = {
-      command: nodeBin,
-      args: [process.argv[8]]
-    };
-    json.mcpServers["photoshop"] = {
-      command: nodeBin,
-      args: [process.argv[9]]
-    };
-    json.mcpServers["premiere"] = {
-      command: nodeBin,
-      args: [process.argv[10]]
-    };
-    json.mcpServers["aftereffects"] = {
       command: nodeBin,
       args: [process.argv[11]]
     };
-    json.mcpServers["ptgui"] = {
+    json.mcpServers["photoshop"] = {
       command: nodeBin,
       args: [process.argv[12]]
     };
+    json.mcpServers["premiere"] = {
+      command: nodeBin,
+      args: [process.argv[13]]
+    };
+    json.mcpServers["aftereffects"] = {
+      command: nodeBin,
+      args: [process.argv[14]]
+    };
+    json.mcpServers["ptgui"] = {
+      command: nodeBin,
+      args: [process.argv[15]]
+    };
 
     fs.writeFileSync(cfgPath, JSON.stringify(json, null, 2) + "\n", "utf8");
-  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$BLENDER_MCP_DIR" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js"
+  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
+
+if [ -x "$DETECTED_BLENDER_BIN" ]; then
+  echo ""
+  echo "=== [6.5/7] Verifying Official Blender Lab Add-on (bl_ext.user_default.mcp) ==="
+  CHECK_PY="import bpy, addon_utils; d, s = addon_utils.check('bl_ext.user_default.mcp'); ext_dir = bpy.utils.user_resource('EXTENSIONS'); print('BLENDER_MCP_EXT_STATUS:' + str(d) + '|' + str(s) + '|' + str(bpy.context.preferences.system.use_online_access) + '|' + ext_dir)"
+  CHECK_OUT="$("$DETECTED_BLENDER_BIN" --background --online-mode --python-expr "$CHECK_PY" 2>&1 || true)"
+  STATUS_LINE="$(printf '%s\n' "$CHECK_OUT" | grep 'BLENDER_MCP_EXT_STATUS:' | tail -n 1 || true)"
+  EXT_INSTALLED=0
+  EXT_ENABLED=0
+  ONLINE_ENABLED=0
+  if [ -n "$STATUS_LINE" ]; then
+    VALS="${STATUS_LINE#BLENDER_MCP_EXT_STATUS:}"
+    IFS='|' read -r D_VAL S_VAL O_VAL EXT_BASE <<< "$VALS"
+    [ "$D_VAL" = "True" ] && EXT_ENABLED=1
+    [ "$O_VAL" = "True" ] && ONLINE_ENABLED=1
+    MANIFEST="$EXT_BASE/user_default/mcp/blender_manifest.toml"
+    if [ -f "$MANIFEST" ] && grep -q 'maintainer *= *"Blender Lab"' "$MANIFEST"; then
+      EXT_INSTALLED=1
+    fi
+  fi
+  if [ "$EXT_INSTALLED" -eq 0 ]; then
+    echo "  Installing official Blender Lab MCP add-on into Blender..."
+    TMP_DIR="$(mktemp -d)"
+    git clone --depth 1 https://projects.blender.org/lab/blender_mcp.git "$TMP_DIR/repo"
+    "$DETECTED_BLENDER_BIN" --command extension build --source-dir "$TMP_DIR/repo/addon/blender_mcp_addon" --output-filepath "$TMP_DIR/mcp.zip"
+    "$DETECTED_BLENDER_BIN" --command extension install-file -r user_default -e "$TMP_DIR/mcp.zip"
+    rm -rf "$TMP_DIR"
+    EXT_INSTALLED=1
+  fi
+  if [ "$EXT_INSTALLED" -eq 1 ] && { [ "$EXT_ENABLED" -eq 0 ] || [ "$ONLINE_ENABLED" -eq 0 ]; }; then
+    echo "  Enabling Blender Online Access and bl_ext.user_default.mcp auto-start..."
+    "$DETECTED_BLENDER_BIN" --background --online-mode --python-expr "import bpy; bpy.context.preferences.system.use_online_access = True; bpy.ops.preferences.addon_enable(module='bl_ext.user_default.mcp'); p = bpy.context.preferences.addons['bl_ext.user_default.mcp'].preferences; p.host = 'localhost'; p.port = 9876; p.use_autostart = True; bpy.ops.wm.save_userpref()"
+  elif [ "$EXT_INSTALLED" -eq 1 ]; then
+    echo "  [OK] Official Blender Lab MCP add-on enabled with Online Access ($DETECTED_BLENDER_BIN)"
+  fi
+fi
 
 echo ""
 echo "=== [7/7] Checking NotebookLM Auth Directory ==="

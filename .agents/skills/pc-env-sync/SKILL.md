@@ -45,7 +45,7 @@ description: >
    - ※もし `setup_auth` でログイン完了後に `https://notebook.google.com/` へリダイレクトされて待機ループが残った場合は、`chrome_profile` から `AuthManager.saveBrowserState()` で `state.json` を書き出して認証を完了させる。
 
 3. **完了報告・引き継ぎ確認**
-   - 検出された `Workspace` / `VaultPath`、Git同期状態、グローバルスキル／ルール同期状態、SSH鍵の有無（未配置時は案内）、NotebookLM認証状態を簡潔に報告する。
+   - 検出された `Workspace` / `VaultPath`、Git同期状態、グローバルスキル／ルール同期状態、公式 Blender Lab MCP（`blender-mcp` クライアント設定・`BLENDER_PATH`・Blenderアドオン `bl_ext.user_default.mcp` ＆ Online Access 有効化状態）、SSH鍵の有無（未配置時は案内）、NotebookLM認証状態を簡潔に報告する。
    - `mcp_config.json` が新規作成・更新された場合は、Antigravity のリロード（または再起動）で新しい MCP サーバーが反映される旨を案内する。
 
 4. **SSH秘密鍵の暗号化バックアップ／復元（`ssh_vault.js`）**

@@ -415,7 +415,7 @@ if (Test-Path $GlobalMasterPluginSrc) {
     }
 }
 
-Write-Host "`n=== [4/6] Verifying Obsidian MCP (@bitbonsai/mcpvault) & Blender MCP (mcp-for-blender) ==="
+Write-Host "`n=== [4/6] Verifying Obsidian MCP, NotebookLM MCP & Official Blender Lab MCP ==="
 $NpmGlobalModules = (npm root -g).Trim()
 $McpVaultScript = Join-Path $NpmGlobalModules "@bitbonsai\mcpvault\dist\server.js"
 $NotebookLmMcpScript = Join-Path $NpmGlobalModules "notebooklm-mcp\dist\index.js"
@@ -434,19 +434,73 @@ if (-not (Test-Path $NotebookLmMcpScript)) {
     Write-Host "  [OK] notebooklm-mcp already installed: $NotebookLmMcpScript"
 }
 
-$UvxCmd = Get-Command uvx -ErrorAction SilentlyContinue
-if ($UvxCmd) {
-    $UvxPath = $UvxCmd.Source
-    Write-Host "  [OK] uvx detected for Blender MCP: $UvxPath"
-} else {
-    $FallbackUvx = Join-Path $env:USERPROFILE ".local\bin\uvx.exe"
-    if (Test-Path $FallbackUvx) {
-        $UvxPath = $FallbackUvx
-        Write-Host "  [OK] uvx detected at fallback path: $UvxPath"
-    } else {
-        $UvxPath = "uvx"
-        Write-Host "  [WARN] uvx not found in PATH; defaulting command to 'uvx'"
+function Find-UvTool {
+    param([string]$ToolName)
+    $cmd = Get-Command $ToolName -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $localCand = Join-Path $env:USERPROFILE ".local\bin\$ToolName.exe"
+    if (Test-Path $localCand) { return $localCand }
+    $wingetPkgDir = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
+    if (Test-Path $wingetPkgDir) {
+        $found = Get-ChildItem -Path $wingetPkgDir -Filter "$ToolName.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) { return $found.FullName }
     }
+    return $null
+}
+
+$UvExe = Find-UvTool -ToolName "uv"
+$UvxExe = Find-UvTool -ToolName "uvx"
+if (-not $UvExe -or -not $UvxExe) {
+    Write-Host "  [INFO] uv/uvx not found; attempting automatic installation..."
+    $ErrorActionPreference = "Continue"
+    $WingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    if ($WingetCmd) {
+        & $WingetCmd.Source install -e --id Astral-sh.uv --accept-package-agreements --accept-source-agreements --silent 2>&1 | Out-Host
+    }
+    $UvExe = Find-UvTool -ToolName "uv"
+    $UvxExe = Find-UvTool -ToolName "uvx"
+    if (-not $UvExe) {
+        try {
+            Invoke-RestMethod "https://astral.sh/uv/install.ps1" | Invoke-Expression
+        } catch {
+            Write-Warning "uv installer failed: $_"
+        }
+        $UvExe = Find-UvTool -ToolName "uv"
+        $UvxExe = Find-UvTool -ToolName "uvx"
+    }
+    $ErrorActionPreference = "Stop"
+}
+
+$UvxPath = if ($UvxExe) { $UvxExe } else { "uvx" }
+if ($UvExe) {
+    Write-Host "  [OK] uv detected: $UvExe"
+} else {
+    Write-Host "  [WARN] uv not found; Blender MCP will fall back to 'uvx'"
+}
+
+$BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
+function Test-OfficialBlenderMcpExe {
+    param([string]$ExePath)
+    if (-not (Test-Path $ExePath)) { return $false }
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $helpText = (& $ExePath --help 2>&1 | Out-String)
+    $ErrorActionPreference = $prevEap
+    return ($helpText -match "MCP server for Blender" -and $helpText -notmatch "mcp-for-blender")
+}
+
+$IsOfficialBlenderMcp = Test-OfficialBlenderMcpExe -ExePath $BlenderMcpExe
+if (-not $IsOfficialBlenderMcp -and $UvExe) {
+    Write-Host "  Installing official Blender Lab blender-mcp via uv tool (--force)..."
+    $ErrorActionPreference = "Continue"
+    & $UvExe tool install --force --python 3.12 --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp 2>&1 | Out-Host
+    $ErrorActionPreference = "Stop"
+    $IsOfficialBlenderMcp = Test-OfficialBlenderMcpExe -ExePath $BlenderMcpExe
+}
+if ($IsOfficialBlenderMcp) {
+    Write-Host "  [OK] Official Blender Lab blender-mcp ready: $BlenderMcpExe"
+} else {
+    Write-Host "  [INFO] Will use uvx for official Blender Lab blender-mcp: $UvxPath"
 }
 
 Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator, photoshop, premiere, aftereffects & ptgui) ==="
@@ -457,7 +511,20 @@ $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server
 $PremiereMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\premiere-mcp\server.js"
 $AfterEffectsMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\aftereffects-mcp\server.js"
 $PtguiMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\ptgui-mcp\server.js"
-$BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
+
+$DetectedBlenderExe = @("C:\Program Files\Blender Foundation", "$env:LOCALAPPDATA\Programs\Blender Foundation") |
+    Where-Object { Test-Path $_ } |
+    ForEach-Object { Get-ChildItem $_ -Recurse -Filter "blender.exe" -ErrorAction SilentlyContinue } |
+    Sort-Object FullName -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
+if (-not $DetectedBlenderExe) {
+    $BlenderInPath = Get-Command blender -ErrorAction SilentlyContinue
+    if ($BlenderInPath) { $DetectedBlenderExe = $BlenderInPath.Source }
+}
+if (-not $DetectedBlenderExe) {
+    $DetectedBlenderExe = "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe"
+}
+
 $McpConfigPaths = @(
     (Join-Path $env:USERPROFILE ".gemini\config\mcp_config.json"),
     (Join-Path $env:USERPROFILE ".gemini\antigravity\mcp_config.json"),
@@ -492,25 +559,7 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "obsidian" -Value $obsidianEntry -Force
 
-    $DetectedBlenderExe = @("C:\Program Files\Blender Foundation", "$env:LOCALAPPDATA\Programs\Blender Foundation") |
-        Where-Object { Test-Path $_ } |
-        ForEach-Object { Get-ChildItem $_ -Recurse -Filter "blender.exe" -ErrorAction SilentlyContinue } |
-        Sort-Object FullName -Descending |
-        Select-Object -First 1 -ExpandProperty FullName
-    if (-not $DetectedBlenderExe) {
-        $DetectedBlenderExe = "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe"
-    }
-
-    # Install official Blender Lab blender-mcp if missing, or use installed blender-mcp.exe
-    $existingBlender = $json.mcpServers.PSObject.Properties["blender"]
-    if (-not (Test-Path $BlenderMcpExe) -and $UvxCmd) {
-        $UvCmd = Get-Command uv -ErrorAction SilentlyContinue
-        if ($UvCmd) {
-            Write-Host "  Installing official Blender Lab blender-mcp via uv tool..."
-            & $UvCmd.Source tool install --python 3.12 --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp 2>&1 | Out-Host
-        }
-    }
-    if (Test-Path $BlenderMcpExe) {
+    if ($IsOfficialBlenderMcp) {
         $blenderEntry = [PSCustomObject]@{
             command = $BlenderMcpExe
             args    = @()
@@ -520,16 +569,18 @@ foreach ($cfgPath in $McpConfigPaths) {
                 BLENDER_MCP_PORT = "9876"
             }
         }
-        $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
-    } elseif ($existingBlender -and $existingBlender.Value.command -and ($existingBlender.Value.command -match "blender-mcp\.exe")) {
-        Write-Host "  [OK] Preserved existing blender-mcp.exe config in $cfgPath"
     } else {
         $blenderEntry = [PSCustomObject]@{
             command = $UvxPath
             args    = @("--python", "3.12", "--from", "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp", "blender-mcp")
+            env     = [PSCustomObject]@{
+                BLENDER_PATH     = $DetectedBlenderExe
+                BLENDER_MCP_HOST = "localhost"
+                BLENDER_MCP_PORT = "9876"
+            }
         }
-        $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
     }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
 
     $notebookLmEntry = [PSCustomObject]@{
         command = $NodeExe
@@ -570,6 +621,84 @@ foreach ($cfgPath in $McpConfigPaths) {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)
     Write-Host "  [OK] Updated MCP config: $cfgPath"
+}
+
+Write-Host "`n=== [5.5/6] Verifying Official Blender Lab Add-on (bl_ext.user_default.mcp) ==="
+if ($DetectedBlenderExe -and (Test-Path $DetectedBlenderExe)) {
+    $ErrorActionPreference = "Continue"
+    $checkPy = "import bpy, addon_utils; d, s = addon_utils.check('bl_ext.user_default.mcp'); ext_dir = bpy.utils.user_resource('EXTENSIONS'); print('BLENDER_MCP_EXT_STATUS:' + str(d) + '|' + str(s) + '|' + str(bpy.context.preferences.system.use_online_access) + '|' + ext_dir)"
+    $checkOut = (& $DetectedBlenderExe --background --online-mode --python-expr $checkPy 2>&1 | Out-String)
+    $ErrorActionPreference = "Stop"
+
+    $extInstalled = $false
+    $extEnabled = $false
+    $onlineEnabled = $false
+    $extBaseDir = ""
+    if ($checkOut -match 'BLENDER_MCP_EXT_STATUS:(True|False)\|(True|False)\|(True|False)\|([^\r\n]+)') {
+        $extEnabled = ($Matches[1] -eq "True")
+        $onlineEnabled = ($Matches[3] -eq "True")
+        $extBaseDir = $Matches[4].Trim()
+        $manifestPath = Join-Path $extBaseDir "user_default\mcp\blender_manifest.toml"
+        if (Test-Path $manifestPath) {
+            $manifestRaw = Get-Content -Path $manifestPath -Raw -Encoding UTF8
+            if ($manifestRaw -match 'maintainer\s*=\s*"Blender Lab"') {
+                $extInstalled = $true
+            }
+        }
+    }
+
+    if (-not $extInstalled) {
+        Write-Host "  Installing official Blender Lab MCP add-on into Blender..."
+        $AddonSrc = $null
+        $uvCacheCheckouts = Join-Path $env:LOCALAPPDATA "uv\cache\git-v1\checkouts"
+        if (Test-Path $uvCacheCheckouts) {
+            $AddonSrc = Get-ChildItem -Path $uvCacheCheckouts -Directory -ErrorAction SilentlyContinue |
+                ForEach-Object { Get-ChildItem -Path $_.FullName -Directory -ErrorAction SilentlyContinue } |
+                ForEach-Object { Join-Path $_.FullName "addon\blender_mcp_addon" } |
+                Where-Object { Test-Path (Join-Path $_ "blender_manifest.toml") } |
+                Sort-Object { (Get-Item $_).LastWriteTime } -Descending |
+                Select-Object -First 1
+        }
+        $TempRepoDir = Join-Path $env:TEMP ("blender_mcp_src_" + [System.Guid]::NewGuid().ToString("N"))
+        $TempZipPath = Join-Path $env:TEMP ("blender_mcp_ext_" + [System.Guid]::NewGuid().ToString("N") + ".zip")
+        try {
+            if (-not $AddonSrc) {
+                $ErrorActionPreference = "Continue"
+                git clone --depth 1 https://projects.blender.org/lab/blender_mcp.git $TempRepoDir 2>&1 | Out-Host
+                $ErrorActionPreference = "Stop"
+                $candAddon = Join-Path $TempRepoDir "addon\blender_mcp_addon"
+                if (Test-Path (Join-Path $candAddon "blender_manifest.toml")) {
+                    $AddonSrc = $candAddon
+                }
+            }
+            if ($AddonSrc) {
+                $ErrorActionPreference = "Continue"
+                & $DetectedBlenderExe --command extension build --source-dir $AddonSrc --output-filepath $TempZipPath 2>&1 | Out-Host
+                if (Test-Path $TempZipPath) {
+                    & $DetectedBlenderExe --command extension install-file -r user_default -e $TempZipPath 2>&1 | Out-Host
+                    $extInstalled = $true
+                }
+                $ErrorActionPreference = "Stop"
+            } else {
+                Write-Warning "Could not locate blender_mcp_addon source for extension install."
+            }
+        } finally {
+            if (Test-Path $TempRepoDir) { Remove-Item -Path $TempRepoDir -Recurse -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $TempZipPath) { Remove-Item -Path $TempZipPath -Force -ErrorAction SilentlyContinue }
+        }
+    }
+
+    if ($extInstalled -and (-not $extEnabled -or -not $onlineEnabled)) {
+        Write-Host "  Enabling Blender Online Access and bl_ext.user_default.mcp auto-start..."
+        $enablePy = "import bpy; bpy.context.preferences.system.use_online_access = True; bpy.ops.preferences.addon_enable(module='bl_ext.user_default.mcp'); p = bpy.context.preferences.addons['bl_ext.user_default.mcp'].preferences; p.host = 'localhost'; p.port = 9876; p.use_autostart = True; bpy.ops.wm.save_userpref(); print('BLENDER_MCP_ENABLED_OK')"
+        $ErrorActionPreference = "Continue"
+        & $DetectedBlenderExe --background --online-mode --python-expr $enablePy 2>&1 | Out-Host
+        $ErrorActionPreference = "Stop"
+    } elseif ($extInstalled -and $extEnabled -and $onlineEnabled) {
+        Write-Host "  [OK] Official Blender Lab MCP add-on enabled with Online Access ($DetectedBlenderExe)"
+    }
+} else {
+    Write-Host "  [INFO] Blender executable not found on this PC yet; install Blender 5.1+ then re-run sync."
 }
 
 Write-Host "`n=== [6/6] Checking NotebookLM Auth Directory ==="
