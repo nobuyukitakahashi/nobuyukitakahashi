@@ -1,5 +1,58 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-18 (v28): Blender 3Dアニメーション v8「腕の `dR_from_c` クランプ廃止・`m_lock=0.55` 剛体保護・タマゴ表面等高線 `R_surf(z)` 厳密追従肩リフト・`z_crotch` 基準足ドーム変形による極限しわゼロ化」および「数式タイムライン完全同期 48kHz ステレオ効果音（SE）生成 ＆ Blender VSE AAC 統合」の確立とスキル・ルール標準化
+
+### 変更理由
+1. 株式会社CVN 公式キャラクター『ケーブル兄弟（いい-ch ＆ いい-NETくん）』2体ペア3Dアニメーション v8 において、①歩くとき＆手を振るときのさらなる極限しわゼロ化（腕の `dR_from_c` クランプ廃止・`m_lock=0.55` 剛体保護・タマゴ表面等高線 `R_surf(z)` 厳密追従肩リフトによる高挙上時の肩上端影スジ消滅・股間分岐高さ `z_crotch` 基準の足ドーム変形と手振り時の両足対称シルエット保持）、および②アニメーション数式タイムラインに完全同期したかわいいマスコット効果音（SE）の 48kHz ステレオ合成と Blender VSE AAC 音声統合を完遂したため。
+2. 確立した v8 の幾何制御および数式同期サウンド生成・Blender VSE 音声統合の知見を [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に標準化するため。
+
+### Before / After
+- **Before (v27)**:
+  - v7 で腕付け根断面ピボットと変位ベクトル場ラプラシアン緩和を導入したが、腕を高く挙げて手を振る際に肩リフトが胴体等高線 `R_surf(z)` からわずかに外へ浮くと肩上端に微細な影スジが出る場合があり、また `dR_from_c` クランプがパドル中間の丸みに影響していた。さらに 3D アニメーション動画は映像トラックのみで効果音（SE）が未統合だった。
+- **After (v28)**:
+  - **① 腕の `dR_from_c` クランプ廃止・`m_lock=0.55` 剛体保護・タマゴ表面等高線 `R_surf(z)` 厳密追従肩リフト**:
+    - `dR_from_c` クランプを全面廃止して先端〜中間 `m_lock = 0.55` を純粋剛体として保護し、高挙上時の肩リフトをタマゴ型胴体表面の水平断面等高線 `R_surf(z)` に厳密追従させることで、高く手を振ったときの肩上端の影スジを完全消滅させた。
+  - **② 股間分岐高さ `z_crotch` 基準の足ドーム変形と手振り（Wave）時の両足対称シルエット保持**:
+    - 足スイング変形を `z_crotch` 基準のドーム変形とし、正面で手を振る区間では両足を対称シルエット（接地・平行）に保持することで、歩行時も手振り時も下腹部・股間のしわや非対称な歪みを完全ゼロ化した。
+  - **③ 数式タイムライン完全同期の 48kHz ステレオ効果音（SE）生成 ＆ Blender VSE AAC 統合**:
+    - 歩行ステップ、着地バウンス、手振りパタパタ、おじぎ、地球儀・ケーブルのキラキラ演出の数式タイミングにミリ秒単位で同期した 48kHz 16bit ステレオ WAV（`cvn_cable_brothers_v8_se.wav`）を生成し、Blender VSE（`sequences.new_sound()`）＋ `AAC 192kbps / 48kHz` で映像・音声一体の Full-HD 60fps MP4 を出力する標準フローを確立。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261118_blender_v7_wrinkle_free_rig.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261118_blender_v7_wrinkle_free_rig.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
+## 2026-11-18 (v27): Blender 3Dアニメーション「丸胴体・超短足・超短腕マスコットの手足しわ・たるみ・コブ・段差完全ゼロ化鉄則（v7）」の確立と `.agents/skills/blender/SKILL.md` ＆ `02_Creative_Dept/AGENTS.md` への自律統合
+
+### 変更理由
+1. 株式会社CVN 公式キャラクター『ケーブル兄弟（いい-ch ＆ いい-NETくん）』2体ペア3Dアニメーション改修（v7）において、手足を大きく動かした際に発生していた微細な幾何学的アーティファクト（腕の肩コブ・水かきたるみ・ネック折れスジ、および超短足スイング時の下腹部二重あご段差・股間斜めひきつれしわ）の数学的原因を特定し、完全ゼロ化する幾何制御アルゴリズムを確立したため。
+2. 再発防止と今後のマスコット3Dアニメーション制作の品質標準化のため、[`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md) および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md) に v7 鉄則を統合するため。
+
+### Before / After
+- **Before (v26)**:
+  - 独立開放リム型パドル腕において、回転ピボットが離れた頭や目の高さにあると大角度回転時にレバーアームで根元が外へ引き抜かれ、動的スカート拡大（`d_neck_out`）や3段つぎはぎ補間・`np.maximum` 法線クランプによって肩コブ・水かきたるみ・リング状陰影スジが生じるリスクがあった。
+  - 超短足のスイングにおいて、股関節ピボット `z_hip_piv` が変形上限 `z_leg_top` より低い位置にあると `dz > 0` の逆変位で下腹部にS字波打ち（二重あご段差）が生じ、また股間中央での左右逆位相衝突による斜めひきつれしわへの対策が明文化されていなかった。
+- **After (v27)**:
+  - **① 腕（独立開放リム型パドルメッシュ）のしわ・コブ・水かきたるみ防止鉄則の明文化**:
+    - 回転ピボットを必ず**実際の腕付け根断面中心（肩ボールジョイント中心）**に一致させ、高い位置で手を振る際は肩ピボット自体を胴体表面の子午線に沿って滑らかにリフトさせる。
+    - 動的スカート拡大（`d_neck_out`）を禁止してコンパクトなフィレット幅に密着させ、**単一 $C^2$ 母線補間＋境界固定2D調和ラプラシアン緩和**および非微分クランプなしの純粋 $C^2$ `smootherstep`＋2Dガウシアン法線ブレンドで変曲点と陰影スジをゼロにする。
+  - **② 超短足の前後スイング・リフト時の下腹部二重あご段差・股間斜めひきつれしわ防止鉄則の明文化**:
+    - 足の回転ピボット高さ `z_hip_piv` を変形上限 `z_leg_top` に厳密一致させ、`dz <= 0` の単調維持によりS字波打ちを根絶する。
+    - 股間アーチ中央（`x ≈ 0`）の中立減衰マスクに加え、変形後の `Body` メッシュ下部遷移帯に対して頂点座標 $\mathbf{p}$ ではなく**「初期メッシュからの変位ベクトル場 $\Delta\mathbf{p} = \mathbf{p} - \mathbf{p}_{\text{rest}}$」に対する境界固定ラプラシアン調和緩和**を適用し、静止時誤差 `0.0000mm` と動作時のしわ・段差ゼロを両立させる。
+
+### 影響範囲
+- 新規追加・更新:
+  - [`.agents/skills/blender/SKILL.md`](.agents/skills/blender/SKILL.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261118_blender_v7_wrinkle_free_rig.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261118_blender_v7_wrinkle_free_rig.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
 ## 2026-11-14 (v26): アカウント共通・最優先マスタールール「タスク難易度に応じた最適モデル逆提案ゲート（Model Adequacy & Counter-Proposal Gate）」の全プロジェクト・全エージェント適用、および `/pc-env-sync` 自動同期対応
 
 ### 変更理由

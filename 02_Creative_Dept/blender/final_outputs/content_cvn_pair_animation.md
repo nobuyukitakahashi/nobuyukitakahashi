@@ -1,59 +1,53 @@
-# CVN公式マスコット「いい-ch（LILI-ch）＆ いい-NETくん（LILI-net）」2体ペア3Dアニメーション動画 制作仕様・品質監査レポート（Blender 5.3 / v6 完成版：腕根元シームレス一体化・ひれ完全ゼロ・足歪みゼロ・ボディ本体歪み波及ゼロ・Full HD 30fps）
+# CVN公式マスコット「いい-ch（LILI-ch）＆ いい-NETくん（LILI-net）」2体ペア3Dアニメーション動画 制作仕様・品質監査レポート（Blender 5.3 / v8 完成版：「歩くとき」「手を振るとき」の残存くびれ・影スジ・股間歪み完全ゼロ化 ＋ 完全同期マスコット効果音SE付き Full HD 30fps）
 
 ## 1. 概要・制作スペック
-- **完成動画ファイル**: [`02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_run_bow_wave.mp4`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_run_bow_wave.mp4)
+- **完成動画ファイル（効果音SE統合・音声付きMP4）**: [`02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_run_bow_wave.mp4`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_run_bow_wave.mp4)
+- **完全同期マスコット効果音（SE）トラック（48kHz / 16-bit ステレオWAV）**: [`02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_sfx.wav`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_sfx.wav)
 - **全4フェーズ代表キーフレーム一覧（6コマ・16:9）**: [`02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_anim_keyframes.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_anim_keyframes.png)
 - **歩行1サイクル連続監査シート（8コマ・16:9）**: [`02_Creative_Dept/blender/drafts/audit_walk_cycle_8frames.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_walk_cycle_8frames.png)
-- **腕根元400%拡大シームレス監査シート（6ポーズ）**: [`02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png)
-- **Blender 5.3 アニメーションプロジェクト**: [`02_Creative_Dept/blender/final_outputs/cvn_iich_and_iinet_pair_anim.blend`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/cvn_iich_and_iinet_pair_anim.blend)
+- **腕根元＆両足・下腹部・股間 400%拡大シームレス監査シート（6ポーズ）**: [`02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png)
+- **Blender 5.3 アニメーションプロジェクト（VSE効果音ストリップ統合済み）**: [`02_Creative_Dept/blender/final_outputs/cvn_iich_and_iinet_pair_anim.blend`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/cvn_iich_and_iinet_pair_anim.blend)
 - **生成・レンダリング統合スクリプト**: [`02_Creative_Dept/blender/drafts/build_pair_animation.py`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/build_pair_animation.py)
-- **映像フォーマット**:
+- **映像・音声フォーマット**:
   - **尺・フレーム数**: **15.0秒（全450フレーム @ 30fps、`FRAME_START = 1`, `FRAME_END = 450`）**
   - **解像度**: **`1920 × 1080`（Full HD / 16:9 ワイド）**
-  - **カメラ・画角**: 16:9 縦視野角完全維持設計（`lens = 52.5mm` `= 70.0mm * 0.75`、頭上の地球儀上端〜足元の余白バランスを従来の完成構図と100%同一に保ちつつ左右のスタジオ空間を拡張）
-  - **コーデック**: MPEG-4 / H.264（CRF: HIGH, GOP: 15）
+  - **カメラ・画角**: 16:9 縦視野角完全維持設計（`lens = 52.5mm` `= 70.0mm * 0.75`）
+  - **映像コーデック**: MPEG-4 / H.264（CRF: HIGH, GOP: 15）
+  - **音声コーデック**: AAC ステレオ（48,000 Hz / 192 kbps、全4フェーズ完全同期マスコット効果音）
   - **レンダーエンジン**: **Blender 5.3.0** Cycles GPU（OpenImageDenoise, Standard View Transform）
 
 ---
 
-## 2. v6 全面改修の技術要点（腕根元シームレス一体化 ＋ オーナー指摘項目の100%根絶）
+## 2. v8 極限改修の技術要点（「歩くとき」「手を振るとき」の残存くびれ・影スジ・股間歪み完全ゼロ化 ＋ 効果音SE統合）
 
-### A. 腕とボディの「切れ目（境界線）」完全消滅：スライディング吸盤フィレットスカート ＋ 法線完全一致制御
-- **課題**: v5 では独立閉曲面パドル腕（`Arm.L/R`）とタマゴ型 `Body` が約50°〜80°のV字角で交差していたため、正面・斜め3/4歩行・手振り時に腕の付け根まわりに別パーツが刺さっているような楕円状の陰影境界線（切れ目）が見えていた。また、Boolean + Voxel Remesh を毎フレーム行う方式ではトポロジ変化による動画フリッカー（チラつき）や翼状のひれが発生するリスクがあった。
-- **v6 解決アーキテクチャ**:
-  1. **開放リム型パドル腕メッシュ（6,273頂点・全450フレームでトポロジ100%不変）**:
-     - `Arm.L/R` を極座標グリッド（`n_rings = 56` × `n_theta = 112` ＋ 先端極1頂点 ＝ 6,273頂点）の開放リム型メッシュとして構築し、内側リム（`j = 0`）を開放端として `Body` 表面に密着させた。これによりフレーム間のトポロジ変化によるフリッカーは物理的にゼロとなる。
-  2. **円筒座標 `Body` 表面距離場と毎フレーム動的2次ベジェRフィレット架橋**:
-     - タマゴ型 `Body` 側面（`z >= 0.165m [IICh] / 0.255m [IINet]` では足変形重み `w_leg == 0.000` のため Step 1B 時点で100%静止タマゴ形状）を円筒座標グリッド `(phi, z) -> (R_surf, N_surf)` で高精度サンプリング。
-     - 毎フレーム剛体 `SO(3)` 回転させた腕母線と `Body` 表面の真の交差位置 `u_zero(theta)`（外側から内側への連続探索で特定）およびネック位置 `u_neck(theta)`（表面高さ `H(theta)` 到達点）から、ボディ接平面上のリム点 `P_rim(theta)`・交差制御点 `P_ctrl(theta)`・腕側ネック点 `P_neck(theta)` を結び、2次ベジェ曲線 $P_{\text{skirt}}(s, \theta) = (1-s)^2 P_{\text{rim}} + 2(1-s)s P_{\text{ctrl}} + s^2 P_{\text{neck}}$ で滑らかなRフィレットスカートを動的形成。
-     - 脇下（`cos(theta) < 0`）はタイトなR高さ（`7〜10mm`）に絞ることで、腕を大きく前後に振っても高く上げても**翼状のひれは一切発生しない**。
-  3. **カスタム分割法線（`normals_split_custom_set_from_vertices`）によるリム法線角度差 `0.00°` 完全一致**:
-     - スカートの開放リム端（`j = 0, s = 0`）の頂点法線に `Body` 側のステップ2〜4変形後法線 `n_body_final` を100%代入（`w_norm = 1.000`）し、スカート領域（`0 <= s <= 1.0`）で幾何法線 `n_geom` へ `smootherstep` 補間（毎回 `custom_normal` 属性をリセットしてから真の幾何法線を取得・下向き法線成分 `Nz < 0` の巻き込み防止処理付き）。
-     - 全450フレーム数値監査において、**リム端での `Body` との位置誤差 `0.0000mm`、法線角度差 `0.00°`** を達成し、400%拡大監査シート（`audit_arm_seam_closeup.png`）でも腕と胴体の境界線が完全に消滅し、1つの柔らかいソフビで一体成型された外観を実現した。
+### A. 腕（パドル手）の「歩くとき」と「手を振るとき」の極限調整
+1. **ひょうたん型のくびれ・潰れを生んでいた `dR_from_c` 半径クランプの完全撤廃**:
+   - 腕を前に振ったり（Frame 26）、上に高く持ち上げたり（Frame 345）した際、斜めに傾いた腕母線がリム `(S_0, Z_0)` より先へ張り出すのをリム内側へ押し戻していた `dR_from_c` クランプを完全撤廃。これにより前振り時や高挙上時の腕中間の凹み・ひょうたん型くびれが100%消滅した。
+2. **純粋剛体ロック境界 `m_lock = 0.55 * (n_u - 1)` への引き締め（パドル中間部の痩せ根絶）**:
+   - `m_lock` を `0.76` から `0.55`（`n_skirt = 14, n_collar = 12, n_tip = 30`、合計56リング・6,273頂点のトポロジ完全維持）へ引き締め、腕の先端側半分以上（`u = 0.55..1.0`）を100%純粋剛体回転のぷっくり丸いパドル形状として完全保護した。
+3. **「歩くとき」と「手を振るとき」の回転角＆タマゴ表面等高線追従リフトの最適化（肩上端の暗い影スジ消滅）**:
+   - **歩くとき（Phase 1）**: 短いパドル手の前後スイング振幅 `swing_amp` を `23.0°`（いい-ch）／`22.0°`（いい-NETくん）に最適化し、前振り時の軽い挙上連動と胴体ヨー回転（`torso_yaw_deg = 8.2 * s`）を組み合わせることで、付け根の歪みゼロで元気に腕を振って歩く。
+   - **手を振るとき（Phase 4）**: 肩ソケット位置自体をタマゴ胴体の表面等高線 `R_surf(z_sh + dz_lift) - R_surf(z_sh)` に沿って正確かつ滑らかにほっぺの横（`sh_lift_z = +0.068m / +0.078m`）へスライドさせつつ、パドル自体の挙上角 `outer_flap` を `(25.5 + 11.5 * sw10) * w_wave`（最大 `+37°` 〜 最小 `+14°`）でパタパタ振ることで、肩上端で胴体法線と腕法線が鋭角にぶつかって生じていた暗いシェーディングの影スジを100%解消した。
+4. **法線ブレンドの広帯域平滑化**:
+   - `s_max_theta = 0.85 + 0.35 * sin2_th` および法線グリッドの2Dガウシアン平滑化（`sigma = 1.8 × 1.8`、リム端 `j=0` は `Body` 法線に角度差 `0.00°` で厳密ロック）により、肩周り全周のシェーディングが完全に連続化した。
 
-### B. 足（超短足）の不自然な歪み・下腹部段差の完全解消と心地よい弾性伸縮
-- **解決アーキテクチャ**:
-  - 足先〜足底（`IICh: z <= 0.035m`, `IINet: z <= 0.045m`）から股関節上限（`IICh: z = 0.165m`, `IINet: z = 0.255m`）にかけて広い遷移帯で `smootherstep` 減衰させ、足の付け根支点（`z_hip_piv = 0.145m / 0.215m`）まわりの素直な振り子回転（`±19°〜20.5°`）と軸方向の弾性伸縮（`+8.5%` 伸び ／ `-6.0%` クッション縮み）を適用。
-  - 下腹部（`z = 0.13m〜0.25m`）に水平方向の段差を生じさせていた半径方向の逆スケーリング（`kxy_leg`）を撤廃し、斜め後ろスイング時（`Frame 36` 等）も下腹部から足先まで段差やねじれの一切ないぷっくり丸いシルエットを維持。
+### B. 足（超短足）の「歩くとき」と「手を振るとき」の極限調整
+1. **股間の谷（`z_crotch`）より上の「1つに繋がったお腹」のねじれ解消とお腹シルエット保護**:
+   - 足変形の上端 `z_leg_top`（`= z_hip_piv`）を実際の足突起ドーム高さ（いい-ch: `z_leg_solid = 0.022m, z_leg_top = 0.112m`、いい-NETくん: `z_leg_solid = 0.030m, z_leg_top = 0.175m`）に引き下げ、さらに前面のお腹保護マスク `w_belly_protect` と股間アーチ中立減衰 `w_crotch_arch`、および変位ベクトル場 $\Delta \mathbf{p}$ の18反復ラプラシアン調和緩和を適用。
+   - 歩行時の足ドーム局所スイング角 `max_swing_deg = 10.5° / 11.5°` と胴体ヨーひねり（`8.2°`）・ロール揺れ（`4.0°`）・バウンスの調和により、斜め3/4アングル（Frame 26 / 36）でもお腹の下のくびれ・二重あご段差が100%ゼロのまま可愛くトコトコ歩く。
+2. **「手を振るとき（Phase 4）」の股間・足元の完全対称シルエット維持**:
+   - Phase 4（手振り中）における左右非対称な足の局所変形をすべて `0.0` にロックし、両足とも100%綺麗な丸い対称シルエットを保ったまま、身体全体の小首傾げロール（`-3.8°`）・左右スウェイ・軽やかな上下リズムホップで手振りのリズムを表現。これにより Frame 345 / 351 の足元・股間の非対称な歪みが100%ゼロとなった。
 
-### C. 手足リグから「ボディ本体（お腹・胸ロゴ・タマゴ輪郭）」への歪み波及ゼロ保証
-- `IICh_Body` / `IINet_Body` は腕を含まない純粋タマゴ型メッシュであるため、腕のスイング・挙上によるボディ本体への頂点歪み波及は **`0.000%`（完全ゼロ）**。
-- 胸ロゴ下端より上（`IICh: z >= 0.165m`, `IINet: z >= 0.255m`）のボディ本体全域は足変形重み **`w_leg = 0.000`（完全無変形）** に厳密ロックされ、全450フレームを通じてお腹・胸ロゴ（`LILI-ch` / `LILI-net`）・タマゴ型輪郭に歪みが一切波及しない。
-
----
-
-## 3. 全4フェーズ演出タイムライン詳細（450フレーム / 15.0秒 @ 30fps）
-
-| フェーズ | フレーム範囲（30fps / 秒数） | カービィ型・超短足マスコットの可愛い仕草・カメラワーク詳細 | 視覚監査フレーム（30fps） |
-| :--- | :--- | :--- | :--- |
-| **Phase 1：カービィお手本準拠の「トコ・ピョコ！」超短足ウォーク** | `Frame 1〜160`<br>（`0.00s〜5.33s`） | ・**テンポ**: 1歩＝10フレーム（左右1サイクル＝20フレーム @ 30fps、計16歩）。2体は心地よい位相差で仲良く歩く。<br>・**カメラワーク**: 歩き出し（`Frame 1〜90`）は約 `36°〜33°` の斜め前3/4円筒オービットから、`Frame 90〜165` で正面16:9カメラ `pos=(0, -8.45, 1.22), lens=52.5mm` へ滑らかに回り込む。<br>・**手足連動**: 丸い形を保った超短足が付け根支点まわりに `±19°〜20.5°` スイングしつつ `+8.5% / -6.0%` 心地よく伸び縮みし、シームレス一体型パドル手が逆位相で `±37°〜38°` パタパタ大きくスイング（腕根元の切れ目ゼロ・ひれゼロ・胸ロゴ歪みゼロ）。 | 8コマ連続監査:<br>`Frame 21, 24, 26, 29, 31, 34, 36, 39`<br>6コマ代表:<br>`Frame 26`, `Frame 96` |
-| **Phase 2：ちょこんと両足着地ホップ（「ピョコン・ピタッ！」）＆正面静止** | `Frame 161〜210`<br>（`5.33s〜7.00s`） | `Y = 0.0m` 定位置に到着した瞬間、両足を揃えて小さく **「ピョコン！」と可愛い着地ホップ（高さ `+4.6cm`、足が `+6.5%` ぷっくり伸び、短い両手を横にパタッと開く）** ➔ 着地で優しくクッションして、正面スマイル静止構図（`Frame 195〜210`）にピタッと収まる。 | `Frame 170`（ピョコン着地ホップ）<br>`Frame 195`（正面完全静止） |
-| **Phase 3：短い2本の足で踏ん張って「ペコリ！」とする可愛いおじぎ** | `Frame 211〜300`<br>（`7.00s〜10.00s`） | 両キャラとも **短い2本の足を床にちょこんと踏ん張って正面に見せたまま**、ボディ本体と胸ロゴ（`LILI-ch` / `LILI-net`）は歪みゼロの完全剛体回転で前へ **`20.5° / 21.5°` 綺麗に「ペコリ！」とおじぎ**。シームレス一体型パドル手も切れ目・ひれゼロで後ろ外側（`-22°`）へ添え、地球儀も前へ可愛く揺れる。 | `Frame 252`（両足踏ん張り＆丸ボディペコリおじぎ） |
-| **Phase 4：両キャラともほっぺ横の高い位置で「パタパタ！」と振る手振り** | `Frame 301〜450`<br>（`10.00s〜15.00s`） | 左の `いい-ch`（右手 `-X`）・右の `いい-NETくん`（左手 `+X`）**両方とも外側のパドル手をほっぺ横の高い位置（`+24° ⇔ +58°`）まで持ち上げ、腕根元の切れ目・ひれ・歪みゼロで「パタパタパタッ！」と元気に手振り**。小首を可愛く傾げ、短い片足を交互にちょこんと浮かせて最後は正面静止ポーズ（`Frame 450`）に収まる。 | `Frame 345`（両キャラ高い位置の手振りUp＆外側足浮き）<br>`Frame 351` / `Frame 364`（手振りDown＆内側足ちょこん浮き） |
+### C. 完全同期マスコット効果音（SE）のプロシージャル生成とMP4・Blend統合
+- Python `numpy` + `wave` により、アニメーションの数式（`f_24` タイムライン）と1ミリ秒のズレもなく完全同期した **48,000Hz / 16-bit ステレオ効果音（`pair_iich_and_iinet_sfx.wav`）** を生成し、Blender VSE Sound Strip（`Mascot_SFX`）および MP4 AAC 192kbps 音声ストリームとして統合：
+  1. **Phase 1（歩く音）**: いい-ch（左定位 `L:0.82, R:0.48`）の「ポコッ、トコッ♪」と、いい-NETくん（右定位 `L:0.48, R:0.82`、`3.0 f_24` 位相差）の「ポテッ、トテッ♪」が1歩（10.0フレーム＝0.3333秒）ごとに完全同期し、奥から手前への接近に合わせて滑らかにクレッシェンド。
+  2. **Phase 2（着地ホップ音）**: Frame 162 のジャンプ開始で可愛い上昇グライド音「ピョコン♪（`350Hz -> 790Hz`）」、Frame 180 の着地クッションで「ポテッ♪」。
+  3. **Phase 3（おじぎ音）**: Frame 222 のおじぎ開始でソフトスウィッシュ＋下降2音マリンバチャイム「ペコリ♪（`E5 659Hz -> C5 523Hz`）」、Frame 271 の起き上がりで上昇2音チャイム「フワッ♪（`C5 -> E5`）」。
+  4. **Phase 4（手を振る音）**: 手振り周期（12.5フレーム＝0.4167秒）の上振り・下振り速度ピーク（6.25フレーム＝0.2083秒ごと）に完全同期した、シルク風スウィッシュ＋キュートなポップトーン「パタパタパタッ♪（フリフリッ♪）」。
 
 ---
 
-## 4. 視覚監査結果サマリー（Blender 5.3 / v6 Full HD 30fps 完成監査）
-1. **腕根元400%拡大監査シート（[`audit_arm_seam_closeup.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png)）**: 6つの代表ポーズ（`Frame 195` 正面静止、`Frame 26` 歩行前振り、`Frame 36` 歩行後ろ振り、`Frame 252` おじぎ、`Frame 345` 手振り最高点、`Frame 351` 手振り下端）の400%拡大画像を目視監査し、腕とボディの境界線（切れ目・暗い陰影帯）が完全に消滅し、ひれもゼロで滑らかなソフビ一体成型となっていることを確認し合格。
-2. **歩行1サイクル連続監査シート（[`audit_walk_cycle_8frames.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_walk_cycle_8frames.png)）**: 30fps 歩行1サイクル連続8コマ（16:9ワイド構図）すべてにおいて、①腕根元の切れ目・ひれが完全ゼロであること、②前後に動く左右の超短足と下腹部に段差やねじれが一切なく、ぷっくり丸い形を保ったままトコトコ歩いていること、③ボディ本体と胸ロゴ（`LILI-ch` / `LILI-net`）に歪みが一切波及していないことを確認し合格。
-3. **全4フェーズ代表キーフレームシート（[`pair_iich_and_iinet_anim_keyframes.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_anim_keyframes.png)）**: 全4フェーズ6コマ（16:9ワイド構図）すべてにおいて、上下の頭上（地球儀上端）〜足元の余白バランスが完璧に維持され、腕根元のシームレス一体化・足の自然な振り子伸縮・ボディ本体の歪みゼロを確認し合格。
+## 3. 視覚監査結果サマリー（Blender 5.3 / v8 Full HD 30fps 完成監査）
+1. **400%拡大クローズアップ監査シート（[`audit_arm_seam_closeup.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_arm_seam_closeup.png)）**: 6つの代表ポーズ（`Frame 195` 正面静止、`Frame 26` 歩行前振り、`Frame 36` 歩行後ろ振り、`Frame 252` おじぎ、`Frame 345` 高い手振りUp、`Frame 351` 手振りDown）を400%拡大で目視監査し、**「歩くとき（Frame 26 / 36）」の腕の潰れやお腹下のくびれ段差、および「手を振るとき（Frame 345 / 351）」の腕のひょうたん型くびれ・肩上端の暗い影スジ・股間アーチの非対称な歪みがすべて100%消滅**し、どのポーズでもぷっくり丸く張りのあるソフビ一体成型シルエットになっていることを確認し合格。
+2. **歩行1サイクル連続監査シート（[`audit_walk_cycle_8frames.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/drafts/audit_walk_cycle_8frames.png)）**: 連続8コマすべてで手足のくびれ・しわ・段差が完全ゼロであり、可愛いトコトコ歩行になっていることを確認し合格。
+3. **全4フェーズ代表キーフレームシート（[`pair_iich_and_iinet_anim_keyframes.png`](file:///g:/マイドライブ/git/nobuyukitakahashi/02_Creative_Dept/blender/final_outputs/pair_iich_and_iinet_anim_keyframes.png)）**: 全4フェーズ6コマすべてにおいて完璧な造形・構図を確認し合格。
