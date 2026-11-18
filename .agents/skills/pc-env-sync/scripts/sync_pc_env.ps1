@@ -501,8 +501,15 @@ foreach ($cfgPath in $McpConfigPaths) {
         $DetectedBlenderExe = "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe"
     }
 
-    # Preserve existing blender-mcp.exe configuration if already configured or if blender-mcp.exe exists
+    # Install official Blender Lab blender-mcp if missing, or use installed blender-mcp.exe
     $existingBlender = $json.mcpServers.PSObject.Properties["blender"]
+    if (-not (Test-Path $BlenderMcpExe) -and $UvxCmd) {
+        $UvCmd = Get-Command uv -ErrorAction SilentlyContinue
+        if ($UvCmd) {
+            Write-Host "  Installing official Blender Lab blender-mcp via uv tool..."
+            & $UvCmd.Source tool install --python 3.12 --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp 2>&1 | Out-Host
+        }
+    }
     if (Test-Path $BlenderMcpExe) {
         $blenderEntry = [PSCustomObject]@{
             command = $BlenderMcpExe
@@ -519,7 +526,7 @@ foreach ($cfgPath in $McpConfigPaths) {
     } else {
         $blenderEntry = [PSCustomObject]@{
             command = $UvxPath
-            args    = @("mcp-for-blender")
+            args    = @("--python", "3.12", "--from", "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp", "blender-mcp")
         }
         $json.mcpServers | Add-Member -MemberType NoteProperty -Name "blender" -Value $blenderEntry -Force
     }

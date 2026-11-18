@@ -24,7 +24,7 @@ description: >-
 
 1. **要件確認と接続チェック（Blender 5.3 優先・5.2 互換）**:
    - [`02_Creative_Dept/AGENTS.md`](../../../02_Creative_Dept/AGENTS.md) の「B. Blender 3D / CG制作手順」に従う。
-   - MCPサーバー `blender` の `get_addon_status` / `get_scene_info` を確認し、MCP未起動またはバッチ処理時は直ちにローカルの Blender CLI（`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` を最優先検出し、未導入環境では `Blender 5.2\blender.exe` へ互換フォールバック：`--background --python 02_Creative_Dept/blender/drafts/<script.py>`）を実行する。
+   - Blender Lab 公式 MCPサーバー `blender`（`blender-mcp.exe` ⇄ `bl_ext.user_default.mcp` `localhost:9876`）の `get_objects_summary` / `execute_blender_code`（戻り値は必ず `result = {...}` の dict 形式）を確認する。GUI未接続時は `execute_blender_code_for_cli` またはローカルの Blender CLI（`C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` を最優先検出し、未導入環境では `Blender 5.2\blender.exe` へ互換フォールバック：`--background --python 02_Creative_Dept/blender/drafts/<script.py>`）を実行する。
 2. **`bpy` / `bmesh` 構築と鉄則の適用**:
    - シェーダーノードは名前ではなく `type`（`"BSDF_PRINCIPLED"` 等）で検索する。
    - 原画色彩の忠実再現時は `scene.view_settings.view_transform = 'Standard'` を設定する。

@@ -3,7 +3,11 @@
     "blender": {
       "command": "uvx",
       "args": [
-        "mcp-for-blender"
+        "--python",
+        "3.12",
+        "--from",
+        "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp",
+        "blender-mcp"
       ]
     }
   }
