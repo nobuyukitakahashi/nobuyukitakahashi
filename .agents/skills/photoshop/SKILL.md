@@ -28,7 +28,8 @@ description: >-
    - MCPサーバー `photoshop` の `get_photoshop_status` または CLI `node .agents/mcp/photoshop-mcp/cli.js status` を実行する。
 2. **ExtendScript (JSX) スクリプトによるマルチレイヤーPSD構築・レタッチ**:
    - スクリプトを `02_Creative_Dept/photoshop/drafts/build_[テーマ名].jsx` に作成し、`execute_photoshop_jsx` または `node .agents/mcp/photoshop-mcp/cli.js exec --file "02_Creative_Dept/photoshop/drafts/build_[テーマ名].jsx"` で実行する。
-   - **単位とダイアログの固定**: スクリプト冒頭で必ず `app.displayDialogs = DialogModes.NO;`、`app.preferences.rulerUnits = Units.PIXELS;`、`app.preferences.typeUnits = TypeUnits.PIXELS;` を設定する。
+   - **単位とダイアログの固定**: スクリプト冒頭で必ず `app.displayDialogs = DialogModes.NO;`、`app.preferences.rulerUnits = Units.PIXELS;`、`app.preferences.typeUnits = TypeUnits.PIXELS;` を設定する（左上が原点 `(0, 0)`・X右向き正・Y下向き正）。
+   - **高解像度DPIフォント補正**: `300 dpi` 等の高解像度ドキュメントで文字が拡大されるのを防ぐため、テキストサイズは `new UnitValue(sizePx * (72.0 / doc.resolution), "pt")` でDPI補正して指定する。
    - **非破壊レイヤー階層設計**: 背景グループ（`LayerSet`）、ビジュアル・シェイプグループ、タイポグラフィグループ等にレイヤーを整理し、後から再編集可能な `.psd` 構造を維持する。
 3. **カンバスPNG書き出し＋`read_file` 視覚監査ループ**:
    - `export_canvas_png`（または `node .agents/mcp/photoshop-mcp/cli.js export-png --out "02_Creative_Dept/photoshop/final_outputs/[テーマ名].png" --scale 100`）で高画質PNGを書き出す。

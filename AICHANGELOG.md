@@ -1,5 +1,34 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-19 (v31): 全プロジェクト ＆ マスター設定のルール重複・24KB上限超過（切り捨て）の全面整理
+
+### 変更理由
+1. マスター設定（`G:\マイドライブ\gemini\GEMINI.md` ＆ `C:\Users\nobuy\.gemini\GEMINI.md`）において、自己参照 `@[global_rules](G:/マイドライブ/gemini/GEMINI.md)` と本文の併記により起動時にシステム行動原則が2重展開（約19KB）されていたため、1重化するため。
+2. `nobuyukitakahashi` 本体の [`AGENTS.md`](AGENTS.md)（`@` 展開後 `29,261` バイト）および [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)（`24,922` バイト）が Antigravity の **1ファイル上限 `24,000` バイトを超過** しており、末尾の重要ルール（トンマナ・禁止事項・最終出力固定ルール等）が自動切り捨て（Truncation）されていたため、重複を解消して安全圏内へスリム化するため。
+3. `G:\マイドライブ\git\antigravity` 配下の親階層および Git未追跡プロジェクトに散在していた同一 `GEMINI.md`（12件）の重複読み込みを解消するため。
+
+### Before / After
+- **Before (v30)**:
+  - `G:\マイドライブ\gemini\GEMINI.md` が自己 `@` 参照により2重展開（約19KB）され、さらに `antigravity\` 配下21箇所に同一コピー（`9,501` バイト）が重複配置されていた。
+  - `AGENTS.md`（展開後 `29,261` バイト）と `02_Creative_Dept/AGENTS.md`（`24,922` バイト）が `24,000` バイト上限を超えて切り捨て状態だった。
+- **After (v31)**:
+  - **マスター `GEMINI.md` の1重化**: `G:\マイドライブ\gemini\GEMINI.md` から自己参照行を削除し、`C:\Users\nobuy\.gemini\GEMINI.md` を参照ポインタのみへ整理。
+  - **`antigravity/` 親階層および未追跡11件の重複 `GEMINI.md`（計12件）を削除**: 親フォルダ継承と二重読み込みを解消（Git管理下9件の `GEMINI.md` も正本側の自己参照削除により展開量を半減し、不要ファイルの削除可否はオーナーへ報告）。
+  - **`AGENTS.md` / `00_COO/AGENTS.md` / `02_Creative_Dept/AGENTS.md` のスリム化**: `.agents/rules/global-policy.md`（自動読込）との二重展開とスキル `SKILL.md` との重複長文を整理し、Photoshop DPI補正式を [`.agents/skills/photoshop/SKILL.md`](.agents/skills/photoshop/SKILL.md) へ保全した上で、全ルールファイルを `24KB` 上限の半分以下へ圧縮（切り捨てゼロ化）。
+
+### 影響範囲
+- 更新（`nobuyukitakahashi` リポジトリ ＋ ローカル同期先）:
+  - [`AGENTS.md`](AGENTS.md)
+  - [`00_COO/AGENTS.md`](00_COO/AGENTS.md)
+  - [`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)
+  - [`.agents/skills/photoshop/SKILL.md`](.agents/skills/photoshop/SKILL.md) ＆ `C:\Users\nobuy\.gemini\config\skills\photoshop\SKILL.md`
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+- グローバル・他フォルダ整理:
+  - `G:\マイドライブ\gemini\GEMINI.md`、`C:\Users\nobuy\.gemini\GEMINI.md`
+  - `G:\マイドライブ\git\antigravity\GEMINI.md` および同配下の Git未追跡重複 `GEMINI.md` 11件を削除
+
+---
+
 ## 2026-11-19 (v30): アカウント共通・最優先マスタールール拡張（全タスク領域対応モデル提案＆アドバイス＋`swarm(action="models")` による新モデル動的検知＋3重注入重複の解消）
 
 ### 変更理由
