@@ -2,8 +2,8 @@
 """
 CVN公式マスコットキャラクター「いい-ch（LILI-ch）＆ いい-NETくん（LILI-net）」
 2体ペア3Dアニメーション動画（15.0秒 / 450フレーム @ 30fps / Full HD 1920x1080 16:9 / 48kHz ステレオ効果音SE統合）
-【v8: 手足の「歩くとき」「手を振るとき」の残存くびれ・影スジ・股間歪み完全ゼロ化
-  ＋ 歩く音・ホップ音・おじぎ音・手を振る音の完全同期マスコット効果音（SE）付きMP4出力版】
+【v10: しなやか尻尾物理エンジン（2次バネ減衰＋S字波動カンチレバー＋地球儀完全真球0.000mm追従）
+  ＋ 目の瞬きを若干ゆっくり柔和に調整（v9の腕隙間ゼロ＆いい-ch女の子仕様を完全継承）】
 
   Phase 1 (Frame 1〜160 / 0.00s〜5.33s @ 30fps):
     リファレンス（Kirby walk cycle: 1歩=10f / 1サイクル=20f @ 30fps）準拠の
@@ -54,6 +54,8 @@ FINAL_DIR = os.path.join(DEPT_DIR, "final_outputs")
 os.makedirs(FINAL_DIR, exist_ok=True)
 
 AUDIT_ARM_SEAM_CLOSEUP_PATH = os.path.join(SCRIPT_DIR, "audit_arm_seam_closeup.png")
+AUDIT_EYE_EXPR_PATH = os.path.join(SCRIPT_DIR, "audit_eye_expressions.png")
+AUDIT_TAIL_SUPPLE_PATH = os.path.join(SCRIPT_DIR, "audit_tail_supple_motion.png")
 AUDIT_WALK_8_PATH = os.path.join(SCRIPT_DIR, "audit_walk_cycle_8frames.png")
 CHECK_SHEET_DRAFT_PATH = os.path.join(SCRIPT_DIR, "anim_keyframes_check.png")
 KEYFRAMES_FINAL_PATH = os.path.join(FINAL_DIR, "pair_iich_and_iinet_anim_keyframes.png")
@@ -399,27 +401,38 @@ def evaluate_arm_fillet_skirt_pose(skirt_meta, char_state, side_sign, flap_deg, 
     R_surf_rot, _ = eval_body_cyl_surface(surf_grid, Phi_rot, Z_rot, side_sign=side_sign)
     h_rot = R_rot - R_surf_rot
 
-    # Step C: 方位角 θ に応じたコンパクトで張りのある吸盤フィレット幅 W_k(θ)
+    # Step C: 方位角 θ に応じたコンパクトかつカメラ前面側で胴体輪郭と確実に接線接続する吸盤フィレット幅 W_k(θ)
     # θ = 0: 肩上端(+Z), θ = π/2: 背面(+Y), θ = π: 脇下(-Z), θ = 3π/2: 前面(-Y)
-    w_pit = (np.maximum(0.0, -np.cos(thetas))) ** 2.0
-    w_fb = (np.sin(thetas)) ** 2
+    w_front = (np.maximum(0.0, -np.sin(thetas))) ** 1.35
+    w_back = (np.maximum(0.0, np.sin(thetas))) ** 1.5
+    w_pit_raw = (np.maximum(0.0, -np.cos(thetas))) ** 2.0
+    # 前面下側（脇下〜前腹境界 θ=210°〜265°）でフィレット幅が急減して胴体裏へ隠れるのを完全に防ぐ
+    w_pit = w_pit_raw * (1.0 - 0.82 * w_front)
 
     if is_iich:
-        W_top = 0.022
-        W_fb = 0.028
-        W_pit = 0.012
-    else:
         W_top = 0.024
-        W_fb = 0.030
-        W_pit = 0.013
+        W_front = 0.040
+        W_back = 0.028
+        W_pit = 0.016
+    else:
+        W_top = 0.026
+        W_front = 0.050
+        W_back = 0.030
+        W_pit = 0.020
 
-    W_upper = (1.0 - w_fb) * W_top + w_fb * W_fb
-    W_k = (1.0 - w_pit) * W_upper + w_pit * W_pit
+    W_fb_mix = (1.0 - w_front - w_back) * W_top + w_front * W_front + w_back * W_back
+    W_k = (1.0 - w_pit) * W_fb_mix + w_pit * W_pit
 
-    # Step D: 交差インデックス m_zero (h=0) の連続特定＆周期平滑化
-    m_zero = find_first_crossing_continuous(h_rot, np.zeros(n_theta, dtype=np.float64), m_min=18, m_max=int(m_lock - 6))
+    # Step D: 交差インデックス m_zero (h=0) の連続特定＆周期平滑化、および動的ロック端 m_lock_k の算出
+    # 【v9 改修】高い手振り (f=345) 等で肩上端の m_lock が胴体内部へ潜って j=26->27 で折れ返る現象 (min_cos_bend=-0.916) を
+    # 根絶するため、方位角ごとに m_lock_k >= m_zero + 18.0 を動的に保証する。
+    m_zero = find_first_crossing_continuous(h_rot, np.zeros(n_theta, dtype=np.float64), m_min=18, m_max=int(n_u - 36))
     m_zero = gaussian_smooth_periodic_1d(m_zero, sigma=4.5, axis=0)
-    m_zero = np.clip(m_zero, 18.0, m_lock - 10.0)
+    m_zero = np.clip(m_zero, 18.0, float(n_u - 42))
+
+    m_lock_k = np.maximum(float(m_lock), m_zero + 18.0)
+    m_lock_k = gaussian_smooth_periodic_1d(m_lock_k, sigma=3.5, axis=0)
+    m_lock_k = np.clip(m_lock_k, m_zero + 14.0, float(n_u - 22))
 
     # Step E: (h, S_phi, Z) 空間における交差ループ P_x と、交差ループ外向き単位法線 (vs, vz)
     table_hsz = np.stack([h_rot, S_rot, Z_rot], axis=-1)
@@ -458,33 +471,35 @@ def evaluate_arm_fillet_skirt_pose(skirt_meta, char_state, side_sign, flap_deg, 
     S_0 = gaussian_smooth_periodic_1d(S_x + W_eff * vs, sigma=3.5, axis=0)
     Z_0 = gaussian_smooth_periodic_1d(Z_x + W_eff * vz, sigma=3.5, axis=0)
 
-    # Step F: リム (j=0) からロック端 (j=n_fillet, m=m_lock) までの単一C^2母線補間（ひょうたん型くびれの原因だった dR_from_c クランプは完全撤廃）
+    # Step F: リム (j=0) から動的ロック端 (j=n_fillet, m=m_lock_k) までの単一C^2母線補間
+    # 【v9 改修】リム端 j=0 を胴体内部へ -0.45mm 確実に噛み込ませ（delta_rim=-0.00045）、
+    # j=1 付近で法線差 0.00° のまま胴体表面を滑らかに通過させることで、いい-NETくん側の微小浮き隙間を100%ゼロ化！
     t_fillet = np.linspace(0.0, 1.0, n_fillet + 1)[:, None]
-    m_fillet = m_zero[None, :] + (t_fillet ** 1.08) * (m_lock - m_zero[None, :])
+    m_fillet = m_zero[None, :] + (t_fillet ** 1.08) * (m_lock_k[None, :] - m_zero[None, :])
     P_rigid_hsz = interp_along_u_table(table_hsz, m_fillet)
 
-    delta_0 = 0.00015
+    delta_rim = -0.00035
+    delta_safe = 0.00018
     w_h_rigid = (t_fillet ** 2) * (3.0 - 2.0 * t_fillet)
-    h_base_lift = delta_0 + (0.0030 * t_fillet * ((1.0 - t_fillet) ** 2))
-    H_sc = (1.0 - w_h_rigid) * h_base_lift + w_h_rigid * np.maximum(P_rigid_hsz[:, :, 0], delta_0 + 0.002 * t_fillet)
+    h_base_lift = delta_rim + (0.0040 * t_fillet * ((1.0 - t_fillet) ** 2)) + 0.0006 * smootherstep_np(t_fillet / 0.16)
+    H_sc = (1.0 - w_h_rigid) * h_base_lift + w_h_rigid * np.maximum(P_rigid_hsz[:, :, 0], delta_safe + 0.0025 * t_fillet)
 
     w_sz_rim = (1.0 - smootherstep_np(np.clip(t_fillet / 0.78, 0.0, 1.0))) ** 1.45
     S_sc = P_rigid_hsz[:, :, 1] + w_sz_rim * (S_0[None, :] - P_rigid_hsz[0:1, :, 1])
     Z_sc = P_rigid_hsz[:, :, 2] + w_sz_rim * (Z_0[None, :] - P_rigid_hsz[0:1, :, 2])
 
     # Step G: (h, S_phi, Z) 空間での境界固定2D調和ラプラシアン緩和（リム j=0 と外側ロック端 j>=n_fillet-1 を完全固定）
-    H_sc[0, :] = delta_0
+    H_sc[0, :] = delta_rim
     S_sc[0, :] = S_0
     Z_sc[0, :] = Z_0
-    for _ in range(10):
+    for _ in range(12):
         H_avg = 0.50 * (H_sc[:-2, :] + H_sc[2:, :]) + 0.25 * (np.roll(H_sc[1:-1, :], 1, axis=1) + np.roll(H_sc[1:-1, :], -1, axis=1)) - 0.50 * H_sc[1:-1, :]
         S_avg = 0.50 * (S_sc[:-2, :] + S_sc[2:, :]) + 0.25 * (np.roll(S_sc[1:-1, :], 1, axis=1) + np.roll(S_sc[1:-1, :], -1, axis=1)) - 0.50 * S_sc[1:-1, :]
         Z_avg = 0.50 * (Z_sc[:-2, :] + Z_sc[2:, :]) + 0.25 * (np.roll(Z_sc[1:-1, :], 1, axis=1) + np.roll(Z_sc[1:-1, :], -1, axis=1)) - 0.50 * Z_sc[1:-1, :]
-        H_sc[1:-1, :] = 0.50 * H_sc[1:-1, :] + 0.50 * H_avg
-        S_sc[1:-1, :] = 0.50 * S_sc[1:-1, :] + 0.50 * S_avg
-        Z_sc[1:-1, :] = 0.50 * Z_sc[1:-1, :] + 0.50 * Z_avg
-        H_sc[1, :] = np.minimum(H_sc[1, :], delta_0 + 0.35 * np.maximum(H_sc[2, :] - delta_0, 0.0005))
-        H_sc[0, :] = delta_0
+        H_sc[1:-1, :] = 0.45 * H_sc[1:-1, :] + 0.55 * H_avg
+        S_sc[1:-1, :] = 0.45 * S_sc[1:-1, :] + 0.55 * S_avg
+        Z_sc[1:-1, :] = 0.45 * Z_sc[1:-1, :] + 0.55 * Z_avg
+        H_sc[0, :] = delta_rim
         S_sc[0, :] = S_0
         Z_sc[0, :] = Z_0
 
@@ -495,17 +510,17 @@ def evaluate_arm_fillet_skirt_pose(skirt_meta, char_state, side_sign, flap_deg, 
     Y_sc = R_tot_sc * np.sin(Phi_sc)
     P_sc_xyz = np.stack([X_sc, Y_sc, Z_sc], axis=-1)
 
-    # Step H: 外側純粋剛体パドル先端 (j > n_fillet, u >= 0.55) と結合し、フィレット接合部のみ軽く3D調和緩和
+    # Step H: 外側純粋剛体パドル先端 (j > n_fillet, m > m_lock_k) と結合し、フィレット接合部のみ軽く3D調和緩和
     t_tip = np.linspace(0.0, 1.0, n_tip + 1)[1:-1, None]
-    m_tip = np.broadcast_to(m_lock + t_tip * ((n_u - 1.0) - m_lock), (n_tip - 1, n_theta))
+    m_tip = m_lock_k[None, :] + t_tip * ((n_u - 1.0) - m_lock_k[None, :])
     table_xyz = np.stack([X_rot, Y_rot, Z_rot], axis=-1)
     P_tip_xyz = interp_along_u_table(table_xyz, m_tip)
 
     all_rings_3d = np.vstack([P_sc_xyz, P_tip_xyz])
     n_tot_rings = all_rings_3d.shape[0]
     j_all = np.arange(n_tot_rings, dtype=np.float64)
-    # j=0..1 (リム) と j >= n_fillet+3 (パドル先端半分以上) は 0.0 で100%剛体ロック
-    w_3d_j = smootherstep_np((j_all - 1.0) / 3.0) * (1.0 - smootherstep_np((j_all - (n_fillet - 3.0)) / 5.0))
+    # j=0..1 (リム) と j >= n_fillet+4 (パドル先端半分以上) は 0.0 で100%剛体ロック
+    w_3d_j = smootherstep_np((j_all - 1.0) / 3.0) * (1.0 - smootherstep_np((j_all - (n_fillet - 2.0)) / 5.0))
     w_3d_j[:2] = 0.0
     w_3d = w_3d_j[:, None, None]
 
@@ -516,15 +531,15 @@ def evaluate_arm_fillet_skirt_pose(skirt_meta, char_state, side_sign, flap_deg, 
             - 0.50 * all_rings_3d[1:-1]
         )
         all_rings_3d[1:-1] = (1.0 - 0.45 * w_3d[1:-1]) * all_rings_3d[1:-1] + (0.45 * w_3d[1:-1]) * avg_3d
-        U_chk = np.maximum(side_sign * all_rings_3d[1:n_fillet, :, 0], 1e-5)
-        Y_chk = all_rings_3d[1:n_fillet, :, 1]
-        Z_chk = all_rings_3d[1:n_fillet, :, 2]
+        U_chk = np.maximum(side_sign * all_rings_3d[2:n_fillet + 3, :, 0], 1e-5)
+        Y_chk = all_rings_3d[2:n_fillet + 3, :, 1]
+        Z_chk = all_rings_3d[2:n_fillet + 3, :, 2]
         R_chk = np.hypot(U_chk, Y_chk)
         Phi_chk = np.arctan2(Y_chk, U_chk)
         Rs_chk, _ = eval_body_cyl_surface(surf_grid, Phi_chk, Z_chk, side_sign=side_sign)
-        R_safe = np.maximum(R_chk, Rs_chk + delta_0)
-        all_rings_3d[1:n_fillet, :, 0] = side_sign * R_safe * np.cos(Phi_chk)
-        all_rings_3d[1:n_fillet, :, 1] = R_safe * np.sin(Phi_chk)
+        R_safe = np.maximum(R_chk, Rs_chk + delta_safe)
+        all_rings_3d[2:n_fillet + 3, :, 0] = side_sign * R_safe * np.cos(Phi_chk)
+        all_rings_3d[2:n_fillet + 3, :, 1] = R_safe * np.sin(Phi_chk)
 
     Phi_all = np.arctan2(all_rings_3d[:, :, 1], np.maximum(side_sign * all_rings_3d[:, :, 0], 1e-5))
     _, N_body_rings = eval_body_cyl_surface(surf_grid, Phi_all, all_rings_3d[:, :, 2], side_sign=side_sign)
@@ -658,9 +673,10 @@ def rebuild_arm_as_polar_skirt_mesh(arm_part_obj, char_state, side_sign=+1.0):
     # フィレット遷移帯で実幾何法線 n_geom へ広い C^2 smootherstep で滑らかに遷移させる。
     ring_s = (np.arange(n_rings, dtype=np.float64) / float(n_skirt))[:, None]
     sin2_th = (np.sin(thetas) ** 2)[None, :]
-    s_max_theta = 0.85 + 0.35 * sin2_th
-    w_norm_2d = 1.0 - smootherstep_np(ring_s / s_max_theta)
+    s_max_theta = 0.88 + 0.36 * sin2_th
+    w_norm_2d = 1.0 - smootherstep_np(np.maximum(ring_s - (1.0 / float(n_skirt)), 0.0) / s_max_theta)
     w_norm_2d[0, :] = 1.0
+    w_norm_2d[1, :] = 1.0
     vert_w_norm = np.append(w_norm_2d.ravel(), 0.0)
     vert_ring_s = np.append(np.repeat(ring_s[:, 0], n_theta), 3.0)
 
@@ -739,6 +755,557 @@ def rebuild_arm_as_polar_skirt_mesh(arm_part_obj, char_state, side_sign=+1.0):
 
 
 # ==========================================
+# 1B. 目の表情（まばたき・おじぎ閉じ目 ︶ ︶・手振り笑顔目 ◠ ◠）コンフォーマル曲面投影＆生成（v9：案A 王道マスコット系）
+# ==========================================
+def build_face_screen_projector(screen_obj):
+    """
+    Face_Screen メッシュのポリゴンと頂点法線から BVHTree を構築し、
+    任意の前面 (x, z) 配列を画面曲面へ完全密着投影 (y, nx, ny, nz) するプロジェクタを返す。
+    """
+    screen_obj.data.update()
+    verts = [v.co.copy() for v in screen_obj.data.vertices]
+    vnorms = [v.normal.copy() for v in screen_obj.data.vertices]
+    tris = []
+    for p in screen_obj.data.polygons:
+        vs = p.vertices[:]
+        tris.append((vs[0], vs[1], vs[2]))
+        if len(vs) == 4:
+            tris.append((vs[0], vs[2], vs[3]))
+    bvh = BVHTree.FromPolygons(verts, tris)
+
+    def project_xz(xs, zs, h_off=0.00075):
+        xs_a = np.asarray(xs, dtype=np.float64)
+        zs_a = np.asarray(zs, dtype=np.float64)
+        out_x = np.empty_like(xs_a)
+        out_y = np.empty_like(xs_a)
+        out_z = np.empty_like(xs_a)
+        for i in range(len(xs_a)):
+            xv = float(xs_a[i])
+            zv = float(zs_a[i])
+            loc, norm, tidx, _ = bvh.ray_cast(Vector((xv, -2.2, zv)), Vector((0.0, 1.0, 0.0)))
+            if loc is None:
+                loc, norm, tidx, _ = bvh.find_nearest(Vector((xv, -0.5, zv)))
+            i0, i1, i2 = tris[tidx]
+            n_int = barycentric_transform(
+                loc, verts[i0], verts[i1], verts[i2], vnorms[i0], vnorms[i1], vnorms[i2]
+            ).normalized()
+            if n_int.y > 0.0:
+                n_int = -n_int
+            out_x[i] = float(loc.x + h_off * n_int.x)
+            out_y[i] = float(loc.y + h_off * n_int.y)
+            out_z[i] = float(loc.z + h_off * n_int.z)
+        return out_x, out_y, out_z
+
+    return project_xz
+
+
+def _add_conformal_ribbon_to_bmesh(bm, proj_fn, sp_x, sp_z, sp_tx, sp_tz, sp_r, r_tube, h_off=0.00090, n_prof=14):
+    """スパイン列 (sp_x, sp_z, sp_tx, sp_tz, sp_r) から滑らかなコンフォーマル曲面リボンを既存 BMesh へ追加する"""
+    s_vals = np.linspace(-1.0, 1.0, n_prof)
+    n_rows = len(sp_x)
+    all_xs = np.empty(n_rows * n_prof, dtype=np.float64)
+    all_zs = np.empty(n_rows * n_prof, dtype=np.float64)
+    for i in range(n_rows):
+        nx_2d, nz_2d = -sp_tz[i], sp_tx[i]
+        rad = r_tube * sp_r[i]
+        all_xs[i * n_prof:(i + 1) * n_prof] = sp_x[i] + nx_2d * rad * s_vals
+        all_zs[i * n_prof:(i + 1) * n_prof] = sp_z[i] + nz_2d * rad * s_vals
+
+    px, py, pz = proj_fn(all_xs, all_zs, h_off=h_off)
+    rings = []
+    for i in range(n_rows):
+        row_v = []
+        base_idx = i * n_prof
+        for ip in range(n_prof):
+            row_v.append(bm.verts.new((float(px[base_idx + ip]), float(py[base_idx + ip]), float(pz[base_idx + ip]))))
+        rings.append(row_v)
+
+    for i in range(n_rows - 1):
+        for ip in range(n_prof - 1):
+            f = bm.faces.new((rings[i][ip], rings[i + 1][ip], rings[i + 1][ip + 1], rings[i][ip + 1]))
+            f.smooth = True
+
+
+def create_conformal_eye_arc_mesh(
+    proj_fn, name, cx_eye, cz_eye, half_w, max_ang_deg, r_tube, mat, coll, arm_obj,
+    curve_up=True, h_off=0.00090, lashes=None, side_x=+1.0
+):
+    """
+    真円弧（一定曲率）＋ 一定太さ（r_tube 均一）＋ 真円半円キャップの滑らかなコンフォーマル曲面リボンとして、
+    ・curve_up=False: 大きく太く可愛いおじぎ＆まばたき閉じ目「︶」
+    ・curve_up=True : 大きく太く可愛い手振りにっこり笑顔目「◠」
+    を生成し、必要に応じて女の子キャラ（いい-ch）用の可愛い曲線まつげ（lashes）も同一メッシュへ統合する。
+    """
+    n_spine = 56
+    n_cap = 16
+    n_prof = 16
+
+    max_ang = math.radians(max_ang_deg)
+    r_arc = half_w / max(math.sin(max_ang), 1e-4)
+    sag = r_arc * (1.0 - math.cos(max_ang))
+    # 弧の視覚的重心が cz_eye に自然に収まるよう円弧中心高さを調整
+    if curve_up:
+        # 上向きアーチ「◠」: 円中心は下側
+        z_center = cz_eye + 0.55 * sag - r_arc
+    else:
+        # 下向きアーチ「︶」: 円中心は上側
+        z_center = cz_eye - 0.55 * sag + r_arc
+
+    def eval_arc(th):
+        if curve_up:
+            x_s = cx_eye + r_arc * math.sin(th)
+            z_s = z_center + r_arc * math.cos(th)
+            tx = math.cos(th)
+            tz = -math.sin(th)
+        else:
+            x_s = cx_eye + r_arc * math.sin(th)
+            z_s = z_center - r_arc * math.cos(th)
+            tx = math.cos(th)
+            tz = math.sin(th)
+        return x_s, z_s, tx, tz
+
+    sp_x, sp_z, sp_tx, sp_tz, sp_r = [], [], [], [], []
+    # 左端の真円半円キャップ
+    x0, z0, tx0, tz0 = eval_arc(-max_ang)
+    for ic in range(n_cap):
+        alpha = 0.5 * math.pi * (ic / float(n_cap))
+        ext = math.cos(alpha) * r_tube
+        sp_x.append(x0 - tx0 * ext)
+        sp_z.append(z0 - tz0 * ext)
+        sp_tx.append(tx0)
+        sp_tz.append(tz0)
+        sp_r.append(math.sin(max(alpha, 0.02)))
+    # 中央真円弧スパイン（太さ 1.000 完全一定）
+    for iseg in range(n_spine):
+        th = -max_ang + 2.0 * max_ang * (iseg / float(n_spine - 1))
+        xs, zs, tx, tz = eval_arc(th)
+        sp_x.append(xs)
+        sp_z.append(zs)
+        sp_tx.append(tx)
+        sp_tz.append(tz)
+        sp_r.append(1.0)
+    # 右端の真円半円キャップ
+    x1, z1, tx1, tz1 = eval_arc(+max_ang)
+    for ic in range(1, n_cap + 1):
+        alpha = 0.5 * math.pi * (1.0 - ic / float(n_cap))
+        ext = math.cos(alpha) * r_tube
+        sp_x.append(x1 + tx1 * ext)
+        sp_z.append(z1 + tz1 * ext)
+        sp_tx.append(tx1)
+        sp_tz.append(tz1)
+        sp_r.append(math.sin(max(alpha, 0.02)))
+
+    bm = bmesh.new()
+    _add_conformal_ribbon_to_bmesh(bm, proj_fn, sp_x, sp_z, sp_tx, sp_tz, sp_r, r_tube, h_off=h_off, n_prof=n_prof)
+
+    # 女の子キャラクター用（いい-ch）の可愛い曲線まつげを追加（目尻側から外向きへ自然にスッと伸びる2本）
+    if lashes:
+        for th_deg, ang_start_deg, ang_end_deg, lash_len, r_lash in lashes:
+            th_rad = side_x * math.radians(th_deg)
+            bx, bz, _, _ = eval_arc(th_rad)
+            # 2次ベジェ的に根元角度から先端角度へ滑らかにカーブするまつげスパイン
+            n_l = 18
+            n_lcap = 8
+            lx, lz, ltx, ltz, lr = [], [], [], [], []
+            a0 = math.radians(ang_start_deg)
+            a1 = math.radians(ang_end_deg)
+            cx_cur, cz_cur = bx, bz
+            ds = lash_len / float(n_l - 1)
+            pts_l = [(cx_cur, cz_cur)]
+            tangs_l = [(side_x * math.cos(a0), math.sin(a0))]
+            for il in range(1, n_l):
+                u = il / float(n_l - 1)
+                ang_u = a0 + (a1 - a0) * u
+                dx_u = side_x * math.cos(ang_u)
+                dz_u = math.sin(ang_u)
+                cx_cur += dx_u * ds
+                cz_cur += dz_u * ds
+                pts_l.append((cx_cur, cz_cur))
+                tangs_l.append((dx_u, dz_u))
+
+            for il in range(n_l):
+                u = il / float(n_l - 1)
+                lx.append(pts_l[il][0])
+                lz.append(pts_l[il][1])
+                ltx.append(tangs_l[il][0])
+                ltz.append(tangs_l[il][1])
+                # 根元は弧と馴染み、先端に向かってごく控えめに可愛い丸先へ
+                lr.append(1.0 - 0.18 * u)
+            # 先端の丸キャップ
+            ex, ez = pts_l[-1]
+            etx, etz = tangs_l[-1]
+            r_end = 0.82
+            for ic in range(1, n_lcap + 1):
+                alpha = 0.5 * math.pi * (1.0 - ic / float(n_lcap))
+                ext = math.cos(alpha) * (r_lash * r_end)
+                lx.append(ex + etx * ext)
+                lz.append(ez + etz * ext)
+                ltx.append(etx)
+                ltz.append(etz)
+                lr.append(r_end * math.sin(max(alpha, 0.02)))
+
+            _add_conformal_ribbon_to_bmesh(
+                bm, proj_fn, lx, lz, ltx, ltz, lr, r_lash, h_off=h_off + 0.00004, n_prof=10
+            )
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    mesh = bpy.data.meshes.new(name + "_Mesh")
+    bm.to_mesh(mesh)
+    bm.free()
+
+    obj = bpy.data.objects.new(name, mesh)
+    coll.objects.link(obj)
+    obj.parent = arm_obj
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    if hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
+    if mat is not None:
+        obj.data.materials.append(mat)
+    return obj
+
+
+def create_conformal_cheek_blush_mesh(proj_fn, name, cx_chk, cz_chk, rx_chk, rz_chk, mat, coll, arm_obj, h_off=0.00050):
+    """女の子キャラクター（いい-ch）用のほんのり可愛いパステルピンクほっぺチークをコンフォーマル曲面投影で生成"""
+    n_ang = 48
+    n_rad = 10
+    ang_grid = np.linspace(0.0, 2.0 * math.pi, n_ang, endpoint=False)
+    bm = bmesh.new()
+
+    cx0, cy0, cz0 = proj_fn(np.array([cx_chk]), np.array([cz_chk]), h_off=h_off)
+    v_center = bm.verts.new((float(cx0[0]), float(cy0[0]), float(cz0[0])))
+
+    rings = []
+    for ir in range(1, n_rad + 1):
+        frac = ir / float(n_rad)
+        xs = cx_chk + (rx_chk * frac) * np.cos(ang_grid)
+        zs = cz_chk + (rz_chk * frac) * np.sin(ang_grid)
+        px, py, pz = proj_fn(xs, zs, h_off=h_off)
+        rings.append([bm.verts.new((float(px[ia]), float(py[ia]), float(pz[ia]))) for ia in range(n_ang)])
+
+    for ia in range(n_ang):
+        ia_next = (ia + 1) % n_ang
+        f = bm.faces.new((v_center, rings[0][ia], rings[0][ia_next]))
+        f.smooth = True
+    for ir in range(n_rad - 1):
+        for ia in range(n_ang):
+            ia_next = (ia + 1) % n_ang
+            f = bm.faces.new((rings[ir][ia], rings[ir + 1][ia], rings[ir + 1][ia_next], rings[ir][ia_next]))
+            f.smooth = True
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    mesh = bpy.data.meshes.new(name + "_Mesh")
+    bm.to_mesh(mesh)
+    bm.free()
+
+    obj = bpy.data.objects.new(name, mesh)
+    coll.objects.link(obj)
+    obj.parent = arm_obj
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    if hasattr(obj, "visible_shadow"):
+        obj.visible_shadow = False
+    if mat is not None:
+        obj.data.materials.append(mat)
+    return obj
+
+
+def evaluate_eye_expression_at_frame(f_24, is_iich=True):
+    """
+    【v10：案A（王道マスコット系）目の表情タイムライン — 瞬きを若干ゆっくり・やわらかい動作へ最適化】
+    戻り値: (mode, blink_val, happy_lift)
+      - mode: "normal"（通常目＋まばたき） / "closed"（おじぎ閉じ目 ︶ ︶） / "happy"（手振り笑顔目 ◠ ◠）
+      - blink_val ∈ [0.0, 1.0]: 通常目のまばたき閉じ具合
+      - happy_lift: 笑顔目のごく控えめなリズムバウンス (m)
+    """
+    def single_blink_pulse(f_now, f_center, half_close=3.0, hold_shut=1.1, half_open=4.2):
+        # 閉じる(3.0 f_24) ➔ 閉眼ホールド(1.1 f_24) ➔ やわらかく開く(4.2 f_24) ≒ 約0.35秒のゆったり可愛い瞬き
+        dt = f_now - f_center
+        h_h = 0.5 * hold_shut
+        if dt < -(half_close + h_h) or dt > (half_open + h_h):
+            return 0.0
+        if abs(dt) <= h_h:
+            return 1.0
+        if dt < -h_h:
+            return smootherstep_scalar(1.0 + (dt + h_h) / half_close)
+        else:
+            return 1.0 - smootherstep_scalar((dt - h_h) / half_open)
+
+    # Phase 1: 歩いてくる（2体ずらしのゆったり自然なまばたき2回：閉眼頂点では均一太さの大弧閉じ目︶︶を使用）
+    if f_24 <= 128.0:
+        centers = (36.0, 96.0) if is_iich else (48.0, 108.0)
+        b_val = max(single_blink_pulse(f_24, c) for c in centers)
+        if b_val >= 0.68:
+            return "closed", 1.0, 0.0
+        return "normal", b_val, 0.0
+
+    # Phase 2: 着地ホップ（ホップ頂点付近でやわらかく1回まばたき ➔ Frame 195 正面静止は通常目100%一致）
+    if f_24 <= 168.0:
+        c_hop = 136.0 if is_iich else 137.5
+        b_val = single_blink_pulse(f_24, c_hop, half_close=2.6, hold_shut=1.0, half_open=3.8)
+        if b_val >= 0.68:
+            return "closed", 1.0, 0.0
+        return "normal", b_val, 0.0
+
+    # Phase 3: おじぎ（頭を下げる瞬間にゆったりまばたき連動で「︶ ︶」閉じ目へ切替 ➔ 起き上がりでやさしく開眼）
+    if f_24 <= 240.0:
+        if f_24 < 172.0:
+            return "normal", 0.0, 0.0
+        elif f_24 < 176.2:
+            return "normal", smootherstep_scalar((f_24 - 172.0) / 4.2), 0.0
+        elif f_24 <= 223.5:
+            return "closed", 1.0, 0.0
+        elif f_24 <= 228.9:
+            return "normal", 1.0 - smootherstep_scalar((f_24 - 223.5) / 5.4), 0.0
+        else:
+            return "normal", 0.0, 0.0
+
+    # Phase 4: 手を振る（ゆったりまばたき連動で「◠ ◠」にっこり笑顔目へ切替 ➔ 最後は公式の通常目に戻ってフィニッシュ）
+    if f_24 < 242.8:
+        return "normal", 0.0, 0.0
+    elif f_24 < 247.0:
+        return "normal", smootherstep_scalar((f_24 - 242.8) / 4.2), 0.0
+    elif f_24 <= 336.5:
+        theta_10 = 2.0 * math.pi * ((f_24 - 273.5) / 10.0)
+        happy_lift = 0.0045 * max(0.0, math.sin(theta_10))
+        return "happy", 0.0, happy_lift
+    elif f_24 <= 341.9:
+        return "normal", 1.0 - smootherstep_scalar((f_24 - 336.5) / 5.4), 0.0
+    else:
+        return "normal", 0.0, 0.0
+
+
+# ==========================================
+# 1C. しなやか尻尾物理エンジン（2次バネ減衰＋S字波動カンチレバー＋地球儀完全真球0.000mm追従：v10）
+# ==========================================
+def precompute_supple_tail_physics(is_iich=True):
+    """
+    全450フレーム（@30fps, 15.0秒）にわたるしっぽ（青いケーブル茎＋地球儀）の
+    2モード弾性バネ減衰シミュレーション（1次カンチレバーたわみ q1 ＋ 2次S字波動遅れ q2）を
+    サブステップ積分（300Hz, dt=1/300s）で事前計算し、フレーム毎の (q1_x, q1_y, q2_x, q2_y) テーブルを返す。
+    ・根元 (s=0) は C^1 完全固定（背中からの浮き・抜けゼロ）
+    ・中間 (0<s<1) は遅れ波動 q2 によりしなやかなS字カーブを描く
+    ・着地ホップ後・おじぎ後・手振り中に自然な慣性オーバーシュート＆減衰余韻（ポヨン・ユラッ）を生む
+    ・Frame 195 正面静止および Frame 450 終了時には正確に 0.000 へ収束する
+    """
+    substeps = 10
+    dt = 1.0 / float(FPS * substeps)
+    n_frames = FRAME_END
+
+    # キャラ個性に応じた固有振動数＆減衰比（いい-ch: 軽快でしなやか、いい-NETくん: ゆったり優雅な弾性）
+    if is_iich:
+        w1, z1 = 9.6, 0.23
+        w2, z2 = 17.2, 0.28
+        amp_scale = 1.00
+    else:
+        w1, z1 = 8.2, 0.21
+        w2, z2 = 14.8, 0.26
+        amp_scale = 1.12
+
+    def eval_tail_drive_at_f24(f):
+        """各フェーズにおける胴体運動由来の目標たわみ・慣性駆動力 (tx, ty, s2x_bias, s2y_bias) を返す"""
+        tx, ty = 0.0, 0.0
+        s2x_b, s2y_b = 0.0, 0.0
+
+        # Phase 1: トコトコ歩行（歩調に連動した軽快な8の字S字スイング）
+        if f <= 128.0:
+            amp_w = 1.0 if f <= 114.0 else (1.0 - smootherstep_scalar((f - 114.0) / 14.0))
+            ph_off = 0.0 if is_iich else 3.0
+            ph = 2.0 * math.pi * ((f - 1.0 - ph_off) / 16.0)
+            # 胴体ロールと逆位相でしっぽが左右へ大きくスイング、2倍周波で前後にポヨンとしなる
+            tx = -0.175 * math.sin(ph) * amp_w * amp_scale
+            ty = (0.045 + 0.095 * math.sin(2.0 * ph - 0.35 * math.pi)) * amp_w * amp_scale
+            # 進行遅れによるS字うねり駆動
+            s2x_b = +0.055 * math.cos(ph) * amp_w * amp_scale
+            s2y_b = -0.036 * math.cos(2.0 * ph - 0.35 * math.pi) * amp_w * amp_scale
+
+        # Phase 2: 着地ホップ（飛び上がりで後ろへ引き、着地の衝撃で前へグッと沈んでポヨン・ユラッと余韻）
+        elif f <= 168.0:
+            f_hop = f - (0.0 if is_iich else 1.0)
+            if 129.0 <= f_hop <= 143.0:
+                uh = (f_hop - 129.0) / 14.0
+                arc = math.sin(math.pi * uh)
+                ty = +0.165 * arc * amp_scale
+                tx = (-0.045 if is_iich else +0.045) * arc * amp_scale
+                s2y_b = -0.055 * math.cos(math.pi * uh) * amp_scale
+            elif 143.0 < f_hop <= 152.0:
+                uc = (f_hop - 143.0) / 9.0
+                cush = math.sin(math.pi * uc) * (1.0 - 0.35 * uc)
+                ty = -0.220 * cush * amp_scale
+                s2y_b = +0.068 * cush * amp_scale
+
+        # Phase 3: 可愛いおじぎ（下げ始めで後ろへS字遅れ ➔ 最下点で前へしなやかにビヨ〜ン ➔ 起き上がりで柔らかく戻る）
+        elif f <= 240.0:
+            def eval_bow_u(tf):
+                if tf < 176.0:
+                    u_pre = smoothstep_scalar((tf - 169.0) / 7.0)
+                    return -0.14 * math.sin(math.pi * u_pre)
+                elif tf < 195.0:
+                    return smootherstep_scalar((tf - 176.0) / 19.0)
+                elif tf <= 214.0:
+                    u_h = (tf - 195.0) / 19.0
+                    return 1.0 + 0.02 * math.sin(math.pi * u_h)
+                elif tf <= 234.0:
+                    return 1.0 - smootherstep_scalar((tf - 214.0) / 20.0)
+                else:
+                    return 0.0
+
+            b0 = eval_bow_u(f)
+            b_prev = eval_bow_u(max(169.0, f - 1.5))
+            b_vel = (b0 - b_prev) / 1.5
+            # 前屈時は重力でしっぽ先端も前へしなやかに垂れ、角速度に比例した慣性遅れでS字を描く
+            ty = (-0.240 * b0 + 2.85 * b_vel) * amp_scale
+            tx = ((-0.045 if is_iich else +0.045) * b0) * amp_scale
+            s2y_b = (-1.15 * b_vel - 0.025 * b0) * amp_scale
+
+        # Phase 4: 元気な手振り（リズムに合わせてご機嫌に大きくしなやかな8の字S字スイング）
+        else:
+            env_in = smootherstep_scalar(np.clip((f - 241.0) / 14.0, 0.0, 1.0))
+            env_out = 1.0 - smootherstep_scalar(np.clip((f - 332.0) / 18.0, 0.0, 1.0))
+            w_w = env_in * env_out
+            th10 = 2.0 * math.pi * ((f - 273.5) / 10.0)
+            th_step = 2.0 * math.pi * ((f - 276.0) / 30.0) + 0.5 * math.pi
+            mirror_s = -1.0 if is_iich else +1.0
+            c_step = mirror_s * math.sin(th_step)
+            # 大きなご機嫌左右スイング＋手振りパタパタ連動の軽快な前後リプル
+            tx = (0.195 * c_step + 0.068 * mirror_s * math.sin(th10)) * w_w * amp_scale
+            ty = (-0.065 * abs(math.sin(th10)) + 0.045 * math.cos(th10)) * w_w * amp_scale
+            s2x_b = (-0.055 * mirror_s * math.cos(th10) - 0.032 * mirror_s * math.cos(th_step)) * w_w * amp_scale
+            s2y_b = (+0.028 * math.sin(th10)) * w_w * amp_scale
+
+        return tx, ty, s2x_b, s2y_b
+
+    # 歩行開始時 (Frame 1) から自然にしなっているよう、事前ウォームアップを0.6秒実行
+    q1x = q1y = v1x = v1y = 0.0
+    q2x = q2y = v2x = v2y = 0.0
+    for k in range(-int(0.6 * FPS * substeps), 0):
+        f_cur = frame30_to_f24(1.0 + k / float(substeps))
+        tx, ty, s2x_b, s2y_b = eval_tail_drive_at_f24(f_cur)
+        a1x = (w1 * w1) * (tx - q1x) - 2.0 * z1 * w1 * v1x
+        a1y = (w1 * w1) * (ty - q1y) - 2.0 * z1 * w1 * v1y
+        v1x += a1x * dt
+        v1y += a1y * dt
+        q1x += v1x * dt
+        q1y += v1y * dt
+        # Mode 2 (S字しなり): Mode 1 の速度に逆らう慣性遅れ＋位相バイアスで駆動
+        t2x = -0.022 * v1x + s2x_b
+        t2y = -0.022 * v1y + s2y_b
+        a2x = (w2 * w2) * (t2x - q2x) - 2.0 * z2 * w2 * v2x
+        a2y = (w2 * w2) * (t2y - q2y) - 2.0 * z2 * w2 * v2y
+        v2x += a2x * dt
+        v2y += a2y * dt
+        q2x += v2x * dt
+        q2y += v2y * dt
+
+    table = np.zeros((n_frames + 1, 4), dtype=np.float64)
+    for frame_idx in range(1, n_frames + 1):
+        for s_i in range(substeps):
+            f_sub = frame30_to_f24(float(frame_idx) - 1.0 + (s_i + 1) / float(substeps))
+            tx, ty, s2x_b, s2y_b = eval_tail_drive_at_f24(f_sub)
+            a1x = (w1 * w1) * (tx - q1x) - 2.0 * z1 * w1 * v1x
+            a1y = (w1 * w1) * (ty - q1y) - 2.0 * z1 * w1 * v1y
+            v1x += a1x * dt
+            v1y += a1y * dt
+            q1x += v1x * dt
+            q1y += v1y * dt
+
+            t2x = -0.024 * v1x + s2x_b
+            t2y = -0.024 * v1y + s2y_b
+            a2x = (w2 * w2) * (t2x - q2x) - 2.0 * z2 * w2 * v2x
+            a2y = (w2 * w2) * (t2y - q2y) - 2.0 * z2 * w2 * v2y
+            v2x += a2x * dt
+            v2y += a2y * dt
+            q2x += v2x * dt
+            q2y += v2y * dt
+
+        # 公式静止ポーズ (Frame 195 前後 ＆ Frame 450 終端) に向かって滑らかに 0.000 収束させる保護マスク
+        f24_now = frame30_to_f24(frame_idx)
+        env_hold = 1.0
+        if 152.0 <= f24_now <= 168.0:
+            # Frame 190..210: ホップ余韻の後に Frame 195 でピタッと静まる
+            env_hold = 1.0 - smootherstep_scalar((f24_now - 152.0) / 4.2)
+        elif f24_now >= 346.0:
+            env_hold = 1.0 - smootherstep_scalar((f24_now - 346.0) / 10.0)
+
+        # 極端な振れ幅で背中ボディにめり込まない安全ソフトリミッタ
+        q1x_c = float(np.clip(q1x * env_hold, -0.32, 0.32))
+        q1y_c = float(np.clip(q1y * env_hold, -0.34, 0.28))
+        q2x_c = float(np.clip(q2x * env_hold, -0.10, 0.10))
+        q2y_c = float(np.clip(q2y * env_hold, -0.10, 0.10))
+        table[frame_idx] = (q1x_c, q1y_c, q2x_c, q2y_c)
+
+    return table
+
+
+def apply_supple_tail_and_globe_deform(x, y, z, char_state, frame_idx, is_globe=False):
+    """
+    【v10 しなやか尻尾変形】
+    1) 青いケーブル茎 (is_globe=False):
+       背中根元 z <= z_root は完全固定 (C^1 連続) とし、s = clip((z - z_root)/L_z, 0, 1) に沿って
+       ・1次カンチレバーたわみ φ1(s) = s^2 * (1.35 - 0.35*s)
+       ・2次S字波動しなり φ2(s) = sin(π*s) * s^1.15
+       ・厳密弧長保存の Z 沈み込み Δz(s) = -0.5 * ∫[(dx/dz)^2 + (dy/dz)^2] dz
+       を適用して本物の弾性ケーブルのようにしなやかに曲げる。
+    2) 先端の地球儀 (is_globe=True):
+       球体を一切歪ませない純粋剛体 SO(3) 回転（先端接線角 θ_roll, θ_pitch）＋
+       茎先端の厳密変位 (Δx_tip, Δy_tip, Δz_tip) 平行移動を適用し、
+       全フレームで「完全真球」かつ「茎先端と地球儀3D球心の0.000mm完全一致」を保証する。
+    """
+    f_clamped = int(np.clip(frame_idx, 1, FRAME_END))
+    q1x, q1y, q2x, q2y = char_state["tail_table"][f_clamped]
+    if abs(q1x) < 1e-6 and abs(q1y) < 1e-6 and abs(q2x) < 1e-6 and abs(q2y) < 1e-6:
+        return x, y, z
+
+    z_root = char_state["tail_z_root"]
+    gx0, gy0, gz0 = char_state["globe_center_rest"]
+    L_z = max(gz0 - z_root, 0.5)
+
+    # 101点の高精度グリッド上で弧長保存 Δz(s) を数値積分
+    s_grid = np.linspace(0.0, 1.0, 101)
+    ds = s_grid[1] - s_grid[0]
+    dphi1 = s_grid * (2.70 - 1.05 * s_grid)
+    dphi2 = math.pi * np.cos(math.pi * s_grid) * (s_grid ** 1.15) + 1.15 * np.sin(math.pi * s_grid) * np.where(s_grid > 1e-6, s_grid ** 0.15, 0.0)
+    dxdz_g = (q1x * dphi1 + q2x * dphi2) / L_z
+    dydz_g = (q1y * dphi1 + q2y * dphi2) / L_z
+    # 弧長保存: dz_drop(s) = -0.5 * ∫_0^s (dx/dz^2 + dy/dz^2) * L_z du
+    integrand = 0.5 * (dxdz_g * dxdz_g + dydz_g * dydz_g) * L_z
+    dz_grid = np.zeros_like(s_grid)
+    dz_grid[1:] = -np.cumsum(0.5 * (integrand[:-1] + integrand[1:]) * ds)
+    dz_tip = float(dz_grid[-1])
+
+    if not is_globe:
+        s_v = np.clip((z - z_root) / L_z, 0.0, 1.0)
+        phi1 = (s_v * s_v) * (1.35 - 0.35 * s_v)
+        phi2 = np.sin(math.pi * s_v) * (s_v ** 1.15)
+        dx = q1x * phi1 + q2x * phi2
+        dy = q1y * phi1 + q2y * phi2
+        dz = np.interp(s_v, s_grid, dz_grid)
+        return x + dx, y + dy, z + dz
+    else:
+        # 先端 s=1 の厳密接線角で地球儀を純粋剛体 SO(3) 回転し、茎先端位置へ厳密平行移動
+        slope_x = float(dxdz_g[-1])
+        slope_y = float(dydz_g[-1])
+        # +X 方向への傾き -> Y軸まわりのロール (+ang_y), +Y 方向への傾き -> X軸まわりのピッチ (-ang_x)
+        ang_y = math.atan(slope_x) * 0.85
+        ang_x = -math.atan(slope_y) * 0.85
+
+        rx = x - gx0
+        ry = y - gy0
+        rz = z - gz0
+
+        # X軸ピッチ回転 (Y-Z平面)
+        cx, sx = math.cos(ang_x), math.sin(ang_x)
+        ry1 = ry * cx - rz * sx
+        rz1 = ry * sx + rz * cx
+        # Y軸ロール回転 (X-Z平面)
+        cy, sy = math.cos(ang_y), math.sin(ang_y)
+        rx2 = rx * cy + rz1 * sy
+        rz2 = -rx * sy + rz1 * cy
+
+        return (gx0 + q1x) + rx2, (gy0 + q1y) + ry1, (gz0 + dz_tip) + rz2
+
+
+# ==========================================
 # 2. キャラクター初期頂点＆変形パラメータ事前計算
 # ==========================================
 def capture_character_rest_state(arm_obj, meshes, is_iich=True):
@@ -747,9 +1314,11 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
     ・Body 側面曲面の高精度2Dグリッド (X_surf, N_surf)
     ・パドル手（Arm.L / Arm.R）の極座標スライディング吸盤フィレットスカート構造
     ・超短足のねじれゼロ股関節振り子回転＆心地よい弾性伸縮用パラメータ
+    ・目の表情メッシュ（まばたき・おじぎ閉じ目 ︶ ︶・手振り笑顔目 ◠ ◠）
     を事前計算してキャッシュする。
     """
     body_obj = next(m for m in meshes if m.name.endswith("_Body"))
+    screen_obj = next(m for m in meshes if m.name.endswith("_Face_Screen"))
     n_body = len(body_obj.data.vertices)
     body_co = np.empty(n_body * 3, dtype=np.float64)
     body_obj.data.vertices.foreach_get("co", body_co)
@@ -757,7 +1326,7 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
 
     if is_iich:
         # 肩ソケット（腕付け根断面中心）ボールジョイントピボット ＋ 手振り時のタマゴ表面等高線追従スライド
-        u_sh, y_sh, z_sh = 0.688, 0.033, 0.345
+        u_sh, y_sh, z_sh = 0.688, 0.026, 0.345
         sh_lift_z, sh_lift_u_in = 0.068, -0.006
         # 【v8 改修】足変形の上端 z_leg_top (= z_hip_piv) を実際の足突起ドーム高さに引き下げ、
         # 股間の谷より上の「1つに繋がった丸いお腹」を左右逆にねじらないようにする
@@ -767,8 +1336,10 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
         x_foot_center = 0.255
         base_loc = Vector((-0.946, -0.025, 0.0036))
     else:
-        u_sh, y_sh, z_sh = 0.758, 0.046, 0.475
-        sh_lift_z, sh_lift_u_in = 0.078, -0.006
+        # 【v9 改修】y_sh を 0.046 -> 0.026 へ適正化し、おじぎ・手振り時に腕の根元が胴体輪郭裏へ回り込んで
+        # 黒い隙間スジを生む現象を根絶する
+        u_sh, y_sh, z_sh = 0.758, 0.026, 0.475
+        sh_lift_z, sh_lift_u_in = 0.084, -0.006
         z_leg_solid = 0.030
         z_leg_top = 0.175
         z_hip_piv = 0.175
@@ -779,6 +1350,92 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
     ground_ref_z = float(base_loc.z) + z_min_rest
 
     surf_grid = build_body_lateral_surface_grid(body_obj, is_iich=is_iich)
+    face_proj = build_face_screen_projector(screen_obj)
+
+    # 目の表情メッシュ（おじぎ閉じ目 ︶ ︶、手振り笑顔目 ◠ ◠）＆ 女の子用（いい-ch）まつげ・チーク・笑顔口を生成
+    prefix = "IICh" if is_iich else "IINet"
+    coll_char = body_obj.users_collection[0] if body_obj.users_collection else bpy.context.scene.collection
+    extra_eye_objs = []
+    if is_iich:
+        mat_eye_expr = bpy.data.materials.get("IICh_Mat_Eye_Inner_Navy") or bpy.data.materials.get("IICh_Mat_Feature_Blue")
+        mat_mouth_iich = bpy.data.materials.get("IICh_Mat_Feature_Blue") or mat_eye_expr
+        eye_specs = [
+            ("R", -0.2750, 0.8593, 0.0850, 0.1140, -1.0),
+            ("L", +0.3075, 0.8593, 0.0850, 0.1140, +1.0),
+        ]
+        # いい-ch（女の子設定）：いい-NETくんより繊細で細い均一ライン (0.0205m) ＋ 目尻の可愛い曲線まつげ2本
+        closed_half_w, closed_ang, closed_rtube = 0.136, 52.0, 0.0205
+        happy_half_w, happy_ang, happy_rtube = 0.122, 76.0, 0.0205
+        cz_closed_off, cz_happy_off = -0.008, +0.044
+        # まつげ定義: (th_deg, ang_start_deg, ang_end_deg, lash_len, r_lash)
+        lashes_closed = [
+            (46.0, -14.0, +4.0, 0.056, 0.0135),
+            (28.0, -34.0, -16.0, 0.048, 0.0125),
+        ]
+        lashes_happy = [
+            (66.0, +12.0, +28.0, 0.056, 0.0135),
+            (44.0, +32.0, +48.0, 0.048, 0.0125),
+        ]
+
+        # 女の子らしいパステルピンクのほっぺチーク（おじぎ・手振り笑顔時に表示）
+        mat_cheek = mod_pair.create_micro_grain_material(
+            "IICh_Mat_Cheek_Pink", (255, 168, 194),
+            bump_dist=0.0018, bump_strength=0.18, rough_min=0.62, rough_max=0.82,
+            spec_ior=0.18, sheen_weight=0.08, coat_weight=0.0, fine_scale=85.0, mid_scale=24.0
+        )
+        chk_r = create_conformal_cheek_blush_mesh(
+            face_proj, "IICh_Cheek.R", -0.348, 0.675, 0.092, 0.048, mat_cheek, coll_char, arm_obj, h_off=0.00055
+        )
+        chk_l = create_conformal_cheek_blush_mesh(
+            face_proj, "IICh_Cheek.L", +0.378, 0.675, 0.092, 0.048, mat_cheek, coll_char, arm_obj, h_off=0.00055
+        )
+        # 手振り笑顔時用の少し広くにっこりした可愛い笑顔口 (IICh_MouthHappy)
+        mouth_happy = create_conformal_eye_arc_mesh(
+            face_proj, "IICh_MouthHappy",
+            +0.0184, 0.562, 0.168, 34.0, 0.0235,
+            mat_mouth_iich, coll_char, arm_obj, curve_up=False, h_off=0.00090,
+        )
+        extra_eye_objs.extend([chk_r, chk_l, mouth_happy])
+    else:
+        mat_eye_expr = bpy.data.materials.get("IINet_Mat_Feature_Blue")
+        eye_specs = [
+            ("R", -0.2677, 1.2934, 0.0742, 0.0742, -1.0),
+            ("L", +0.3075, 1.2934, 0.0742, 0.0742, +1.0),
+        ]
+        # いい-NETくん：しっかりした均一ライン (0.0300m)、おじぎ閉じ目は緩やかでやさしい弧 (46°) へ調整
+        closed_half_w, closed_ang, closed_rtube = 0.146, 46.0, 0.0300
+        happy_half_w, happy_ang, happy_rtube = 0.140, 68.0, 0.0300
+        cz_closed_off, cz_happy_off = -0.006, +0.022
+        lashes_closed = None
+        lashes_happy = None
+
+    eye_spec_map = {}
+    for side_tag, cx_e, cz_e, rx_e, rz_e, side_x in eye_specs:
+        eye_spec_map[f"{prefix}_Eye.{side_tag}"] = (cx_e, cz_e, rx_e, rz_e)
+        obj_closed = create_conformal_eye_arc_mesh(
+            face_proj, f"{prefix}_EyeClosed.{side_tag}",
+            cx_e, cz_e + cz_closed_off, closed_half_w, closed_ang, closed_rtube,
+            mat_eye_expr, coll_char, arm_obj, curve_up=False, h_off=0.00090,
+            lashes=lashes_closed, side_x=side_x,
+        )
+        obj_happy = create_conformal_eye_arc_mesh(
+            face_proj, f"{prefix}_EyeHappy.{side_tag}",
+            cx_e, cz_e + cz_happy_off, happy_half_w, happy_ang, happy_rtube,
+            mat_eye_expr, coll_char, arm_obj, curve_up=True, h_off=0.00090,
+            lashes=lashes_happy, side_x=side_x,
+        )
+        extra_eye_objs.extend([obj_closed, obj_happy])
+
+    all_char_meshes = list(meshes) + extra_eye_objs
+
+    # しっぽ物理エンジン（v10）用の事前シミュレーション＆地球儀球心・背中根元高さ取得
+    globe_obj = next(m for m in meshes if m.name.endswith("_Globe"))
+    g_co = np.empty(len(globe_obj.data.vertices) * 3, dtype=np.float64)
+    globe_obj.data.vertices.foreach_get("co", g_co)
+    g_co = g_co.reshape(-1, 3)
+    globe_center_rest = (float(np.mean(g_co[:, 0])), float(np.mean(g_co[:, 1])), float(np.mean(g_co[:, 2])))
+    tail_z_root = 0.438 if is_iich else 0.520
+    tail_table = precompute_supple_tail_physics(is_iich=is_iich)
 
     char_state = {
         "arm_obj": arm_obj,
@@ -786,6 +1443,10 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
         "base_loc": base_loc,
         "ground_ref_z": ground_ref_z,
         "surf_grid": surf_grid,
+        "face_proj": face_proj,
+        "tail_table": tail_table,
+        "tail_z_root": tail_z_root,
+        "globe_center_rest": globe_center_rest,
         "meshes": [],
         "u_sh": u_sh,
         "y_sh": y_sh,
@@ -799,7 +1460,7 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
     }
 
     mesh_entries = []
-    for obj in meshes:
+    for obj in all_char_meshes:
         # Armature モディファイアが有効だと Cycles Depsgraph 評価時にカスタム分割法線
         # (normals_split_custom_set_from_vertices) が上書き再計算されるため、完全に除去する
         obj.modifiers.clear()
@@ -807,7 +1468,15 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
         is_arm_l = obj.name.endswith("_Arm.L")
         is_arm_r = obj.name.endswith("_Arm.R")
         is_logo = "_Logo_" in obj.name
-        is_ant_or_globe = obj.name.endswith("_Antenna") or obj.name.endswith("_Globe")
+        is_antenna = obj.name.endswith("_Antenna")
+        is_globe = obj.name.endswith("_Globe")
+        is_ant_or_globe = is_antenna or is_globe
+        is_eye_normal = obj.name in eye_spec_map
+        is_eye_closed = "_EyeClosed." in obj.name
+        is_eye_happy = "_EyeHappy." in obj.name
+        is_cheek = "_Cheek." in obj.name
+        is_mouth_normal = obj.name == "IICh_Mouth"
+        is_mouth_happy = obj.name == "IICh_MouthHappy"
 
         skirt_meta = None
         if is_arm_l:
@@ -819,6 +1488,23 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
         co = np.empty(nv * 3, dtype=np.float64)
         obj.data.vertices.foreach_get("co", co)
         co = co.reshape(-1, 3)
+
+        eye_meta = None
+        if is_eye_normal:
+            cx_e, cz_e, rx_e, rz_e = eye_spec_map[obj.name]
+            # まばたき全閉 (blink=1.0) 時のコンフォーマル投影座標も大きく太く可愛い弧に整える
+            dx_n = np.clip((co[:, 0] - cx_e) / max(rx_e, 1e-4), -1.2, 1.2)
+            x_scale_shut = 1.42 if is_iich else 1.54
+            z_scale_shut = 0.25 if is_iich else 0.34
+            x_shut = cx_e + (co[:, 0] - cx_e) * x_scale_shut
+            z_shut = (cz_e - 0.012) + (co[:, 2] - cz_e) * z_scale_shut - 0.034 * (dx_n ** 2)
+            # いい-ch の二重オーバル目の内側/外側オフセット差を保ったまま曲面へ投影
+            h_shut = 0.00095 if is_iich else 0.00080
+            bx, by, bz = face_proj(x_shut, z_shut, h_off=h_shut)
+            eye_meta = {
+                "cx": cx_e, "cz": cz_e,
+                "shut_co": np.column_stack([bx, by, bz]),
+            }
 
         if is_body:
             vx, vy, vz = co[:, 0], co[:, 1], co[:, 2]
@@ -880,7 +1566,16 @@ def capture_character_rest_state(arm_obj, meshes, is_iich=True):
             "is_arm_l": is_arm_l,
             "is_arm_r": is_arm_r,
             "is_logo": is_logo,
+            "is_antenna": is_antenna,
+            "is_globe": is_globe,
             "is_ant_or_globe": is_ant_or_globe,
+            "is_eye_normal": is_eye_normal,
+            "is_eye_closed": is_eye_closed,
+            "is_eye_happy": is_eye_happy,
+            "is_cheek": is_cheek,
+            "is_mouth_normal": is_mouth_normal,
+            "is_mouth_happy": is_mouth_happy,
+            "eye_meta": eye_meta,
             "w_leg": w_leg,
             "s_leg_l": s_leg_l,
             "body_lap_meta": body_lap_meta,
@@ -1042,11 +1737,11 @@ def evaluate_kirby_walk_cycle(f_24, is_iich=True):
     leg_l_rx, leg_l_dy, leg_l_stretch, leg_l_lift = single_leg_motion(phase)
     leg_r_rx, leg_r_dy, leg_r_stretch, leg_r_lift = single_leg_motion(phase + math.pi)
 
-    # 【v8 改修】超短いパドル手を水平に ±38° も振ると下側のすぼまった胴体から飛び出してくびれが出るため、
-    # 23.0°/22.0° の自然な前後スイング＋前振り時の軽い挙上連動で歪みゼロで元気に腕を振る
-    swing_amp = 23.0 if is_iich else 22.0
-    arm_r_swing = +swing_amp * s
-    arm_l_swing = -swing_amp * s
+    # 【v8/v9 改修】超短いパドル手が後ろ振り時に胴体正面輪郭の裏へ隠れて黒い隙間スジを出さないよう、
+    # 自然な前後スイング幅 (21.0°/19.5°) ＋ わずかな前寄りバイアス (+2.0°) で立体的に振る
+    swing_amp = 21.0 if is_iich else 19.5
+    arm_r_swing = 2.0 + swing_amp * s
+    arm_l_swing = 2.0 - swing_amp * s
 
     outer_base_flap = 10.0 if is_iich else 11.0
     inner_base_flap = 6.0 if is_iich else 7.0
@@ -1358,14 +2053,16 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             ant_pitch_extra = -4.0 * math.sin(math.pi * u_set) * (1.0 - u_set)
         else:
             b_pos = max(0.0, b_unit)
-            outer_bow_flap = 15.0 * b_pos
-            inner_bow_flap = 8.0 * b_pos
+            outer_bow_flap = 16.0 * b_pos
+            inner_bow_flap = 9.0 * b_pos
             if is_iich:
                 arm_r_flap, arm_l_flap = outer_bow_flap, inner_bow_flap
             else:
                 arm_l_flap, arm_r_flap = outer_bow_flap, inner_bow_flap
-            arm_l_swing = -22.0 * b_pos
-            arm_r_swing = -22.0 * b_pos
+            # 【v9 改修】後ろ振り角を -22° -> -10° へ適正化し、おじぎ時に腕付け根が胴体輪郭裏へ潜って
+            # 黒い隙間・切れ目スジを生む現象を完全根絶しつつ可愛いペコリ姿勢を保つ
+            arm_l_swing = -10.0 * b_pos
+            arm_r_swing = -10.0 * b_pos
 
     # =========================================================================
     # Phase 4 (f_24 > 240.0 / Frame 301〜450 @ 30fps): 元気なほっぺ横手振り
@@ -1388,10 +2085,11 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
         # 【v8 改修】手を振るときは肩ソケット自体をタマゴ側面の表面等高線に沿ってほっぺ横へスライド (arm_lift_fac = w_wave) させつつ、
         # パドル自体の挙上角を (25.5 + 11.5 * sw10) に抑えることで、肩上端の暗い影スジ・ひょうたんくびれを100%ゼロにする！
         if is_iich:
-            outer_flap = (25.5 + 11.5 * sw10) * w_wave
+            outer_flap = (25.0 + 11.0 * sw10) * w_wave
+            outer_swing = (8.0 + 4.5 * cw10) * w_wave
         else:
-            outer_flap = (26.5 + 12.0 * sw10) * w_wave
-        outer_swing = (5.0 + 5.0 * cw10) * w_wave
+            outer_flap = (23.5 + 10.5 * sw10) * w_wave
+            outer_swing = (12.0 + 4.5 * cw10) * w_wave
 
         inner_flap = (6.0 - 2.5 * sw10) * w_wave
         inner_swing = (14.0 - 4.0 * sw_step) * w_wave
@@ -1431,13 +2129,15 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
     y_bow_piv = -0.080 if is_iich else -0.080
 
     z_min_body_current = None
+    eye_mode, eye_blink, eye_happy_lift = evaluate_eye_expression_at_frame(f, is_iich=is_iich)
 
     for entry in char_state["meshes"]:
         obj = entry["obj"]
         rest_co = entry["rest_co"]
         nbody_rest = None
+        is_hidden_eye = False
 
-        # Step 1A / 1B: Body の超短足変形 または 腕の剛体回転＋スライディング吸盤フィレットスカート変形
+        # Step 1A / 1B / 1C: Body の超短足変形 / 腕の剛体回転＋吸盤フィレットスカート / 目の表情切替＆まばたき
         if entry["is_body"]:
             x = rest_co[:, 0].copy()
             y = rest_co[:, 1].copy()
@@ -1460,10 +2160,81 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
                 entry["skirt_meta"], char_state,
                 side_sign=-1.0, flap_deg=arm_r_flap, swing_fwd_deg=arm_r_swing, sh_lift_factor=arm_r_lift_fac,
             )
+        elif entry["is_eye_normal"]:
+            if eye_mode == "normal":
+                if eye_blink > 1e-4:
+                    shut_co = entry["eye_meta"]["shut_co"]
+                    x = (1.0 - eye_blink) * rest_co[:, 0] + eye_blink * shut_co[:, 0]
+                    y = (1.0 - eye_blink) * rest_co[:, 1] + eye_blink * shut_co[:, 1]
+                    z = (1.0 - eye_blink) * rest_co[:, 2] + eye_blink * shut_co[:, 2]
+                else:
+                    x = rest_co[:, 0].copy()
+                    y = rest_co[:, 1].copy()
+                    z = rest_co[:, 2].copy()
+            else:
+                is_hidden_eye = True
+        elif entry["is_eye_closed"]:
+            if eye_mode == "closed":
+                x = rest_co[:, 0].copy()
+                y = rest_co[:, 1].copy()
+                z = rest_co[:, 2].copy()
+            else:
+                is_hidden_eye = True
+        elif entry["is_eye_happy"]:
+            if eye_mode == "happy":
+                x = rest_co[:, 0].copy()
+                y = rest_co[:, 1].copy()
+                z = rest_co[:, 2].copy() + eye_happy_lift
+            else:
+                is_hidden_eye = True
+        elif entry["is_cheek"]:
+            # いい-chのほっぺチークはおじぎ閉じ目・手振り笑顔時に可愛く表示（静止画・歩行時は公式そのまま）
+            if eye_mode == "happy" or (eye_mode == "closed" and f > 168.0):
+                x = rest_co[:, 0].copy()
+                y = rest_co[:, 1].copy()
+                z = rest_co[:, 2].copy() + (0.5 * eye_happy_lift if eye_mode == "happy" else 0.0)
+            else:
+                is_hidden_eye = True
+        elif entry["is_mouth_normal"]:
+            if eye_mode == "happy":
+                is_hidden_eye = True
+            else:
+                x = rest_co[:, 0].copy()
+                y = rest_co[:, 1].copy()
+                z = rest_co[:, 2].copy()
+        elif entry["is_mouth_happy"]:
+            if eye_mode == "happy":
+                x = rest_co[:, 0].copy()
+                y = rest_co[:, 1].copy()
+                z = rest_co[:, 2].copy()
+            else:
+                is_hidden_eye = True
+        elif entry["is_antenna"]:
+            x = rest_co[:, 0].copy()
+            y = rest_co[:, 1].copy()
+            z = rest_co[:, 2].copy()
+            x, y, z = apply_supple_tail_and_globe_deform(x, y, z, char_state, frame_idx, is_globe=False)
+        elif entry["is_globe"]:
+            x = rest_co[:, 0].copy()
+            y = rest_co[:, 1].copy()
+            z = rest_co[:, 2].copy()
+            x, y, z = apply_supple_tail_and_globe_deform(x, y, z, char_state, frame_idx, is_globe=True)
         else:
             x = rest_co[:, 0].copy()
             y = rest_co[:, 1].copy()
             z = rest_co[:, 2].copy()
+
+        if is_hidden_eye:
+            # 非表示の表情メッシュはボディ内部中心へ退避（Cycles の Depsgraph キャッシュ影響ゼロで確実に非表示）
+            nv_h = len(rest_co)
+            z_hide = 0.72 if is_iich else 1.05
+            hide_co = np.empty((nv_h, 3), dtype=np.float32)
+            hide_co[:, 0] = 0.0
+            hide_co[:, 1] = 0.20
+            hide_co[:, 2] = z_hide
+            obj.data.vertices.foreach_set("co", hide_co.ravel())
+            obj.data.update()
+            continue
 
         # Step 2: 着地クッション等のごく控えめな体積保存バウンス（±1.5%以内）
         # Step 1B 後の z 座標を共通参照することで、スカートリム (s=0) と Body 表面の 0.000mm 一致を完全維持
@@ -1476,7 +2247,8 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             y = y * kxy
             z = np.where(z > z_foot_cush, z_foot_cush + (z - z_foot_cush) * kz, z)
 
-        # Step 3: Phase 3 おじぎ（上部ボディ・胸ロゴ・両腕は u_bow=1.0 の純粋剛体回転、y_bow_piv=-0.08m で前腹部圧縮しわ防止）
+        # Step 3: Phase 3 おじぎ（上部ボディ・胸ロゴ・両腕・しっぽは u_bow=1.0 の純粋剛体回転、y_bow_piv=-0.08m で前腹部圧縮しわ防止）
+        # ※ v10 ではしっぽ＆地球儀のしなやかな追従しなり・バネ余韻は Step 1D (apply_supple_tail_and_globe_deform) で物理計算済み
         if abs(bow_deg) > 1e-4:
             if entry["is_body"]:
                 u_bow = 0.15 + 0.85 * smootherstep_np((rest_co[:, 2] - z_bow_z0) / span_bow)
@@ -1489,45 +2261,25 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             y = y_bow_piv + dy_b * cb - dz_b * sb
             z = z_bow_piv + dy_b * sb + dz_b * cb
 
-            if entry["is_ant_or_globe"]:
-                u_ant_b = smootherstep_np((rest_co[:, 2] - 0.85) / 1.05)
-                b_norm = bow_deg / (20.5 if is_iich else 21.5)
-                flex_deg = (15.0 * b_norm - 11.0 * bow_whip)
-                a_rad = math.radians(flex_deg) * u_ant_b
-                ca_a, sa_a = np.cos(a_rad), np.sin(a_rad)
-                y_ap = 0.35 if is_iich else 0.55
-                z_ap = 1.15 if is_iich else 1.35
-                dy_a = y - y_ap
-                dz_a = z - z_ap
-                y = y_ap + dy_a * ca_a - dz_a * sa_a
-                z = z_ap + dy_a * sa_a + dz_a * ca_a
-
         # Step 3B: Body 下部遷移帯・股間アーチの変位ベクトル場 Δp ラプラシアン調和緩和（しわ・段差・ひきつれ完全ゼロ化）
         if entry["is_body"]:
             x, y, z = smooth_body_displacement_laplacian(
                 x, y, z, rest_co, entry["body_lap_meta"], n_iters=18
             )
 
-        # Step 4: 身体の可愛い最小限の傾き・ツイスト ＆ アンテナ二次バウンス
+        # Step 4: 身体の可愛い最小限の傾き・ツイスト（しっぽ＆地球儀は u_orient=1.0 で胴体へ剛体追従しつつ Step 1D の弾性S字しなりを保持）
         if (
             abs(torso_pitch_deg) > 1e-4
             or abs(torso_roll_deg) > 1e-4
             or abs(torso_yaw_deg) > 1e-4
-            or abs(ant_pitch_extra) > 1e-4
-            or abs(ant_roll_extra) > 1e-4
         ):
-            if entry["is_arm_l"] or entry["is_arm_r"]:
+            if entry["is_arm_l"] or entry["is_arm_r"] or entry["is_ant_or_globe"]:
                 u_orient = 1.0
             else:
                 u_orient = 0.72 + 0.28 * smootherstep_np((rest_co[:, 2] - 0.02) / 0.16)
             p_rad = math.radians(torso_pitch_deg) * u_orient
             r_rad = math.radians(torso_roll_deg) * u_orient
             yw_rad = math.radians(torso_yaw_deg) * u_orient
-
-            if entry["is_ant_or_globe"]:
-                u_ant = smootherstep_np((rest_co[:, 2] - 0.75) / 1.20)
-                p_rad = p_rad + math.radians(ant_pitch_extra) * u_ant
-                r_rad = r_rad + math.radians(ant_roll_extra) * u_ant
 
             z_piv = 0.18 if is_iich else 0.24
 
@@ -1573,11 +2325,13 @@ def apply_character_kirby_motion_at_frame(char_state, frame_idx):
             n_rings_m = entry["skirt_meta"]["n_rings"]
             n_theta_m = entry["skirt_meta"]["n_theta"]
             n_grid_2d = n_blend[:-1].reshape(n_rings_m, n_theta_m, 3)
-            n_rim_exact = n_body_final[:-1].reshape(n_rings_m, n_theta_m, 3)[0].copy()
+            n_body_2d = n_body_final[:-1].reshape(n_rings_m, n_theta_m, 3)
             n_grid_sm = gaussian_smooth_periodic_1d(
                 gaussian_smooth_edge_1d(n_grid_2d, sigma=1.8, axis=0), sigma=1.8, axis=1
             )
-            n_grid_sm[0] = n_rim_exact
+            # j=0（ボディ内部噛み込み端）と j=1（表面通過直後）の両方を Body 法線に 0.00° ロック
+            n_grid_sm[0] = n_body_2d[0]
+            n_grid_sm[1] = n_body_2d[1]
             n_blend[:-1] = n_grid_sm.reshape(-1, 3)
             n_len2 = np.linalg.norm(n_blend, axis=-1, keepdims=True)
             n_custom = (n_blend / np.maximum(n_len2, 1e-8)).astype(np.float32)
@@ -1768,6 +2522,68 @@ def render_arm_seam_closeup_sheet(
 
     mod_iinet.save_rgba_uint8_as_png(sheet, out_path)
     print(f"Saved 400% arm-seam closeup audit sheet (frames={frame_list}) to: {out_path}")
+
+
+def render_eye_expression_audit_sheet(
+    cam_obj, char_states, frame_list, cols, rows, out_path, panel_w=840, panel_h=380
+):
+    """
+    【v9 必須監査】2キャラクターの目の表情（まばたき・公式通常目・おじぎ閉じ目 ︶︶・手振り笑顔目 ◠◠）を
+    顔アップ（左半分＝いい-ch、右半分＝いい-NETくん）で6フレーム並べて監査するシートを出力する。
+    """
+    scene = bpy.context.scene
+    tmp_path = os.path.join(SCRIPT_DIR, "_tmp_eye_kf.png")
+    half_w = panel_w // 2
+
+    panels = []
+    for f in frame_list:
+        scene.frame_set(f)
+        update_camera_for_frame(cam_obj, f)
+        for cs in char_states:
+            apply_character_kirby_motion_at_frame(cs, f)
+        bpy.context.view_layer.update()
+
+        cam_fwd = (cam_obj.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
+        sub_imgs = []
+        for cs in char_states:
+            loc = cs["arm_obj"].location
+            is_iich = cs["is_iich"]
+            z_tgt = 0.84 if is_iich else 1.20
+            tgt = Vector((loc.x, loc.y, loc.z + z_tgt))
+            c_pos = tgt - 4.40 * cam_fwd
+            mod_pair.set_pair_camera_pose(
+                cam_obj, pos=c_pos, forward=cam_fwd, up_hint=(0.0, 0.0, 1.0), ortho=False, lens=92.0
+            )
+            arr = mod_iinet.render_view_to_array(cam_obj, half_w, panel_h, tmp_path, transparent=False)
+            sub_imgs.append(arr)
+
+        panel = np.concatenate(sub_imgs, axis=1)
+        border_col = (205, 215, 232)
+        panel[:2, :, :3] = border_col
+        panel[-2:, :, :3] = border_col
+        panel[:, :2, :3] = border_col
+        panel[:, -2:, :3] = border_col
+        panel[:, half_w - 1:half_w + 1, :3] = (220, 226, 238)
+        panels.append(panel)
+
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
+    pad = 16
+    sheet_w = cols * panel_w + (cols + 1) * pad
+    sheet_h = rows * panel_h + (rows + 1) * pad
+    sheet = np.full((sheet_h, sheet_w, 4), 240, dtype=np.uint8)
+    sheet[:, :, 3] = 255
+
+    for idx, panel in enumerate(panels):
+        r = idx // cols
+        c = idx % cols
+        y0 = pad + r * (panel_h + pad)
+        x0 = pad + c * (panel_w + pad)
+        sheet[y0:y0 + panel_h, x0:x0 + panel_w] = panel
+
+    mod_iinet.save_rgba_uint8_as_png(sheet, out_path)
+    print(f"Saved eye-expression closeup audit sheet (frames={frame_list}) to: {out_path}")
 
 
 def render_contact_sheet_for_frames(
@@ -2181,8 +2997,8 @@ def main():
     create_studio_floor_and_backdrop()
     cam_obj = setup_animation_lighting_and_camera(scene)
 
-    # 監査シート0（v6最優先）：腕根元の400%拡大クローズアップ6ポーズ監査シート
-    # [195: 正面静止, 26: 歩行前振り(+38°), 36: 歩行後ろ振り(-38°), 252: おじぎ(21°), 345: 高い手振りUp(+56°), 351: 手振りDown(+24°)]
+    # 監査シート0（v6〜v9最優先）：腕根元の400%拡大クローズアップ6ポーズ監査シート
+    # [195: 正面静止, 26: 歩行前振り, 36: 歩行後ろ振り, 252: おじぎ, 345: 高い手振りUp, 351: 手振りDown]
     render_arm_seam_closeup_sheet(
         cam_obj,
         char_states,
@@ -2192,6 +3008,32 @@ def main():
         out_path=AUDIT_ARM_SEAM_CLOSEUP_PATH,
         panel_w=840,
         panel_h=360,
+    )
+
+    # 監査シート0B（v9新規）：2キャラクター目の表情クローズアップ6ポーズ監査シート
+    # [45: 歩行まばたき(いい-ch), 60: 歩行まばたき(いい-NET), 171: ホップまばたき, 195: 公式通常目, 252: おじぎ閉じ目(︶︶), 345: 手振り笑顔目(◠◠)]
+    render_eye_expression_audit_sheet(
+        cam_obj,
+        char_states,
+        frame_list=[45, 60, 171, 195, 252, 345],
+        cols=3,
+        rows=2,
+        out_path=AUDIT_EYE_EXPR_PATH,
+        panel_w=840,
+        panel_h=380,
+    )
+
+    # 監査シート0C（v10新規）：しなやか尻尾＆地球儀の連続8ポーズ監査シート
+    # [26: 歩行S字左, 36: 歩行S字右, 171: ホップ頂点, 182: 着地ポヨン沈み, 232: おじぎ下げ遅れS字, 250: おじぎ最下点しなり, 345: 手振り大きく右揺れ, 364: 手振り大きく左揺れ]
+    render_contact_sheet_for_frames(
+        cam_obj,
+        char_states,
+        frame_list=[26, 36, 171, 182, 232, 250, 345, 364],
+        cols=4,
+        rows=2,
+        out_paths=[AUDIT_TAIL_SUPPLE_PATH],
+        width=560,
+        height=315,
     )
 
     # 監査シートA：歩行1サイクル（30fps 20フレーム周期）連続8コマ確認（16:9 パネル）

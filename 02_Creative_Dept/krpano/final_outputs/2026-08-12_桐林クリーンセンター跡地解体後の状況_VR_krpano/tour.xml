@@ -1,0 +1,322 @@
+<krpano version="1.24" title="桐林クリーンセンター跡地 解体後の状況 VRツアー">
+
+	<include url="skin/vtourskin.xml" />
+	<include url="plugins/showtext.xml" />
+
+	<!-- High-end skin settings with GSI Aerial Map, WebVR, Gyro, Tooltips, and Smooth Blend -->
+	<skin_settings maps="true"
+	               maps_type="gsi_photo"
+	               maps_bing_api_key=""
+	               maps_google_api_key=""
+	               maps_zoombuttons="true"
+	               maps_loadonfirstuse="false"
+	               gyro="true"
+	               gyro_keeplookingdirection="false"
+	               webvr="true"
+	               webvr_keeplookingdirection="true"
+	               webvr_prev_next_hotspots="true"
+	               autotour="false"
+	               littleplanetintro="false"
+	               followmousecontrol="false"
+	               title="false"
+	               thumbs="true"
+	               thumbs_width="136" thumbs_height="86" thumbs_padding="10" thumbs_crop="0|40|240|160"
+	               thumbs_opened="false"
+	               thumbs_text="true"
+	               thumbs_dragging="true"
+	               thumbs_onhoverscrolling="false"
+	               thumbs_scrollbuttons="true"
+	               thumbs_scrollindicator="true"
+	               thumbs_loop="true"
+	               tooltips_buttons="true"
+	               tooltips_thumbs="true"
+	               tooltips_hotspots="false"
+	               tooltips_mapspots="true"
+	               deeplinking="true"
+	               loadscene_flags="MERGE"
+	               loadscene_blend="OPENBLEND(0.65, 0.0, 0.75, 0.05, easeOutQuad)"
+	               loadscene_blend_prev="SLIDEBLEND(0.55, 180, 0.75, easeOutQuad)"
+	               loadscene_blend_next="SLIDEBLEND(0.55,   0, 0.75, easeOutQuad)"
+	               loadingtext="高精細パノラマ読込中..."
+	               layout_width="100%"
+	               layout_maxwidth="920"
+	               controlbar_width="-24"
+	               controlbar_height="42"
+	               controlbar_offset="16"
+	               controlbar_offset_closed="-42"
+	               controlbar_overlap.no-fractionalscaling="10"
+	               controlbar_overlap.fractionalscaling="0"
+	               design_skin_images="vtourskin.png"
+	               design_bgcolor="0x0F172A"
+	               design_bgalpha="0.86"
+	               design_bgborder="1 0x38BDF8 0.35"
+	               design_bgroundedge="10"
+	               design_bgshadow="0 8 24 0x000000 0.55"
+	               design_thumbborder_bgborder="3 0x00E5FF 1.0"
+	               design_thumbborder_padding="2"
+	               design_thumbborder_bgroundedge="6"
+	               design_text_css="color:#F8FAFC; font-family:'Meiryo', 'Hiragino Sans', sans-serif; font-weight:600;"
+	               design_text_shadow="1"
+	               />
+
+	<!-- Custom 3D Spatial Hotspot Style with Distance, Elevation Diff & Hover Preview -->
+	<style name="hs_spatial_nav"
+	       type="text"
+	       edge="center"
+	       distorted="false"
+	       depth="1000"
+	       scale="1.0"
+	       alpha="0.96"
+	       bg="true"
+	       bgcolor="0x0F172A"
+	       bgalpha="0.88"
+	       bgborder="2 0x38BDF8 0.90"
+	       bgroundedge="18"
+	       bgshadow="0 4 16 0x000000 0.65"
+	       padding="7 14 7 14"
+	       css="color:#FFFFFF; font-family:'Meiryo','Hiragino Sans',sans-serif; font-size:12px; font-weight:700; text-align:center; line-height:1.35;"
+	       txtshadow="0 1 3 0x000000 0.9"
+	       onover="tween(scale, 1.14, 0.18, easeOutBack); set(bgborder, '2 0x00E5FF 1.0'); set(bgcolor, 0x1E293B); hs_show_thumb_preview(get(name), get(target_thumb), get(target_title), get(dist_label), get(dz_label));"
+	       onout="tween(scale, 1.0, 0.18, easeOutQuad); set(bgborder, '2 0x38BDF8 0.90'); set(bgcolor, 0x0F172A); hs_hide_thumb_preview();"
+	       onclick="hs_spatial_click();"
+	       />
+
+	<!-- Floating Thumbnail Preview Card on Hotspot Hover -->
+	<layer name="hs_preview_card" keep="true" type="container" align="lefttop" edge="bottom" oy="-42" width="196" height="134" bgcolor="0x0F172A" bgalpha="0.94" bgborder="2 0x00E5FF 0.95" bgroundedge="12" bgshadow="0 8 24 0x000000 0.7" maskchildren="true" visible="false" alpha="0.0" enabled="false" zorder="99">
+		<layer name="hs_preview_img" type="image" url="" align="top" width="196" height="100" enabled="false" />
+		<layer name="hs_preview_caption" type="text" align="bottom" width="196" height="34" bg="true" bgcolor="0x090D16" bgalpha="0.95" css="color:#E2E8F0; font-family:'Meiryo',sans-serif; font-size:11px; font-weight:700; text-align:center;" vcenter="true" enabled="false" html="" />
+	</layer>
+
+	<action name="hs_show_thumb_preview" scope="local" args="hsname, thumburl, ttitle, distlbl, dzlbl">
+		if(!webvr.isenabled AND device.mouse,
+			set(global.layer[hs_preview_img].url, get(thumburl));
+			calc(global.layer[hs_preview_caption].html, ttitle + ' [span style="color:#38BDF8;"](' + distlbl + ' / ' + dzlbl + ')[/span]');
+			set(global.layer[hs_preview_card].visible, true);
+			tween(global.layer[hs_preview_card].alpha, 1.0, 0.15);
+			asyncloop(hotspot[get(hsname)].hovering,
+				copy(global.layer[hs_preview_card].x, mouse.stagex);
+				copy(global.layer[hs_preview_card].y, mouse.stagey);
+			);
+		);
+	</action>
+
+	<action name="hs_hide_thumb_preview">
+		tween(layer[hs_preview_card].alpha, 0.0, 0.12, default, set(layer[hs_preview_card].visible, false));
+	</action>
+
+	<!-- 3D Spatial Dolly Transition Action -->
+	<action name="hs_spatial_click" scope="local">
+		hs_hide_thumb_preview();
+		if(isvalue(caller.linkedscene),
+			copy(target_sc, caller.linkedscene);
+			copy(target_h, caller.target_hlookat);
+			copy(target_v, caller.target_vlookat);
+			copy(target_f, caller.target_fov);
+			caller.getcenter(ch, cv);
+			calc(move_depth, min(max(caller.dist_m * 10, 180), 750));
+			set3dtransition("sphere", get(ch), 0, get(move_depth), 0.45, 0, 0.0, 0.65, "easeOutQuad");
+			skin_loadscene(get(target_sc), BLEND(0.65, easeOutQuad));
+			if(target_h !== null, skin_lookat(get(target_h), get(target_v), get(target_f)); );
+		);
+	</action>
+
+	<!-- Bridge Events to HTML5 Telemetry HUD & Interactive Spatial Radar -->
+	<events name="hud_bridge_events" keep="true"
+	        onnewpano="js(onKrpanoSceneChange(get(xml.scene)));"
+	        onnewscene="js(onKrpanoSceneChange(get(xml.scene)));"
+	        onviewchange="js(onKrpanoViewChange(get(view.hlookat), get(view.vlookat), get(view.fov)));"
+	        />
+
+	<scene name="scene_01" title="01 正門前・入口分岐" onstart="" thumburl="panos/01.tiles/thumb.jpg" lat="35.47330850" lng="137.81369002" alt="498.08" mapzoom="17.6" heading="-89.0" east_m="75.30" north_m="-44.38" up_m="2.08" zone="北東・管理通路" capturedt="2026-08-12T10:27:08">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="2.25" vlookat="-2.33" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/01.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/01.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_01_01" style="hs_spatial_nav" ath="44.46" atv="-5.21" linkedscene="scene_02" target_title="02 北東側・管理通路（東）" target_thumb="panos/02.tiles/thumb.jpg" dist_m="39.2" dist_label="39.2m" dz_label="▲+3.6m" target_hlookat="146.46" target_vlookat="-1.8" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 02 北東側・管理通路（東）[br][span style='font-size:10px;color:#CBD5E1;']距離 39.2m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+3.6m[/span]" />
+		<hotspot name="hs_01_02" style="hs_spatial_nav" ath="11.94" atv="1.38" linkedscene="scene_11" target_title="11 跡地広場（入口・舗装側）" target_thumb="panos/11.tiles/thumb.jpg" dist_m="65.4" dist_label="65.4m" dz_label="▼-1.6m" target_hlookat="8.94" target_vlookat="0.5" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 11 跡地広場（入口・舗装側）[br][span style='font-size:10px;color:#CBD5E1;']距離 65.4m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-1.6m[/span]" />
+	</scene>
+
+	<scene name="scene_02" title="02 北東側・管理通路（東）" onstart="" thumburl="panos/02.tiles/thumb.jpg" lat="35.47355859" lng="137.81338778" alt="501.64" mapzoom="17.6" heading="169.0" east_m="47.90" north_m="-16.54" up_m="5.64" zone="北東・管理通路" capturedt="2026-08-12T10:28:15">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="104.25" vlookat="-2.33" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/02.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/02.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_02_01" style="hs_spatial_nav" ath="-33.54" atv="5.21" linkedscene="scene_01" target_title="01 正門前・入口分岐" target_thumb="panos/01.tiles/thumb.jpg" dist_m="39.2" dist_label="39.2m" dz_label="▼-3.6m" target_hlookat="-135.54" target_vlookat="1.8" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 01 正門前・入口分岐[br][span style='font-size:10px;color:#CBD5E1;']距離 39.2m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-3.6m[/span]" />
+		<hotspot name="hs_02_02" style="hs_spatial_nav" ath="132.48" atv="3.15" linkedscene="scene_03" target_title="03 北側・管理通路（中央）" target_thumb="panos/03.tiles/thumb.jpg" dist_m="29.0" dist_label="29.0m" dz_label="▼-1.6m" target_hlookat="117.48" target_vlookat="1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 03 北側・管理通路（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 29.0m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-1.6m[/span]" />
+		<hotspot name="hs_02_03" style="hs_spatial_nav" ath="98.77" atv="3.69" linkedscene="scene_10" target_title="10 跡地広場（北東・法面下）" target_thumb="panos/10.tiles/thumb.jpg" dist_m="24.7" dist_label="24.7m" dz_label="▼-1.6m" target_hlookat="-10.23" target_vlookat="1.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 10 跡地広場（北東・法面下）[br][span style='font-size:10px;color:#CBD5E1;']距離 24.7m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-1.6m[/span]" />
+		<hotspot name="hs_02_04" style="hs_spatial_nav" ath="81.03" atv="7.58" linkedscene="scene_11" target_title="11 跡地広場（入口・舗装側）" target_thumb="panos/11.tiles/thumb.jpg" dist_m="39.0" dist_label="39.0m" dz_label="▼-5.1m" target_hlookat="-23.97" target_vlookat="2.7" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 11 跡地広場（入口・舗装側）[br][span style='font-size:10px;color:#CBD5E1;']距離 39.0m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-5.1m[/span]" />
+		<hotspot name="hs_02_05" style="hs_spatial_nav" ath="160.12" atv="1.9" linkedscene="scene_09" target_title="09 北東角・法面上端（広場見下ろし）" target_thumb="panos/09.tiles/thumb.jpg" dist_m="48.1" dist_label="48.1m" dz_label="▼-1.6m" target_hlookat="109.12" target_vlookat="0.7" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 09 北東角・法面上端（広場見下ろし）[br][span style='font-size:10px;color:#CBD5E1;']距離 48.1m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-1.6m[/span]" />
+	</scene>
+
+	<scene name="scene_03" title="03 北側・管理通路（中央）" onstart="" thumburl="panos/03.tiles/thumb.jpg" lat="35.47369423" lng="137.81311576" alt="500.05" mapzoom="17.6" heading="-176.0" east_m="23.24" north_m="-1.44" up_m="4.05" zone="北東・管理通路" capturedt="2026-08-12T10:28:47">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="13.25" vlookat="-2.33" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/03.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/03.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_03_01" style="hs_spatial_nav" ath="-62.52" atv="-3.15" linkedscene="scene_02" target_title="02 北東側・管理通路（東）" target_thumb="panos/02.tiles/thumb.jpg" dist_m="29.0" dist_label="29.0m" dz_label="▲+1.6m" target_hlookat="-47.52" target_vlookat="-1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 02 北東側・管理通路（東）[br][span style='font-size:10px;color:#CBD5E1;']距離 29.0m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+1.6m[/span]" />
+		<hotspot name="hs_03_02" style="hs_spatial_nav" ath="114.43" atv="-0.0" linkedscene="scene_04" target_title="04 北側・管理通路（高台）" target_thumb="panos/04.tiles/thumb.jpg" dist_m="54.9" dist_label="54.9m" dz_label="±0.0m" target_hlookat="121.43" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 04 北側・管理通路（高台）[br][span style='font-size:10px;color:#CBD5E1;']距離 54.9m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_03_03" style="hs_spatial_nav" ath="-4.0" atv="-0.0" linkedscene="scene_10" target_title="10 跡地広場（北東・法面下）" target_thumb="panos/10.tiles/thumb.jpg" dist_m="16.1" dist_label="16.1m" dz_label="±0.0m" target_hlookat="-98.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 10 跡地広場（北東・法面下）[br][span style='font-size:10px;color:#CBD5E1;']距離 16.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_03_04" style="hs_spatial_nav" ath="176.0" atv="-0.0" linkedscene="scene_09" target_title="09 北東角・法面上端（広場見下ろし）" target_thumb="panos/09.tiles/thumb.jpg" dist_m="26.1" dist_label="26.1m" dz_label="±0.0m" target_hlookat="140.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 09 北東角・法面上端（広場見下ろし）[br][span style='font-size:10px;color:#CBD5E1;']距離 26.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+	</scene>
+
+	<scene name="scene_04" title="04 北側・管理通路（高台）" onstart="" thumburl="panos/04.tiles/thumb.jpg" lat="35.47392896" lng="137.81258342" alt="500.05" mapzoom="17.6" heading="177.0" east_m="-25.02" north_m="24.69" up_m="4.05" zone="北東・管理通路" capturedt="2026-08-12T10:29:51">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="0.94" vlookat="7.94" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/04.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/04.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_04_01" style="hs_spatial_nav" ath="-58.57" atv="-0.0" linkedscene="scene_03" target_title="03 北側・管理通路（中央）" target_thumb="panos/03.tiles/thumb.jpg" dist_m="54.9" dist_label="54.9m" dz_label="±0.0m" target_hlookat="-65.57" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 03 北側・管理通路（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 54.9m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_04_02" style="hs_spatial_nav" ath="93.0" atv="-0.0" linkedscene="scene_08" target_title="08 北西角・管理通路" target_thumb="panos/08.tiles/thumb.jpg" dist_m="47.1" dist_label="47.1m" dz_label="±0.0m" target_hlookat="149.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 08 北西角・管理通路[br][span style='font-size:10px;color:#CBD5E1;']距離 47.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_04_03" style="hs_spatial_nav" ath="-29.4" atv="6.68" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="34.8" dist_label="34.8m" dz_label="▼-4.0m" target_hlookat="-120.4" target_vlookat="2.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 34.8m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+		<hotspot name="hs_04_04" style="hs_spatial_nav" ath="-87.0" atv="-0.0" linkedscene="scene_09" target_title="09 北東角・法面上端（広場見下ろし）" target_thumb="panos/09.tiles/thumb.jpg" dist_m="48.3" dist_label="48.3m" dz_label="±0.0m" target_hlookat="-130.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 09 北東角・法面上端（広場見下ろし）[br][span style='font-size:10px;color:#CBD5E1;']距離 48.3m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+	</scene>
+
+	<scene name="scene_05" title="05 西側・管理通路（北）" onstart="" thumburl="panos/05.tiles/thumb.jpg" lat="35.47373933" lng="137.81206421" alt="500.05" mapzoom="17.6" heading="89.0" east_m="-72.09" north_m="3.58" up_m="4.05" zone="北西・西管理通路" capturedt="2026-08-12T10:31:01">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="31.85" vlookat="11.57" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/05.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/05.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_05_01" style="hs_spatial_nav" ath="-89.0" atv="-0.0" linkedscene="scene_08" target_title="08 北西角・管理通路" target_thumb="panos/08.tiles/thumb.jpg" dist_m="21.1" dist_label="21.1m" dz_label="±0.0m" target_hlookat="-121.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 08 北西角・管理通路[br][span style='font-size:10px;color:#CBD5E1;']距離 21.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_05_02" style="hs_spatial_nav" ath="131.66" atv="-0.0" linkedscene="scene_07" target_title="07 西側・管理通路（南）" target_thumb="panos/07.tiles/thumb.jpg" dist_m="13.7" dist_label="13.7m" dz_label="±0.0m" target_hlookat="140.66" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 07 西側・管理通路（南）[br][span style='font-size:10px;color:#CBD5E1;']距離 13.7m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+	</scene>
+
+	<scene name="scene_06" title="06 西側・管理通路（北・別カット）" onstart="" thumburl="panos/06.tiles/thumb.jpg" lat="35.47373933" lng="137.81206421" alt="500.05" mapzoom="17.6" heading="89.0" east_m="-72.09" north_m="3.58" up_m="4.05" zone="北西・西管理通路" capturedt="2026-08-12T10:31:25" skipthumb="true">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="31.85" vlookat="11.57" fovtype="MFOV" fov="110.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/06.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/06.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_06_01" style="hs_spatial_nav" ath="-89.0" atv="-0.0" linkedscene="scene_08" target_title="08 北西角・管理通路" target_thumb="panos/08.tiles/thumb.jpg" dist_m="21.1" dist_label="21.1m" dz_label="±0.0m" target_hlookat="-121.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 08 北西角・管理通路[br][span style='font-size:10px;color:#CBD5E1;']距離 21.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_06_02" style="hs_spatial_nav" ath="131.66" atv="-0.0" linkedscene="scene_07" target_title="07 西側・管理通路（南）" target_thumb="panos/07.tiles/thumb.jpg" dist_m="13.7" dist_label="13.7m" dz_label="±0.0m" target_hlookat="140.66" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 07 西側・管理通路（南）[br][span style='font-size:10px;color:#CBD5E1;']距離 13.7m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_06_03" style="hs_spatial_nav" ath="8.05" atv="3.51" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="66.2" dist_label="66.2m" dz_label="▼-4.0m" target_hlookat="-170.95" target_vlookat="1.2" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 66.2m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+	</scene>
+
+	<scene name="scene_07" title="07 西側・管理通路（南）" onstart="" thumburl="panos/07.tiles/thumb.jpg" lat="35.47364626" lng="137.81196604" alt="500.05" mapzoom="17.6" heading="80.0" east_m="-80.99" north_m="-6.78" up_m="4.05" zone="北西・西管理通路" capturedt="2026-08-12T10:32:02">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="9.33" vlookat="10.04" fovtype="MFOV" fov="100.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/07.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/07.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_07_01" style="hs_spatial_nav" ath="-39.34" atv="-0.0" linkedscene="scene_05" target_title="05 西側・管理通路（北）" target_thumb="panos/05.tiles/thumb.jpg" dist_m="13.7" dist_label="13.7m" dz_label="±0.0m" target_hlookat="-48.34" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 05 西側・管理通路（北）[br][span style='font-size:10px;color:#CBD5E1;']距離 13.7m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_07_02" style="hs_spatial_nav" ath="8.27" atv="3.11" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="74.7" dist_label="74.7m" dz_label="▼-4.0m" target_hlookat="-179.73" target_vlookat="1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 74.7m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+		<hotspot name="hs_07_03" style="hs_spatial_nav" ath="77.47" atv="-0.0" linkedscene="scene_13" target_title="13 南西側・車庫前広場" target_thumb="panos/13.tiles/thumb.jpg" dist_m="40.8" dist_label="40.8m" dz_label="±0.0m" target_hlookat="110.47" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 13 南西側・車庫前広場[br][span style='font-size:10px;color:#CBD5E1;']距離 40.8m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+	</scene>
+
+	<scene name="scene_08" title="08 北西角・管理通路" onstart="" thumburl="panos/08.tiles/thumb.jpg" lat="35.47392896" lng="137.81206421" alt="500.05" mapzoom="17.6" heading="121.0" east_m="-72.09" north_m="24.69" up_m="4.05" zone="北西・西管理通路" capturedt="2026-08-12T10:33:11">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="-0.0" vlookat="-0.0" fovtype="MFOV" fov="100.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/08.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/08.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_08_01" style="hs_spatial_nav" ath="-31.0" atv="-0.0" linkedscene="scene_04" target_title="04 北側・管理通路（高台）" target_thumb="panos/04.tiles/thumb.jpg" dist_m="47.1" dist_label="47.1m" dz_label="±0.0m" target_hlookat="-87.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 04 北側・管理通路（高台）[br][span style='font-size:10px;color:#CBD5E1;']距離 47.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_08_02" style="hs_spatial_nav" ath="59.0" atv="-0.0" linkedscene="scene_05" target_title="05 西側・管理通路（北）" target_thumb="panos/05.tiles/thumb.jpg" dist_m="21.1" dist_label="21.1m" dz_label="±0.0m" target_hlookat="91.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 05 西側・管理通路（北）[br][span style='font-size:10px;color:#CBD5E1;']距離 21.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+	</scene>
+
+	<scene name="scene_09" title="09 北東角・法面上端（広場見下ろし）" onstart="" thumburl="panos/09.tiles/thumb.jpg" lat="35.47392896" lng="137.81311576" alt="500.05" mapzoom="17.6" heading="220.0" east_m="23.24" north_m="24.69" up_m="4.05" zone="北東・管理通路" capturedt="2026-08-12T10:34:35">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="0.0" vlookat="8.0" fovtype="MFOV" fov="105.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/09.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/09.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_09_01" style="hs_spatial_nav" ath="50.0" atv="-0.0" linkedscene="scene_04" target_title="04 北側・管理通路（高台）" target_thumb="panos/04.tiles/thumb.jpg" dist_m="48.3" dist_label="48.3m" dz_label="±0.0m" target_hlookat="93.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 04 北側・管理通路（高台）[br][span style='font-size:10px;color:#CBD5E1;']距離 48.3m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_09_02" style="hs_spatial_nav" ath="-70.88" atv="-1.9" linkedscene="scene_02" target_title="02 北東側・管理通路（東）" target_thumb="panos/02.tiles/thumb.jpg" dist_m="48.1" dist_label="48.1m" dz_label="▲+1.6m" target_hlookat="-19.88" target_vlookat="-0.7" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 02 北東側・管理通路（東）[br][span style='font-size:10px;color:#CBD5E1;']距離 48.1m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+1.6m[/span]" />
+		<hotspot name="hs_09_03" style="hs_spatial_nav" ath="-40.0" atv="-0.0" linkedscene="scene_03" target_title="03 北側・管理通路（中央）" target_thumb="panos/03.tiles/thumb.jpg" dist_m="26.1" dist_label="26.1m" dz_label="±0.0m" target_hlookat="-4.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 03 北側・管理通路（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 26.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_09_04" style="hs_spatial_nav" ath="5.49" atv="5.55" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="41.9" dist_label="41.9m" dz_label="▼-4.0m" target_hlookat="-42.51" target_vlookat="1.9" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 41.9m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+	</scene>
+
+	<scene name="scene_10" title="10 跡地広場（北東・法面下）" onstart="" thumburl="panos/10.tiles/thumb.jpg" lat="35.47354996" lng="137.81311576" alt="500.05" mapzoom="17.6" heading="-82.0" east_m="23.24" north_m="-17.50" up_m="4.05" zone="跡地広場（解体範囲）" capturedt="2026-08-12T10:35:20">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="-8.57" vlookat="32.42" fovtype="MFOV" fov="100.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/10.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/10.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_10_01" style="hs_spatial_nav" ath="169.77" atv="-3.69" linkedscene="scene_02" target_title="02 北東側・管理通路（東）" target_thumb="panos/02.tiles/thumb.jpg" dist_m="24.7" dist_label="24.7m" dz_label="▲+1.6m" target_hlookat="-81.23" target_vlookat="-1.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 02 北東側・管理通路（東）[br][span style='font-size:10px;color:#CBD5E1;']距離 24.7m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+1.6m[/span]" />
+		<hotspot name="hs_10_02" style="hs_spatial_nav" ath="82.0" atv="-0.0" linkedscene="scene_03" target_title="03 北側・管理通路（中央）" target_thumb="panos/03.tiles/thumb.jpg" dist_m="16.1" dist_label="16.1m" dz_label="±0.0m" target_hlookat="176.0" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 03 北側・管理通路（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 16.1m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_10_03" style="hs_spatial_nav" ath="-54.39" atv="11.86" linkedscene="scene_11" target_title="11 跡地広場（入口・舗装側）" target_thumb="panos/11.tiles/thumb.jpg" dist_m="17.3" dist_label="17.3m" dz_label="▼-3.5m" target_hlookat="-50.39" target_vlookat="4.2" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 11 跡地広場（入口・舗装側）[br][span style='font-size:10px;color:#CBD5E1;']距離 17.3m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-3.5m[/span]" />
+		<hotspot name="hs_10_04" style="hs_spatial_nav" ath="15.58" atv="7.12" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="32.7" dist_label="32.7m" dz_label="▼-4.0m" target_hlookat="25.58" target_vlookat="2.5" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 32.7m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+	</scene>
+
+	<scene name="scene_11" title="11 跡地広場（入口・舗装側）" onstart="" thumburl="panos/11.tiles/thumb.jpg" lat="35.47344001" lng="137.81298714" alt="496.50" mapzoom="17.6" heading="-86.0" east_m="11.58" north_m="-29.74" up_m="0.50" zone="跡地広場（解体範囲）" capturedt="2026-08-12T10:36:13">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="-3.97" vlookat="0.04" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/11.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/11.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_11_01" style="hs_spatial_nav" ath="-171.06" atv="-1.38" linkedscene="scene_01" target_title="01 正門前・入口分岐" target_thumb="panos/01.tiles/thumb.jpg" dist_m="65.4" dist_label="65.4m" dz_label="▲+1.6m" target_hlookat="-168.06" target_vlookat="-0.5" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 01 正門前・入口分岐[br][span style='font-size:10px;color:#CBD5E1;']距離 65.4m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+1.6m[/span]" />
+		<hotspot name="hs_11_02" style="hs_spatial_nav" ath="156.03" atv="-7.58" linkedscene="scene_02" target_title="02 北東側・管理通路（東）" target_thumb="panos/02.tiles/thumb.jpg" dist_m="39.0" dist_label="39.0m" dz_label="▲+5.1m" target_hlookat="-98.97" target_vlookat="-2.7" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 02 北東側・管理通路（東）[br][span style='font-size:10px;color:#CBD5E1;']距離 39.0m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+5.1m[/span]" />
+		<hotspot name="hs_11_03" style="hs_spatial_nav" ath="129.61" atv="-11.86" linkedscene="scene_10" target_title="10 跡地広場（北東・法面下）" target_thumb="panos/10.tiles/thumb.jpg" dist_m="17.3" dist_label="17.3m" dz_label="▲+3.5m" target_hlookat="125.61" target_vlookat="-4.2" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 10 跡地広場（北東・法面下）[br][span style='font-size:10px;color:#CBD5E1;']距離 17.3m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+3.5m[/span]" />
+		<hotspot name="hs_11_04" style="hs_spatial_nav" ath="50.38" atv="0.92" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="31.0" dist_label="31.0m" dz_label="▼-0.5m" target_hlookat="56.38" target_vlookat="0.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 31.0m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-0.5m[/span]" />
+	</scene>
+
+	<scene name="scene_12" title="12 跡地広場（中央）" onstart="" thumburl="panos/12.tiles/thumb.jpg" lat="35.47366648" lng="137.81278793" alt="496.00" mapzoom="17.6" heading="-92.0" east_m="-6.48" north_m="-4.53" up_m="0.00" zone="跡地広場（解体範囲）" capturedt="2026-08-12T10:36:59">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="2.1" vlookat="15.77" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/12.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/12.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_12_01" style="hs_spatial_nav" ath="176.06" atv="-7.72" linkedscene="scene_03" target_title="03 北側・管理通路（中央）" target_thumb="panos/03.tiles/thumb.jpg" dist_m="30.2" dist_label="30.2m" dz_label="▲+4.0m" target_hlookat="-99.94" target_vlookat="-2.7" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 03 北側・管理通路（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 30.2m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_02" style="hs_spatial_nav" ath="59.6" atv="-6.68" linkedscene="scene_04" target_title="04 北側・管理通路（高台）" target_thumb="panos/04.tiles/thumb.jpg" dist_m="34.8" dist_label="34.8m" dz_label="▲+4.0m" target_hlookat="150.6" target_vlookat="-2.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 04 北側・管理通路（高台）[br][span style='font-size:10px;color:#CBD5E1;']距離 34.8m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_03" style="hs_spatial_nav" ath="9.05" atv="-3.51" oy="0" linkedscene="scene_05" target_title="05 西側・管理通路（北）" target_thumb="panos/05.tiles/thumb.jpg" dist_m="66.2" dist_label="66.2m" dz_label="▲+4.0m" target_hlookat="-171.95" target_vlookat="-1.2" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 05 西側・管理通路（北）[br][span style='font-size:10px;color:#CBD5E1;']距離 66.2m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_04" style="hs_spatial_nav" ath="0.27" atv="-3.11" oy="58" linkedscene="scene_07" target_title="07 西側・管理通路（南）" target_thumb="panos/07.tiles/thumb.jpg" dist_m="74.7" dist_label="74.7m" dz_label="▲+4.0m" target_hlookat="-171.73" target_vlookat="-1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 07 西側・管理通路（南）[br][span style='font-size:10px;color:#CBD5E1;']距離 74.7m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_05" style="hs_spatial_nav" ath="26.01" atv="-3.23" oy="-58" linkedscene="scene_08" target_title="08 北西角・管理通路" target_thumb="panos/08.tiles/thumb.jpg" dist_m="71.9" dist_label="71.9m" dz_label="▲+4.0m" target_hlookat="173.01" target_vlookat="-1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 08 北西角・管理通路[br][span style='font-size:10px;color:#CBD5E1;']距離 71.9m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_06" style="hs_spatial_nav" ath="137.49" atv="-5.55" linkedscene="scene_09" target_title="09 北東角・法面上端（広場見下ろし）" target_thumb="panos/09.tiles/thumb.jpg" dist_m="41.9" dist_label="41.9m" dz_label="▲+4.0m" target_hlookat="-174.51" target_vlookat="-1.9" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 09 北東角・法面上端（広場見下ろし）[br][span style='font-size:10px;color:#CBD5E1;']距離 41.9m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_07" style="hs_spatial_nav" ath="-154.42" atv="-7.12" linkedscene="scene_10" target_title="10 跡地広場（北東・法面下）" target_thumb="panos/10.tiles/thumb.jpg" dist_m="32.7" dist_label="32.7m" dz_label="▲+4.0m" target_hlookat="-164.42" target_vlookat="-2.5" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 10 跡地広場（北東・法面下）[br][span style='font-size:10px;color:#CBD5E1;']距離 32.7m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_08" style="hs_spatial_nav" ath="-123.62" atv="-0.92" linkedscene="scene_11" target_title="11 跡地広場（入口・舗装側）" target_thumb="panos/11.tiles/thumb.jpg" dist_m="31.0" dist_label="31.0m" dz_label="▲+0.5m" target_hlookat="-129.62" target_vlookat="-0.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 11 跡地広場（入口・舗装側）[br][span style='font-size:10px;color:#CBD5E1;']距離 31.0m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+0.5m[/span]" />
+		<hotspot name="hs_12_09" style="hs_spatial_nav" ath="-32.14" atv="-3.26" oy="32" linkedscene="scene_13" target_title="13 南西側・車庫前広場" target_thumb="panos/13.tiles/thumb.jpg" dist_m="71.3" dist_label="71.3m" dz_label="▲+4.0m" target_hlookat="-171.14" target_vlookat="-1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 13 南西側・車庫前広場[br][span style='font-size:10px;color:#CBD5E1;']距離 71.3m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_12_10" style="hs_spatial_nav" ath="-35.46" atv="-4.23" oy="-46" linkedscene="scene_14" target_title="14 南西側・斜面高台（全景）" target_thumb="panos/14.tiles/thumb.jpg" dist_m="108.5" dist_label="108.5m" dz_label="▲+8.0m" target_hlookat="152.54" target_vlookat="-1.5" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 14 南西側・斜面高台（全景）[br][span style='font-size:10px;color:#CBD5E1;']距離 108.5m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+8.0m[/span]" />
+		<hotspot name="hs_12_11" style="hs_spatial_nav" ath="-45.4" atv="1.02" oy="62" linkedscene="scene_15" target_title="15 南側・上屋横スロープ" target_thumb="panos/15.tiles/thumb.jpg" dist_m="100.6" dist_label="100.6m" dz_label="▼-1.8m" target_hlookat="117.6" target_vlookat="0.4" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 15 南側・上屋横スロープ[br][span style='font-size:10px;color:#CBD5E1;']距離 100.6m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-1.8m[/span]" />
+	</scene>
+
+	<scene name="scene_13" title="13 南西側・車庫前広場" onstart="" thumburl="panos/13.tiles/thumb.jpg" lat="35.47330778" lng="137.81213845" alt="500.05" mapzoom="17.6" heading="47.0" east_m="-65.36" north_m="-44.46" up_m="4.05" zone="南西・斜面高台" capturedt="2026-08-12T10:38:11">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="-47.82" vlookat="-0.38" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/13.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/13.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_13_01" style="hs_spatial_nav" ath="-69.53" atv="-0.0" linkedscene="scene_07" target_title="07 西側・管理通路（南）" target_thumb="panos/07.tiles/thumb.jpg" dist_m="40.8" dist_label="40.8m" dz_label="±0.0m" target_hlookat="-102.53" target_vlookat="-0.0" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 07 西側・管理通路（南）[br][span style='font-size:10px;color:#CBD5E1;']距離 40.8m ｜ [/span][span style='font-size:10px;color:#94A3B8;']標高差 ±0.0m[/span]" />
+		<hotspot name="hs_13_02" style="hs_spatial_nav" ath="8.86" atv="3.26" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="71.3" dist_label="71.3m" dz_label="▼-4.0m" target_hlookat="147.86" target_vlookat="1.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 71.3m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+		<hotspot name="hs_13_03" style="hs_spatial_nav" ath="179.21" atv="-6.02" linkedscene="scene_14" target_title="14 南西側・斜面高台（全景）" target_thumb="panos/14.tiles/thumb.jpg" dist_m="37.6" dist_label="37.6m" dz_label="▲+4.0m" target_hlookat="146.21" target_vlookat="-2.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 14 南西側・斜面高台（全景）[br][span style='font-size:10px;color:#CBD5E1;']距離 37.6m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+4.0m[/span]" />
+		<hotspot name="hs_13_04" style="hs_spatial_nav" ath="148.14" atv="9.39" linkedscene="scene_15" target_title="15 南側・上屋横スロープ" target_thumb="panos/15.tiles/thumb.jpg" dist_m="35.8" dist_label="35.8m" dz_label="▼-5.8m" target_hlookat="90.14" target_vlookat="3.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 15 南側・上屋横スロープ[br][span style='font-size:10px;color:#CBD5E1;']距離 35.8m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-5.8m[/span]" />
+	</scene>
+
+	<scene name="scene_14" title="14 南西側・斜面高台（全景）" onstart="" thumburl="panos/14.tiles/thumb.jpg" lat="35.47307512" lng="137.81184040" alt="504.00" mapzoom="17.6" heading="80.0" east_m="-92.38" north_m="-70.36" up_m="8.00" zone="南西・斜面高台" capturedt="2026-08-12T10:39:32">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="10.19" vlookat="-4.81" fovtype="MFOV" fov="115.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/14.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/14.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_14_01" style="hs_spatial_nav" ath="-33.79" atv="6.02" linkedscene="scene_13" target_title="13 南西側・車庫前広場" target_thumb="panos/13.tiles/thumb.jpg" dist_m="37.6" dist_label="37.6m" dz_label="▼-4.0m" target_hlookat="-0.79" target_vlookat="2.1" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 13 南西側・車庫前広場[br][span style='font-size:10px;color:#CBD5E1;']距離 37.6m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-4.0m[/span]" />
+		<hotspot name="hs_14_02" style="hs_spatial_nav" ath="34.86" atv="26.57" linkedscene="scene_15" target_title="15 南側・上屋横スロープ" target_thumb="panos/15.tiles/thumb.jpg" dist_m="21.9" dist_label="21.9m" dz_label="▼-9.8m" target_hlookat="9.86" target_vlookat="9.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 15 南側・上屋横スロープ[br][span style='font-size:10px;color:#CBD5E1;']距離 21.9m ｜ [/span][span style='font-size:10px;color:#34D399;']標高差 ▼-9.8m[/span]" />
+	</scene>
+
+	<scene name="scene_15" title="15 南側・上屋横スロープ" onstart="" thumburl="panos/15.tiles/thumb.jpg" lat="35.47300109" lng="137.81203652" alt="494.20" mapzoom="17.6" heading="105.0" east_m="-74.60" north_m="-78.60" up_m="-1.80" zone="南西・斜面高台" capturedt="2026-08-12T10:40:39">
+		<control bouncinglimits="calc:image.cube ? true : false" />
+		<view hlookat="-69.12" vlookat="5.12" fovtype="MFOV" fov="100.0" maxpixelzoom="2.5" fovmin="35" fovmax="140" limitview="auto" />
+		<preview url="panos/15.tiles/preview.jpg" />
+		<image>
+			<cube url="panos/15.tiles/%s/l%l/%0v/l%l_%s_%0v_%0h.jpg" multires="512,768,1664,3200,6400" />
+		</image>
+		<hotspot name="hs_15_01" style="hs_spatial_nav" ath="-62.4" atv="-1.02" linkedscene="scene_12" target_title="12 跡地広場（中央）" target_thumb="panos/12.tiles/thumb.jpg" dist_m="100.6" dist_label="100.6m" dz_label="▲+1.8m" target_hlookat="134.6" target_vlookat="-0.4" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 12 跡地広場（中央）[br][span style='font-size:10px;color:#CBD5E1;']距離 100.6m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+1.8m[/span]" />
+		<hotspot name="hs_15_02" style="hs_spatial_nav" ath="-89.86" atv="-9.39" linkedscene="scene_13" target_title="13 南西側・車庫前広場" target_thumb="panos/13.tiles/thumb.jpg" dist_m="35.8" dist_label="35.8m" dz_label="▲+5.8m" target_hlookat="-31.86" target_vlookat="-3.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 13 南西側・車庫前広場[br][span style='font-size:10px;color:#CBD5E1;']距離 35.8m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+5.8m[/span]" />
+		<hotspot name="hs_15_03" style="hs_spatial_nav" ath="-170.14" atv="-26.57" linkedscene="scene_14" target_title="14 南西側・斜面高台（全景）" target_thumb="panos/14.tiles/thumb.jpg" dist_m="21.9" dist_label="21.9m" dz_label="▲+9.8m" target_hlookat="-145.14" target_vlookat="-9.3" target_fov="105.0" html="[span style='color:#38BDF8;font-size:13px;']⬢[/span] 14 南西側・斜面高台（全景）[br][span style='font-size:10px;color:#CBD5E1;']距離 21.9m ｜ [/span][span style='font-size:10px;color:#FBBF24;']標高差 ▲+9.8m[/span]" />
+	</scene>
+
+</krpano>
