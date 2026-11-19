@@ -216,10 +216,6 @@ SKILLS_TO_SYNC=(
   "audio-meeting-minutes"
   "auto-git-sync"
   "wordpress-avada-maintenance"
-  "adobe-illustrator"
-  "adobe-photoshop"
-  "adobe-premiere"
-  "adobe-aftereffects"
   "blender"
   "illustrator"
   "photoshop"
@@ -233,6 +229,10 @@ SKILLS_TO_SYNC=(
   "pc-env-sync"
 )
 
+for legacy_skill in adobe-illustrator adobe-photoshop adobe-premiere adobe-aftereffects; do
+  rm -rf "$GLOBAL_SKILLS_DIR/$legacy_skill"
+done
+
 for skill in "${SKILLS_TO_SYNC[@]}"; do
   src="$WORKSPACE_ROOT/.agents/skills/$skill"
   if [ -d "$src" ]; then
@@ -244,11 +244,8 @@ done
 
 GLOBAL_PLUGINS_DIR="$HOME/.gemini/config/plugins"
 mkdir -p "$GLOBAL_PLUGINS_DIR"
-if [ -d "$WORKSPACE_ROOT/.agents/plugins/notebooklm-plugin" ]; then
-  rm -rf "$GLOBAL_PLUGINS_DIR/notebooklm-plugin"
-  cp -R "$WORKSPACE_ROOT/.agents/plugins/notebooklm-plugin" "$GLOBAL_PLUGINS_DIR/"
-  echo "  [OK] Synced global plugin: notebooklm-plugin"
-fi
+# Remove legacy MCP wrapper plugins (MCP registration is unified in global mcp_config.json)
+rm -rf "$GLOBAL_PLUGINS_DIR/notebooklm-plugin" "$GLOBAL_PLUGINS_DIR/blender-plugin"
 if [ -d "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" ]; then
   rm -rf "$GLOBAL_PLUGINS_DIR/global-master-rules"
   cp -R "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" "$GLOBAL_PLUGINS_DIR/"

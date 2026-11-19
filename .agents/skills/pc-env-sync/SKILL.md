@@ -40,7 +40,7 @@ description: >
      ※ 特定パスを明示したい場合は `--workspace "<パス>"` を付与可能。
 
 2. **NotebookLM MCPの認証状態チェック**
-   - `notebooklm-plugin_notebooklm-research` の `get_health`（または登録済み `notebooklm-research` MCP の `get_health`）を呼び出す。
+   - `notebooklm-research` MCP の `get_health` を呼び出す。
    - `authenticated: false` の場合のみ、ユーザーに「このPCでの初回Googleログインを行うため `setup_auth` を起動しますか？」と案内する。
    - ※もし `setup_auth` でログイン完了後に `https://notebook.google.com/` へリダイレクトされて待機ループが残った場合は、`chrome_profile` から `AuthManager.saveBrowserState()` で `state.json` を書き出して認証を完了させる。
 

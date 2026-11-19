@@ -22,7 +22,7 @@ description: >-
 
 ## 2. 実行手順（MCP `photoshop` ＆ CLI ハイブリッド運用）
 
-詳細なExtendScript（DOM + ActionManager）実装パターンは [`.agents/skills/adobe-photoshop/SKILL.md`](../adobe-photoshop/SKILL.md) を参照してください。
+詳細なExtendScript（DOM + ActionManager）実装パターンは [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照してください。
 
 1. **Photoshop 2027 ステータス確認**:
    - MCPサーバー `photoshop` の `get_photoshop_status` または CLI `node .agents/mcp/photoshop-mcp/cli.js status` を実行する。

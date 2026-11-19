@@ -363,10 +363,6 @@ $SkillsToSync = @(
     "audio-meeting-minutes",
     "auto-git-sync",
     "wordpress-avada-maintenance",
-    "adobe-illustrator",
-    "adobe-photoshop",
-    "adobe-premiere",
-    "adobe-aftereffects",
     "blender",
     "illustrator",
     "photoshop",
@@ -379,6 +375,13 @@ $SkillsToSync = @(
     "writing",
     "pc-env-sync"
 )
+
+foreach ($legacySkill in @("adobe-illustrator", "adobe-photoshop", "adobe-premiere", "adobe-aftereffects")) {
+    $legacyPath = Join-Path $GlobalSkillsDir $legacySkill
+    if (Test-Path $legacyPath) {
+        Remove-Item -Path $legacyPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
 foreach ($skill in $SkillsToSync) {
     $src = Join-Path $WorkspaceRoot ".agents\skills\$skill"
@@ -393,10 +396,12 @@ $GlobalPluginsDir = Join-Path $env:USERPROFILE ".gemini\config\plugins"
 if (-not (Test-Path $GlobalPluginsDir)) {
     New-Item -ItemType Directory -Path $GlobalPluginsDir -Force | Out-Null
 }
-$NotebookPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\notebooklm-plugin"
-if (Test-Path $NotebookPluginSrc) {
-    Copy-Item -Path $NotebookPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
-    Write-Host "  [OK] Synced global plugin: notebooklm-plugin"
+# Remove legacy MCP wrapper plugins (MCP registration is unified in global mcp_config.json)
+foreach ($legacyPlugin in @("notebooklm-plugin", "blender-plugin")) {
+    $legacyPluginPath = Join-Path $GlobalPluginsDir $legacyPlugin
+    if (Test-Path $legacyPluginPath) {
+        Remove-Item -Path $legacyPluginPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 $GlobalMasterPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\global-master-rules"
 if (Test-Path $GlobalMasterPluginSrc) {

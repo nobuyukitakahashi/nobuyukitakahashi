@@ -23,7 +23,7 @@ description: >-
 
 ## 2. 実行手順（MCP `illustrator` ＆ CLI ハイブリッド運用）
 
-詳細なExtendScript（JSX）実装パターンは [`.agents/skills/adobe-illustrator/SKILL.md`](../adobe-illustrator/SKILL.md) を参照してください。
+詳細なExtendScript（JSX）実装パターンは [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照してください。
 
 1. **Illustrator 2027 ステータス確認**:
    - MCPサーバー `illustrator` の `get_illustrator_status` または CLI `node .agents/mcp/illustrator-mcp/cli.js status` を実行する。

@@ -23,7 +23,7 @@ description: >-
 
 ## 2. 実行手順（MCP `aftereffects` ＆ CLI ハイブリッド運用）
 
-詳細な ExtendScript（JSX）実装仕様は [`.agents/skills/adobe-aftereffects/SKILL.md`](../adobe-aftereffects/SKILL.md) を参照してください。
+詳細な ExtendScript（JSX）実装仕様は [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照してください。
 
 1. **After Effects 2027 ステータス確認**:
    - MCPサーバー `aftereffects` の `get_aftereffects_status` または CLI `node .agents/mcp/aftereffects-mcp/cli.js status` を実行する。

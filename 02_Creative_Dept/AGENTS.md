@@ -7,8 +7,8 @@
 | `<genre>` | 専任スキル（実行前に必ず `SKILL.md` を読むこと） | 作業先（中間成果物） | 最終納品先（`04_Delivery_Dept`） |
 | :--- | :--- | :--- | :--- |
 | **`blender`** | [`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) | `02_Creative_Dept/blender/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/blender/<案件サブフォルダ>/` |
-| **`illustrator`** | [`.agents/skills/illustrator/SKILL.md`](../.agents/skills/illustrator/SKILL.md) / [`adobe-illustrator`](../.agents/skills/adobe-illustrator/SKILL.md) | `02_Creative_Dept/illustrator/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/illustrator/<案件サブフォルダ>/` |
-| **`photoshop`** | [`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md) / [`adobe-photoshop`](../.agents/skills/adobe-photoshop/SKILL.md) | `02_Creative_Dept/photoshop/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/photoshop/<案件サブフォルダ>/` |
+| **`illustrator`** | [`.agents/skills/illustrator/SKILL.md`](../.agents/skills/illustrator/SKILL.md) | `02_Creative_Dept/illustrator/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/illustrator/<案件サブフォルダ>/` |
+| **`photoshop`** | [`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md) | `02_Creative_Dept/photoshop/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/photoshop/<案件サブフォルダ>/` |
 | **`davinci`** | [`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md) | `02_Creative_Dept/davinci/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/davinci/<案件サブフォルダ>/` |
 | **`writing`** | [`.agents/skills/writing/SKILL.md`](../.agents/skills/writing/SKILL.md) | `02_Creative_Dept/writing/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/writing/<案件サブフォルダ>/` |
 

@@ -22,7 +22,7 @@ description: >-
 
 ## 2. 実行手順（MCP `premiere` ＆ CLI ハイブリッド運用）
 
-詳細な ExtendScript（JSX）実装仕様は [`.agents/skills/adobe-premiere/SKILL.md`](../adobe-premiere/SKILL.md) を参照してください。
+詳細な ExtendScript（JSX）実装仕様は [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照してください。
 
 1. **Premiere Pro 2027 ＆ CEP Bridge ステータス確認**:
    - MCPサーバー `premiere` の `get_premiere_status` または CLI `node .agents/mcp/premiere-mcp/cli.js status` を実行する。
