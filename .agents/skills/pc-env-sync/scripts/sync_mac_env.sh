@@ -481,6 +481,19 @@ done
       }
     } catch (_) {}
   }
+
+  const pluginMainJs = path.join(vaultPath, ".obsidian", "plugins", "antigravity", "main.js");
+  if (vaultPath && fs.existsSync(pluginMainJs)) {
+    const raw = fs.readFileSync(pluginMainJs, "utf8");
+    const target = "let P=[\"--hub\",`--hub-port=${y}`,`--app_data_dir=${u}`,`--project=${C}`,`--add-dir=${t}`];o&&P.push(\"--dangerously-skip-permissions\"),r&&P.push(`--agent=${r}`);let k={AGY_ENABLE_HUB:\"1\",...x.formatProxyEnv(c)},D=x.getEnrichedEnv(k),m=(0,Bt.spawn)(e,P,{cwd:t,env:D,stdio:[\"ignore\",\"pipe\",\"pipe\"],detached:process.platform!==\"win32\"});m.pid&&Mt(u,{pid:m.pid,port:y,profile:u,vaultPath:t,dangerouslySkipPermissions:o,startedAt:Date.now()}),this.recentOutput=[];let M=null,";
+    if (raw.includes("--csrf_token=")) {
+      console.log("  [OK] Obsidian Antigravity plugin already patched (--csrf_token)");
+    } else if (raw.includes(target)) {
+      const repl = "let B=(St.randomUUID?St.randomUUID():St.randomBytes(16).toString(\"hex\")),P=[\"--hub\",`--hub-port=${y}`,`--app_data_dir=${u}`,`--csrf_token=${B}`,`--project=${C}`,`--add-dir=${t}`];o&&P.push(\"--dangerously-skip-permissions\"),r&&P.push(`--agent=${r}`);let k={AGY_ENABLE_HUB:\"1\",...x.formatProxyEnv(c)},D=x.getEnrichedEnv(k),m=(0,Bt.spawn)(e,P,{cwd:t,env:D,stdio:[\"ignore\",\"pipe\",\"pipe\"],detached:process.platform!==\"win32\"});m.pid&&Mt(u,{pid:m.pid,port:y,profile:u,vaultPath:t,dangerouslySkipPermissions:o,startedAt:Date.now()}),this.recentOutput=[];let M=B,";
+      fs.writeFileSync(pluginMainJs, raw.replace(target, repl), "utf8");
+      console.log("  [OK] Patched Obsidian Antigravity plugin (--csrf_token) to prevent white screen");
+    }
+  }
 ' "$OBSIDIAN_VAULT_PATH"
 echo "  [OK] Updated Obsidian plugin trustedWorkspaces: $HOME/.gemini/antigravity-obsidian/settings.json"
 

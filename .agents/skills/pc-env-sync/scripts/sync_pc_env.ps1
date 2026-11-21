@@ -671,6 +671,30 @@ $utf8NoBomProf = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($ObsidianProfileSettings, ($profileSettingsJson | ConvertTo-Json -Depth 10), $utf8NoBomProf)
 Write-Host "  [OK] Updated Obsidian plugin trustedWorkspaces: $ObsidianProfileSettings"
 
+# Ensure Obsidian Antigravity plugin passes --csrf_token so agy v1.5.13+ does not render white screen
+$ObsidianPluginMainJs = Join-Path $ObsidianVaultPath ".obsidian\plugins\antigravity\main.js"
+if (Test-Path $ObsidianPluginMainJs) {
+    $pluginJsRaw = [System.IO.File]::ReadAllText($ObsidianPluginMainJs, [System.Text.UTF8Encoding]::new($false))
+    $unpatchedTarget = 'let P=["--hub",`--hub-port=${y}`,`--app_data_dir=${u}`,`--project=${C}`,`--add-dir=${t}`];o&&P.push("--dangerously-skip-permissions"),r&&P.push(`--agent=${r}`);let k={AGY_ENABLE_HUB:"1",...x.formatProxyEnv(c)},D=x.getEnrichedEnv(k),m=(0,Bt.spawn)(e,P,{cwd:t,env:D,stdio:["ignore","pipe","pipe"],detached:process.platform!=="win32"});m.pid&&Mt(u,{pid:m.pid,port:y,profile:u,vaultPath:t,dangerouslySkipPermissions:o,startedAt:Date.now()}),this.recentOutput=[];let M=null,'
+    if ($pluginJsRaw.Contains('--csrf_token=')) {
+        Write-Host "  [OK] Obsidian Antigravity plugin already patched (--csrf_token)"
+    } elseif ($pluginJsRaw.Contains($unpatchedTarget)) {
+        $patchedRepl = 'let B=(St.randomUUID?St.randomUUID():St.randomBytes(16).toString("hex")),P=["--hub",`--hub-port=${y}`,`--app_data_dir=${u}`,`--csrf_token=${B}`,`--project=${C}`,`--add-dir=${t}`];o&&P.push("--dangerously-skip-permissions"),r&&P.push(`--agent=${r}`);let k={AGY_ENABLE_HUB:"1",...x.formatProxyEnv(c)},D=x.getEnrichedEnv(k),m=(0,Bt.spawn)(e,P,{cwd:t,env:D,stdio:["ignore","pipe","pipe"],detached:process.platform!=="win32"});m.pid&&Mt(u,{pid:m.pid,port:y,profile:u,vaultPath:t,dangerouslySkipPermissions:o,startedAt:Date.now()}),this.recentOutput=[];let M=B,'
+        $patchedJs = $pluginJsRaw.Replace($unpatchedTarget, $patchedRepl)
+        [System.IO.File]::WriteAllText($ObsidianPluginMainJs, $patchedJs, [System.Text.UTF8Encoding]::new($false))
+        $ErrorActionPreference = "Continue"
+        & node --check $ObsidianPluginMainJs 2>&1 | Out-Null
+        $chkExit = $LASTEXITCODE
+        $ErrorActionPreference = "Stop"
+        if ($chkExit -eq 0) {
+            Write-Host "  [OK] Patched Obsidian Antigravity plugin (--csrf_token) to prevent white screen"
+        } else {
+            [System.IO.File]::WriteAllText($ObsidianPluginMainJs, $pluginJsRaw, [System.Text.UTF8Encoding]::new($false))
+            Write-Warning "Reverted Obsidian Antigravity plugin patch because node --check failed"
+        }
+    }
+}
+
 # Migrate Obsidian desktop obsidian.json if pointing to removed nested obsidian\nobuyukitakahashi path
 $ObsidianAppJson = Join-Path $env:APPDATA "obsidian\obsidian.json"
 if ((Test-Path $ObsidianAppJson) -and $ObsidianVaultPath -and (Test-Path (Join-Path $ObsidianVaultPath ".obsidian"))) {
