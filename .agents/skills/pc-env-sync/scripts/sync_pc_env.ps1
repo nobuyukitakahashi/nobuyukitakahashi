@@ -133,8 +133,9 @@ function Resolve-ObsidianVaultPath {
     param([string]$DriveRootPath)
 
     $candidates = @(
-        (Join-Path $DriveRootPath "obsidian"),
-        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi\nobuyukitakahashi")
+        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi"),
+        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi\nobuyukitakahashi"),
+        (Join-Path $DriveRootPath "obsidian")
     )
     foreach ($cand in $candidates) {
         if (Test-Path (Join-Path $cand ".obsidian")) {
@@ -625,6 +626,18 @@ foreach ($cfgPath in $McpConfigPaths) {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)
     Write-Host "  [OK] Updated MCP config: $cfgPath"
+}
+
+# Ensure antigravity-obsidian profile has trustedWorkspaces and OAuth marker for Obsidian plugin v1.0.15+ compatibility on Windows
+$ObsidianProfileDir = Join-Path $env:USERPROFILE ".gemini\antigravity-obsidian"
+if (-not (Test-Path $ObsidianProfileDir)) {
+    New-Item -ItemType Directory -Path $ObsidianProfileDir -Force | Out-Null
+}
+$ObsidianOAuthMarker = Join-Path $ObsidianProfileDir "antigravity-oauth-token"
+if (-not (Test-Path $ObsidianOAuthMarker)) {
+    $utf8NoBomEmpty = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($ObsidianOAuthMarker, "", $utf8NoBomEmpty)
+    Write-Host "  [OK] Created Windows OAuth marker for Obsidian plugin: $ObsidianOAuthMarker"
 }
 
 Write-Host "`n=== [5.5/6] Verifying Official Blender Lab Add-on (bl_ext.user_default.mcp) ==="

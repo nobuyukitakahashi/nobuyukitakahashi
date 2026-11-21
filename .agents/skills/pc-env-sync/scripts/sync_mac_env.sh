@@ -105,6 +105,7 @@ resolve_workspace_root() {
 resolve_obsidian_vault() {
   local drive_root="$1"
   local candidates=(
+    "$drive_root/obsidian/nobuyukitakahashi"
     "$drive_root/obsidian/nobuyukitakahashi/nobuyukitakahashi"
     "$drive_root/obsidian"
   )
