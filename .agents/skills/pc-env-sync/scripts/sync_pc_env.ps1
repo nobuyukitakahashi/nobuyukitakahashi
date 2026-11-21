@@ -133,9 +133,8 @@ function Resolve-ObsidianVaultPath {
     param([string]$DriveRootPath)
 
     $candidates = @(
-        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi"),
-        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi\nobuyukitakahashi"),
-        (Join-Path $DriveRootPath "obsidian")
+        (Join-Path $DriveRootPath "obsidian"),
+        (Join-Path $DriveRootPath "obsidian\nobuyukitakahashi")
     )
     foreach ($cand in $candidates) {
         if (Test-Path (Join-Path $cand ".obsidian")) {
@@ -638,6 +637,64 @@ if (-not (Test-Path $ObsidianOAuthMarker)) {
     $utf8NoBomEmpty = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($ObsidianOAuthMarker, "", $utf8NoBomEmpty)
     Write-Host "  [OK] Created Windows OAuth marker for Obsidian plugin: $ObsidianOAuthMarker"
+}
+$ObsidianProfileSettings = Join-Path $ObsidianProfileDir "settings.json"
+$profileSettingsJson = $null
+if (Test-Path $ObsidianProfileSettings) {
+    try {
+        $rawProf = Get-Content -Path $ObsidianProfileSettings -Raw -Encoding UTF8
+        if ($rawProf -and $rawProf.Trim()) {
+            $profileSettingsJson = $rawProf | ConvertFrom-Json
+        }
+    } catch {
+        $profileSettingsJson = $null
+    }
+}
+if (-not $profileSettingsJson) {
+    $profileSettingsJson = [PSCustomObject]@{}
+}
+$existingTrusted = @()
+if ($profileSettingsJson.PSObject.Properties.Name -contains "trustedWorkspaces" -and $profileSettingsJson.trustedWorkspaces) {
+    $existingTrusted = @($profileSettingsJson.trustedWorkspaces)
+}
+$cleanedTrusted = @()
+foreach ($tw in $existingTrusted) {
+    if ($tw -and ($tw -notmatch '[\\/]obsidian[\\/]nobuyukitakahashi([\\/]|$)' -or (Test-Path -LiteralPath $tw))) {
+        if ($cleanedTrusted -notcontains $tw) { $cleanedTrusted += $tw }
+    }
+}
+if ($ObsidianVaultPath -and ($cleanedTrusted -notcontains $ObsidianVaultPath)) {
+    $cleanedTrusted += $ObsidianVaultPath
+}
+$profileSettingsJson | Add-Member -MemberType NoteProperty -Name "trustedWorkspaces" -Value @($cleanedTrusted) -Force
+$utf8NoBomProf = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($ObsidianProfileSettings, ($profileSettingsJson | ConvertTo-Json -Depth 10), $utf8NoBomProf)
+Write-Host "  [OK] Updated Obsidian plugin trustedWorkspaces: $ObsidianProfileSettings"
+
+# Migrate Obsidian desktop obsidian.json if pointing to removed nested obsidian\nobuyukitakahashi path
+$ObsidianAppJson = Join-Path $env:APPDATA "obsidian\obsidian.json"
+if ((Test-Path $ObsidianAppJson) -and $ObsidianVaultPath -and (Test-Path (Join-Path $ObsidianVaultPath ".obsidian"))) {
+    try {
+        $obsRaw = Get-Content -Path $ObsidianAppJson -Raw -Encoding UTF8
+        $obsObj = $obsRaw | ConvertFrom-Json
+        $obsChanged = $false
+        if ($obsObj -and $obsObj.vaults) {
+            foreach ($prop in $obsObj.vaults.PSObject.Properties) {
+                $vp = $prop.Value.path
+                if ($vp -and ($vp -match '[\\/]obsidian[\\/]nobuyukitakahashi([\\/]|$)') -and (-not (Test-Path -LiteralPath $vp))) {
+                    $prop.Value.path = $ObsidianVaultPath
+                    $obsChanged = $true
+                }
+            }
+        }
+        if ($obsChanged) {
+            $utf8NoBomObs = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($ObsidianAppJson, ($obsObj | ConvertTo-Json -Depth 10 -Compress), $utf8NoBomObs)
+            Write-Host "  [OK] Migrated Obsidian desktop vault path in $ObsidianAppJson -> $ObsidianVaultPath"
+        }
+    } catch {
+        Write-Warning "Could not parse $ObsidianAppJson : $_"
+    }
 }
 
 Write-Host "`n=== [5.5/6] Verifying Official Blender Lab Add-on (bl_ext.user_default.mcp) ==="

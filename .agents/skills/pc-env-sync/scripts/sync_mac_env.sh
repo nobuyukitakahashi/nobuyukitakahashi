@@ -105,9 +105,8 @@ resolve_workspace_root() {
 resolve_obsidian_vault() {
   local drive_root="$1"
   local candidates=(
-    "$drive_root/obsidian/nobuyukitakahashi"
-    "$drive_root/obsidian/nobuyukitakahashi/nobuyukitakahashi"
     "$drive_root/obsidian"
+    "$drive_root/obsidian/nobuyukitakahashi"
   )
   local c
   for c in "${candidates[@]}"; do
@@ -352,6 +351,7 @@ fi
 MCP_CONFIG_PATHS=(
   "$HOME/.gemini/config/mcp_config.json"
   "$HOME/.gemini/antigravity/mcp_config.json"
+  "$HOME/.gemini/antigravity-obsidian/mcp_config.json"
 )
 
 for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
@@ -436,6 +436,53 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
   ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
+
+# Ensure antigravity-obsidian profile trustedWorkspaces and migrate desktop obsidian.json if needed
+"$NODE_BIN" -e '
+  const fs = require("fs");
+  const path = require("path");
+  const os = require("os");
+  const vaultPath = process.argv[1];
+  const profDir = path.join(os.homedir(), ".gemini", "antigravity-obsidian");
+  fs.mkdirSync(profDir, { recursive: true });
+  const settingsPath = path.join(profDir, "settings.json");
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, "utf8")); } catch (_) {}
+  }
+  const existing = Array.isArray(settings.trustedWorkspaces) ? settings.trustedWorkspaces : [];
+  const cleaned = [];
+  for (const tw of existing) {
+    if (tw && (!/[\/\\]obsidian[\/\\]nobuyukitakahashi([\/\\]|$)/.test(tw) || fs.existsSync(tw))) {
+      if (!cleaned.includes(tw)) cleaned.push(tw);
+    }
+  }
+  if (vaultPath && !cleaned.includes(vaultPath)) cleaned.push(vaultPath);
+  settings.trustedWorkspaces = cleaned;
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf8");
+
+  const obsJsonPath = path.join(os.homedir(), "Library", "Application Support", "obsidian", "obsidian.json");
+  if (fs.existsSync(obsJsonPath) && vaultPath && fs.existsSync(path.join(vaultPath, ".obsidian"))) {
+    try {
+      const obs = JSON.parse(fs.readFileSync(obsJsonPath, "utf8"));
+      let changed = false;
+      if (obs && obs.vaults) {
+        for (const key of Object.keys(obs.vaults)) {
+          const vp = obs.vaults[key]?.path;
+          if (vp && /[\/\\]obsidian[\/\\]nobuyukitakahashi([\/\\]|$)/.test(vp) && !fs.existsSync(vp)) {
+            obs.vaults[key].path = vaultPath;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        fs.writeFileSync(obsJsonPath, JSON.stringify(obs), "utf8");
+        console.log("  [OK] Migrated Obsidian desktop vault path in " + obsJsonPath + " -> " + vaultPath);
+      }
+    } catch (_) {}
+  }
+' "$OBSIDIAN_VAULT_PATH"
+echo "  [OK] Updated Obsidian plugin trustedWorkspaces: $HOME/.gemini/antigravity-obsidian/settings.json"
 
 if [ -x "$DETECTED_BLENDER_BIN" ]; then
   echo ""
