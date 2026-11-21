@@ -1,0 +1,315 @@
+{
+  "timeline_name": "2026-11-19_ワインとジャズのコンサート_Master",
+  "start_frame": 108000,
+  "end_frame": 265338,
+  "total_frames": 157338,
+  "total_seconds": 5249.84,
+  "segments": {
+    "open": {
+      "rec_start": 108000,
+      "rec_end": 108299,
+      "rel_start_s": 0.0,
+      "rel_end_s": 9.98,
+      "stabilized": false,
+      "cdl_applied": false
+    },
+    "c01": {
+      "rec_start": 108299,
+      "rec_end": 162349,
+      "rel_start_s": 9.98,
+      "rel_end_s": 1813.44,
+      "stabilized": true,
+      "cdl_applied": false
+    },
+    "c02": {
+      "rec_start": 162349,
+      "rec_end": 169241,
+      "rel_start_s": 1813.44,
+      "rel_end_s": 2043.41,
+      "stabilized": true,
+      "cdl_applied": false
+    },
+    "part2": {
+      "rec_start": 169241,
+      "rec_end": 169390,
+      "rel_start_s": 2043.41,
+      "rel_end_s": 2048.38,
+      "stabilized": false,
+      "cdl_applied": false
+    },
+    "c03": {
+      "rec_start": 169390,
+      "rec_end": 177031,
+      "rel_start_s": 2048.38,
+      "rel_end_s": 2303.33,
+      "stabilized": true,
+      "cdl_applied": false
+    },
+    "gap": {
+      "rec_start": 177031,
+      "rec_end": 177135,
+      "rel_start_s": 2303.33,
+      "rel_end_s": 2306.8,
+      "stabilized": false,
+      "cdl_applied": false
+    },
+    "c04": {
+      "rec_start": 177135,
+      "rec_end": 239657,
+      "rel_start_s": 2306.8,
+      "rel_end_s": 4392.96,
+      "stabilized": true,
+      "cdl_applied": true
+    },
+    "c05a": {
+      "rec_start": 239657,
+      "rec_end": 264231,
+      "rel_start_s": 4392.96,
+      "rel_end_s": 5212.91,
+      "stabilized": true,
+      "cdl_applied": true
+    },
+    "c05b": {
+      "rec_start": 264231,
+      "rec_end": 265159,
+      "rel_start_s": 5212.91,
+      "rel_end_s": 5243.87,
+      "stabilized": false,
+      "cdl_applied": true
+    },
+    "end": {
+      "rec_start": 265159,
+      "rec_end": 265338,
+      "rel_start_s": 5243.87,
+      "rel_end_s": 5249.84,
+      "stabilized": false,
+      "cdl_applied": false
+    }
+  },
+  "telops": [
+    {
+      "label": "01. 情熱大陸",
+      "mov": "song_01_jounetsu.mov",
+      "timeline_time": "00:00:15",
+      "timeline_sec": 14.98,
+      "record_frame": 108449,
+      "duration_frames": 419
+    },
+    {
+      "label": "Member: 鈴木 真明地",
+      "mov": "member_01_suzuki.mov",
+      "timeline_time": "00:06:45",
+      "timeline_sec": 404.97,
+      "record_frame": 120137,
+      "duration_frames": 419
+    },
+    {
+      "label": "Member: 渡邊 丈留",
+      "mov": "member_02_watanabe.mov",
+      "timeline_time": "00:07:23",
+      "timeline_sec": 442.98,
+      "record_frame": 121276,
+      "duration_frames": 419
+    },
+    {
+      "label": "Member: 高橋 幹太",
+      "mov": "member_03_takahashi.mov",
+      "timeline_time": "00:08:02",
+      "timeline_sec": 481.98,
+      "record_frame": 122445,
+      "duration_frames": 419
+    },
+    {
+      "label": "Member: 田中 良明",
+      "mov": "member_04_tanaka.mov",
+      "timeline_time": "00:08:44",
+      "timeline_sec": 523.96,
+      "record_frame": 123703,
+      "duration_frames": 419
+    },
+    {
+      "label": "Member: 西浦 颯",
+      "mov": "member_05_nishiura.mov",
+      "timeline_time": "00:09:30",
+      "timeline_sec": 569.97,
+      "record_frame": 125082,
+      "duration_frames": 419
+    },
+    {
+      "label": "02. Take Five",
+      "mov": "song_02_takefive.mov",
+      "timeline_time": "00:10:45",
+      "timeline_sec": 644.98,
+      "record_frame": 127330,
+      "duration_frames": 419
+    },
+    {
+      "label": "03. オー・シャンゼリゼ",
+      "mov": "song_03_champs.mov",
+      "timeline_time": "00:15:59",
+      "timeline_sec": 958.96,
+      "record_frame": 136740,
+      "duration_frames": 419
+    },
+    {
+      "label": "04. A列車で行こう",
+      "mov": "song_04_atrain.mov",
+      "timeline_time": "00:21:55",
+      "timeline_sec": 1314.98,
+      "record_frame": 147410,
+      "duration_frames": 419
+    },
+    {
+      "label": "05. Sing, Sing, Sing",
+      "mov": "song_05_singsing.mov",
+      "timeline_time": "00:28:19",
+      "timeline_sec": 1698.96,
+      "record_frame": 158918,
+      "duration_frames": 419
+    },
+    {
+      "label": "06. SWEET MEMORIES",
+      "mov": "song_06_seiko_01.mov",
+      "timeline_time": "00:34:11",
+      "timeline_sec": 2051.38,
+      "record_frame": 169480,
+      "duration_frames": 419
+    },
+    {
+      "label": "07. 赤いスイートピー",
+      "mov": "song_07_seiko_02.mov",
+      "timeline_time": "00:35:58",
+      "timeline_sec": 2158.36,
+      "record_frame": 172686,
+      "duration_frames": 419
+    },
+    {
+      "label": "08. 瑠璃色の地球",
+      "mov": "song_08_seiko_03.mov",
+      "timeline_time": "00:38:03",
+      "timeline_sec": 2283.38,
+      "record_frame": 176433,
+      "duration_frames": 479
+    },
+    {
+      "label": "09. 青い珊瑚礁",
+      "mov": "song_09_seiko_04.mov",
+      "timeline_time": "00:38:29",
+      "timeline_sec": 2308.81,
+      "record_frame": 177195,
+      "duration_frames": 419
+    },
+    {
+      "label": "10. シェルブールの雨傘",
+      "mov": "song_10_cherbourg.mov",
+      "timeline_time": "00:41:34",
+      "timeline_sec": 2493.79,
+      "record_frame": 182739,
+      "duration_frames": 419
+    },
+    {
+      "label": "11. Sir Duke",
+      "mov": "song_11_stevie_01.mov",
+      "timeline_time": "00:47:56",
+      "timeline_sec": 2875.81,
+      "record_frame": 194188,
+      "duration_frames": 389
+    },
+    {
+      "label": "12. Superstition",
+      "mov": "song_12_stevie_02.mov",
+      "timeline_time": "00:49:06",
+      "timeline_sec": 2945.81,
+      "record_frame": 196286,
+      "duration_frames": 389
+    },
+    {
+      "label": "13. I Wish",
+      "mov": "song_13_stevie_03.mov",
+      "timeline_time": "00:50:07",
+      "timeline_sec": 3006.8,
+      "record_frame": 198114,
+      "duration_frames": 389
+    },
+    {
+      "label": "14. Isn't She Lovely",
+      "mov": "song_14_stevie_04.mov",
+      "timeline_time": "00:51:08",
+      "timeline_sec": 3067.8,
+      "record_frame": 199942,
+      "duration_frames": 389
+    },
+    {
+      "label": "15. Beat It",
+      "mov": "song_15_beatit.mov",
+      "timeline_time": "00:52:15",
+      "timeline_sec": 3134.8,
+      "record_frame": 201950,
+      "duration_frames": 419
+    },
+    {
+      "label": "16. 美女と野獣",
+      "mov": "song_16_beauty.mov",
+      "timeline_time": "00:56:43",
+      "timeline_sec": 3402.8,
+      "record_frame": 209982,
+      "duration_frames": 419
+    },
+    {
+      "label": "17. マツケンサンバ II",
+      "mov": "song_17_matsuken.mov",
+      "timeline_time": "01:05:38",
+      "timeline_sec": 3937.8,
+      "record_frame": 226016,
+      "duration_frames": 419
+    },
+    {
+      "label": "18. ギザギザハートの子守唄",
+      "mov": "song_18_checkers_01.mov",
+      "timeline_time": "01:10:53",
+      "timeline_sec": 4252.82,
+      "record_frame": 235457,
+      "duration_frames": 389
+    },
+    {
+      "label": "19. 星屑のステージ",
+      "mov": "song_19_checkers_02.mov",
+      "timeline_time": "01:11:59",
+      "timeline_sec": 4318.81,
+      "record_frame": 237435,
+      "duration_frames": 359
+    },
+    {
+      "label": "20. 涙のリクエスト",
+      "mov": "song_20_checkers_03.mov",
+      "timeline_time": "01:12:15",
+      "timeline_sec": 4334.8,
+      "record_frame": 237914,
+      "duration_frames": 389
+    },
+    {
+      "label": "21. ジュリアに傷心",
+      "mov": "song_21_checkers_04.mov",
+      "timeline_time": "01:13:52",
+      "timeline_sec": 4431.96,
+      "record_frame": 240826,
+      "duration_frames": 419
+    },
+    {
+      "label": "22. 見上げてごらん夜の星を",
+      "mov": "song_22_miagete.mov",
+      "timeline_time": "01:17:38",
+      "timeline_sec": 4657.95,
+      "record_frame": 247599,
+      "duration_frames": 419
+    },
+    {
+      "label": "23. ENCORE September",
+      "mov": "song_23_september.mov",
+      "timeline_time": "01:21:35",
+      "timeline_sec": 4894.96,
+      "record_frame": 254702,
+      "duration_frames": 449
+    }
+  ]
+}
