@@ -9,17 +9,13 @@
 4. **自律的組織改善**: 業務完了時や定期点検時に `05_System_Evolution_Dept` を稼働させ、Antigravity仕様・最新モデル・ルール/スキルを点検・改善させること。
 
 ## 2. 標準業務フロー
-0. **Step 0-A：【最優先】最適モデル判定 ＆ Blender Swarm動的切替プロトコル**
-   - 着手前に選択モデル（`Model Selection`）とタスク難易度を照合し、乖離時は提案ゲートを実行する。
-   - **Blenderタスク専用・最適モデル判定マトリクス（案A：提案 ＋ 案B：`swarm` 動的切替）**:
-     - **Tier 1（軽量・定型）**: `get_objects_summary` 一覧確認、単体プリミティブ配置、座標・回転・スケール単純変更、リネーム、単色変更 ➔ `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low`）
-     - **Tier 2（制作・`bpy`・ノード・アニメ・デバッグ）**: `bpy`/`bmesh` 造形、ジオメトリ／シェーダーノード、リギング、物理、アニメーション、空間計算、デバッグ ➔ **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
-     - **Tier 3（極限幾何・エラー昇格）**: v7/v8級マスコット変形（ラプラシアン緩和等）、複雑行列、または `Hydrogen` / `Neon (High)` エラー再試行 ➔ **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
+0. **Step 0-A：【最優先】Blender専用モデル判定 ＆ Swarm実行仕様**
+   - 汎用ルール（照合・提案・昇格）は `global-master-rules` に従い、Blender 案件では以下を基準とする：
+     - **Tier 1（軽量）**: 一覧確認、単体配置、移動／回転／スケール、リネーム、単色変更 ➔ `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low`）
+     - **Tier 2（制作・デバッグ）**: `bpy`/`bmesh` 造形、ノード、リギング、物理、アニメ、空間計算、デバッグ ➔ **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
+     - **Tier 3（極限幾何・連続エラー昇格）**: v7/v8級マスコット変形（ラプラシアン緩和等）、複雑行列、再試行昇格 ➔ **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
      - **Tier 4（長尺動画参照・大規模視覚比較監査）** ➔ `Gemini 4 Argon (Medium/High)` または `Carbon`
-   - **実行モード分岐**:
-     - **通常対話時（案A）**: 不一致時は `ask_question` 等で「① `swarm` ワーカーに最適実名モデルを割り当てて自動実行（メインUI切替不要）」「② 画面のモデル選択を推奨モデルへ切替」「③ サブエージェント（`pro`/`flash`）委譲」「④ 現行のまま続行」を提示。
-     - **自動切替委任時（案B）**: 「モデル選択はお任せ」「自動切替で」等の委任時（または選択肢①選択時）は `swarm` で初期モデル（`gemini-4-hydrogen-low` / `gemini-4-neon-high`）の `blender-worker` を起動する。`execute_blender_code` エラーや破綻時は `swarm(action="model")` で `gemini-4-neon-high` ➔ `gemini-4-neon-xhigh` へ自動昇格させて再実行し、ボードと完了報告に理由を明記する。
-     - ※`brief` には公式 Blender Lab MCP（`get_objects_summary`, `execute_blender_code`, `result = {...}` 規約、`render_viewport_to_path` / PNG視覚監査）および [`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) の遵守を明記すること。
+   - `swarm` の `brief` には公式 Blender Lab MCP（`get_objects_summary`, `execute_blender_code`, `result = {...}` 規約、`render_viewport_to_path` / PNG視覚監査）および [`.agents/skills/blender/SKILL.md`](../.agents/skills/blender/SKILL.md) の遵守を明記する。
 1. **Step 0-B：ジャンル確定とログ初期化**: `<genre>`・`[テーマ名]`・法務審査要否を確定し、`00_COO/task_logs/log_[YYYYMMDD]_[テーマ名].md` を作成する。
 2. **Step 1：リサーチ（`01_Research_Dept`）**: `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` を作成し、`research-dept`（[`01_Research_Dept/AGENTS.md`](../01_Research_Dept/AGENTS.md) 準拠）で `01_Research_Dept/reports/report_[テーマ名].md` を生成させる。
 3. **Step 2：制作（`02_Creative_Dept`）**: `creative-dept`（[`02_Creative_Dept/AGENTS.md`](../02_Creative_Dept/AGENTS.md) 準拠）を起動し、`02_Creative_Dept/<genre>/{drafts,final_outputs}/<案件サブフォルダ>/` へ中間成果物を出力させる。
