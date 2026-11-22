@@ -353,29 +353,6 @@ if (-not (Test-Path $GlobalSkillsDir)) {
     New-Item -ItemType Directory -Path $GlobalSkillsDir -Force | Out-Null
 }
 
-$SkillsToSync = @(
-    "obsidian-markdown",
-    "obsidian-bases",
-    "obsidian-cli",
-    "json-canvas",
-    "defuddle",
-    "knap",
-    "audio-meeting-minutes",
-    "auto-git-sync",
-    "wordpress-avada-maintenance",
-    "blender",
-    "illustrator",
-    "photoshop",
-    "premiere",
-    "aftereffects",
-    "davinci",
-    "pano2vr",
-    "krpano",
-    "ptgui",
-    "writing",
-    "pc-env-sync"
-)
-
 foreach ($legacySkill in @("adobe-illustrator", "adobe-photoshop", "adobe-premiere", "adobe-aftereffects")) {
     $legacyPath = Join-Path $GlobalSkillsDir $legacySkill
     if (Test-Path $legacyPath) {
@@ -383,13 +360,20 @@ foreach ($legacySkill in @("adobe-illustrator", "adobe-photoshop", "adobe-premie
     }
 }
 
+$WorkspaceSkillsRoot = Join-Path $WorkspaceRoot ".agents\skills"
+$SkillsToSync = Get-ChildItem -Path $WorkspaceSkillsRoot -Directory -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } |
+    Select-Object -ExpandProperty Name |
+    Sort-Object
+
 foreach ($skill in $SkillsToSync) {
-    $src = Join-Path $WorkspaceRoot ".agents\skills\$skill"
+    $src = Join-Path $WorkspaceSkillsRoot $skill
     $dst = Join-Path $GlobalSkillsDir $skill
-    if (Test-Path $src) {
-        Copy-Item -Path $src -Destination $GlobalSkillsDir -Recurse -Force
-        Write-Host "  [OK] Synced skill: $skill"
+    if (Test-Path $dst) {
+        Remove-Item -Path $dst -Recurse -Force -ErrorAction SilentlyContinue
     }
+    Copy-Item -Path $src -Destination $GlobalSkillsDir -Recurse -Force
+    Write-Host "  [OK] Synced skill: $skill"
 }
 
 $GlobalPluginsDir = Join-Path $env:USERPROFILE ".gemini\config\plugins"

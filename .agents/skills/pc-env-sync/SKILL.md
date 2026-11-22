@@ -15,7 +15,7 @@ description: >
 複数のPC（Windows / macOS、別ドライブレターや別ワークスペース含む）で同じ `nobuyukitakahashi` プロジェクトを継続利用する際、PCローカル（`C:\Users\<ユーザー名>\` や `~/`、`~/.gemini/`）に依存する設定を一括で構築・同期します。
 
 スクリプト内部で **`nobuyukitakahashi` ワークスペースの実パス・Google Drive ルート・Obsidian Vault パスを自動探索**するため、PCごとにドライブレター（`G:\`, `H:\`, `D:\` 等）や配置先が異なっても、また別ワークスペースからグローバルスキルとして呼び出された場合でも安全に動作します。
-（※ 部門オーケストレーション系7スキル `coo-orchestrator` / `research-dept` / `creative-dept` / `marketing-dept` / `delivery-dept` / `system-evolution` / `legal-dept` は `nobuyukitakahashi` プロジェクト固有のため、意図的にグローバル同期対象外としています）
+（※ `.agents/skills/` 配下の全スキル — `coo-orchestrator` 等のオーケストレーション系含む — を動的にグローバル `~/.gemini/config/skills/` へ同期するため、どのPC・どのプロジェクトを開いても同一のジン窓口・`qa-verifier` 検証・納品ルールが利用できます）
 
 ## 実行手順
 

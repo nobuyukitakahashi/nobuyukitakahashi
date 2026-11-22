@@ -206,36 +206,13 @@ echo "=== [3/7] Syncing Global Skills (~/.gemini/config/skills) ==="
 GLOBAL_SKILLS_DIR="$HOME/.gemini/config/skills"
 mkdir -p "$GLOBAL_SKILLS_DIR"
 
-SKILLS_TO_SYNC=(
-  "obsidian-markdown"
-  "obsidian-bases"
-  "obsidian-cli"
-  "json-canvas"
-  "defuddle"
-  "knap"
-  "audio-meeting-minutes"
-  "auto-git-sync"
-  "wordpress-avada-maintenance"
-  "blender"
-  "illustrator"
-  "photoshop"
-  "premiere"
-  "aftereffects"
-  "davinci"
-  "pano2vr"
-  "krpano"
-  "ptgui"
-  "writing"
-  "pc-env-sync"
-)
-
 for legacy_skill in adobe-illustrator adobe-photoshop adobe-premiere adobe-aftereffects; do
   rm -rf "$GLOBAL_SKILLS_DIR/$legacy_skill"
 done
 
-for skill in "${SKILLS_TO_SYNC[@]}"; do
-  src="$WORKSPACE_ROOT/.agents/skills/$skill"
-  if [ -d "$src" ]; then
+for src in "$WORKSPACE_ROOT/.agents/skills"/*; do
+  if [ -d "$src" ] && [ -f "$src/SKILL.md" ]; then
+    skill="$(basename "$src")"
     rm -rf "$GLOBAL_SKILLS_DIR/$skill"
     cp -R "$src" "$GLOBAL_SKILLS_DIR/"
     echo "  [OK] Synced skill: $skill"
@@ -244,8 +221,9 @@ done
 
 GLOBAL_PLUGINS_DIR="$HOME/.gemini/config/plugins"
 mkdir -p "$GLOBAL_PLUGINS_DIR"
-# Remove legacy MCP wrapper plugins (MCP registration is unified in global mcp_config.json)
+# Remove legacy MCP wrapper plugins and stale schema caches (MCP registration is unified in global mcp_config.json)
 rm -rf "$GLOBAL_PLUGINS_DIR/notebooklm-plugin" "$GLOBAL_PLUGINS_DIR/blender-plugin"
+rm -rf "$HOME/.gemini/antigravity/mcp/blender-plugin_blender" "$HOME/.gemini/antigravity/mcp/notebooklm-plugin_notebooklm-research"
 if [ -d "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" ]; then
   rm -rf "$GLOBAL_PLUGINS_DIR/global-master-rules"
   cp -R "$WORKSPACE_ROOT/.agents/plugins/global-master-rules" "$GLOBAL_PLUGINS_DIR/"
