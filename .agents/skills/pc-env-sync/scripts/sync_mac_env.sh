@@ -523,4 +523,53 @@ else
 fi
 
 echo ""
+echo "=== [7.5/7] Configuring SessionStart Hook & Auto-Sync Launchers ==="
+GLOBAL_SCRIPTS_DIR="$HOME/.gemini/config/skills/pc-env-sync/scripts"
+if [ -d "$GLOBAL_SCRIPTS_DIR" ]; then
+  chmod +x "$GLOBAL_SCRIPTS_DIR/"*.sh 2>/dev/null || true
+fi
+
+HOOKS_JSON="$HOME/.gemini/config/hooks.json"
+SESSION_HOOK_SH="$GLOBAL_SCRIPTS_DIR/session_start_sync.sh"
+if command -v node >/dev/null 2>&1; then
+  node -e '
+    const fs = require("fs");
+    const hooksPath = process.argv[1];
+    const hookScript = process.argv[2];
+    let obj = {};
+    if (fs.existsSync(hooksPath)) {
+      try { obj = JSON.parse(fs.readFileSync(hooksPath, "utf8")) || {}; } catch (_) { obj = {}; }
+    }
+    obj["pc-env-sync"] = {
+      SessionStart: [
+        {
+          type: "command",
+          command: `bash "${hookScript}"`,
+          timeout: 15
+        }
+      ]
+    };
+    fs.writeFileSync(hooksPath, JSON.stringify(obj, null, 2) + "\n", "utf8");
+  ' "$HOOKS_JSON" "$SESSION_HOOK_SH"
+  echo "  [OK] Registered SessionStart hook in: $HOOKS_JSON"
+fi
+
+LAUNCH_SH="$GLOBAL_SCRIPTS_DIR/launch_antigravity.sh"
+DESKTOP_DIR="$HOME/Desktop"
+if [ -d "$DESKTOP_DIR" ]; then
+  if [ -d "/Applications/Antigravity IDE.app" ] || [ -d "$HOME/Applications/Antigravity IDE.app" ]; then
+    CMD_IDE="$DESKTOP_DIR/Antigravity IDE (Auto Sync).command"
+    printf '#!/usr/bin/env bash\nbash "%s" ide\n' "$LAUNCH_SH" > "$CMD_IDE"
+    chmod +x "$CMD_IDE"
+    echo "  [OK] Created launcher: $CMD_IDE"
+  fi
+  if [ -d "/Applications/Antigravity.app" ] || [ -d "$HOME/Applications/Antigravity.app" ]; then
+    CMD_APP="$DESKTOP_DIR/Antigravity (Auto Sync).command"
+    printf '#!/usr/bin/env bash\nbash "%s" app\n' "$LAUNCH_SH" > "$CMD_APP"
+    chmod +x "$CMD_APP"
+    echo "  [OK] Created launcher: $CMD_APP"
+  fi
+fi
+
+echo ""
 echo "=== Mac Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="
