@@ -802,4 +802,61 @@ if (Test-Path $NotebookLmStateFile) {
     Write-Host "  [INFO] NotebookLM state.json not found on this PC yet (run setup_auth when needed)"
 }
 
+Write-Host "`n=== [6.5/6] Configuring SessionStart Hook & Auto-Sync Launch Shortcuts ==="
+$HooksJsonPath = Join-Path $env:USERPROFILE ".gemini\config\hooks.json"
+$SessionHookScript = Join-Path $env:USERPROFILE ".gemini\config\skills\pc-env-sync\scripts\session_start_sync.ps1"
+$HooksObj = $null
+if (Test-Path $HooksJsonPath) {
+    try {
+        $rawHooks = Get-Content -Path $HooksJsonPath -Raw -Encoding UTF8
+        if ($rawHooks -and $rawHooks.Trim()) {
+            $HooksObj = $rawHooks | ConvertFrom-Json
+        }
+    } catch {
+        $HooksObj = $null
+    }
+}
+if (-not $HooksObj) {
+    $HooksObj = [PSCustomObject]@{}
+}
+$SessionHookEntry = [PSCustomObject]@{
+    SessionStart = @(
+        [PSCustomObject]@{
+            type    = "command"
+            command = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$SessionHookScript`""
+            timeout = 15
+        }
+    )
+}
+$HooksObj | Add-Member -MemberType NoteProperty -Name "pc-env-sync" -Value $SessionHookEntry -Force
+$utf8NoBomHooks = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($HooksJsonPath, ($HooksObj | ConvertTo-Json -Depth 10), $utf8NoBomHooks)
+Write-Host "  [OK] Registered SessionStart hook in: $HooksJsonPath"
+
+$LaunchScriptGlobal = Join-Path $env:USERPROFILE ".gemini\config\skills\pc-env-sync\scripts\launch_antigravity.ps1"
+$DesktopDir = [Environment]::GetFolderPath("Desktop")
+$WshShell = New-Object -ComObject WScript.Shell
+$IdeExePath = Join-Path $env:LOCALAPPDATA "Programs\Antigravity IDE\Antigravity IDE.exe"
+$AppExePath = Join-Path $env:LOCALAPPDATA "Programs\antigravity\Antigravity.exe"
+if (Test-Path $IdeExePath) {
+    $lnkPath = Join-Path $DesktopDir "Antigravity IDE (Auto Sync).lnk"
+    $sc = $WshShell.CreateShortcut($lnkPath)
+    $sc.TargetPath = "powershell.exe"
+    $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$LaunchScriptGlobal`" -Target ide"
+    $sc.IconLocation = "$IdeExePath,0"
+    $sc.Description = "Update agy CLI, run pc-env-sync, and launch Antigravity IDE"
+    $sc.Save()
+    Write-Host "  [OK] Created launcher shortcut: $lnkPath"
+}
+if (Test-Path $AppExePath) {
+    $lnkPathApp = Join-Path $DesktopDir "Antigravity (Auto Sync).lnk"
+    $scApp = $WshShell.CreateShortcut($lnkPathApp)
+    $scApp.TargetPath = "powershell.exe"
+    $scApp.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$LaunchScriptGlobal`" -Target app"
+    $scApp.IconLocation = "$AppExePath,0"
+    $scApp.Description = "Update agy CLI, run pc-env-sync, and launch Antigravity"
+    $scApp.Save()
+    Write-Host "  [OK] Created launcher shortcut: $lnkPathApp"
+}
+
 Write-Host "`n=== PC Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="
