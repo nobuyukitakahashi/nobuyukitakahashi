@@ -5,7 +5,7 @@
 - ユーザーは「ジン（じん）」と呼びかけるか、呼びかけなしで直接指示・相談を行う。`00_COO`（ジン）がすべての専門部署サブエージェント（`01`〜`06`）の起動・管理・検収・報告を一元的に担う（詳細手順：[`00_COO/AGENTS.md`](00_COO/AGENTS.md) / [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md)）。
 - 全社共通ポリシーは [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md)（自動読込）、アカウント共通のモデル判定・切替ルールは [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md) に従う。
 
-## 5大制作ジャンル ＆ 組織マップ
+## 10大制作ジャンル ＆ 組織マップ（主要5ジャンル＋映像・VR拡張5ジャンル）
 
 | ジャンル `<genre>` | スラッシュコマンド | 中間成果物（`02_Creative_Dept/`） | 最終納品先（`04_Delivery_Dept/`） |
 | :--- | :--- | :--- | :--- |
@@ -14,6 +14,11 @@
 | `photoshop` | `/photoshop` | `02_Creative_Dept/photoshop/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/photoshop/` |
 | `davinci` | `/davinci` | `02_Creative_Dept/davinci/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/davinci/` |
 | `writing` | `/writing` | `02_Creative_Dept/writing/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/writing/` |
+| `premiere` | `/premiere` | `02_Creative_Dept/premiere/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/premiere/` |
+| `aftereffects` | `/aftereffects` | `02_Creative_Dept/aftereffects/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/aftereffects/` |
+| `pano2vr` | `/pano2vr` | `02_Creative_Dept/pano2vr/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/pano2vr/` |
+| `krpano` | `/krpano` | `02_Creative_Dept/krpano/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/krpano/` |
+| `ptgui` | `/ptgui` | `02_Creative_Dept/ptgui/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/ptgui/` |
 
 | 部署 | 役割 | ルール定義 | 出力先 |
 | :--- | :--- | :--- | :--- |

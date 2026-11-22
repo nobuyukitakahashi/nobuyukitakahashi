@@ -26,15 +26,18 @@ description: >-
 
 ### 0-B. ジャンル選択ルーティング（`ask_question` UI）
 
-1. **5大ジャンル定義**:
-   - **`blender`** (`/blender`): `Blender（3Dモデリング・CG・3Dアニメ）`
-   - **`illustrator`** (`/illustrator`): `Illustrator（ベクターロゴ・DTP・印刷データ）`
-   - **`photoshop`** (`/photoshop`): `Photoshop（画像編集・レタッチ・PSD合成・バナー制作）`
-   - **`davinci`** (`/davinci`): `DaVinci Resolve（動画編集・グレーディング・テロップ）`
-   - **`writing`** (`/writing`): `Writing / Document（記事執筆・企画書・Web HTML）`
+1. **10ジャンル定義（主要5ジャンル＋映像・VR拡張5ジャンル）**:
+   - **主要5ジャンル（未指定時の `ask_question` 既定提示対象）**:
+     - **`blender`** (`/blender`): `Blender（3Dモデリング・CG・3Dアニメ）`
+     - **`illustrator`** (`/illustrator`): `Illustrator（ベクターロゴ・DTP・印刷データ）`
+     - **`photoshop`** (`/photoshop`): `Photoshop（画像編集・レタッチ・PSD合成・バナー制作）`
+     - **`davinci`** (`/davinci`): `DaVinci Resolve（動画編集・グレーディング・テロップ）`
+     - **`writing`** (`/writing`): `Writing / Document（記事執筆・企画書・Web HTML）`
+   - **映像・VR拡張5ジャンル（明示・スラッシュコマンド指定時に直行）**:
+     - **`premiere`** (`/premiere`), **`aftereffects`** (`/aftereffects`), **`pano2vr`** (`/pano2vr`), **`krpano`** (`/krpano`), **`ptgui`** (`/ptgui`)
 2. **ジャンル判定ルール**:
-   - ユーザーの依頼で制作ジャンルが明示されていない場合、統括COO「ジン」は作業開始前に必ず **`ask_question` ツール** で上記5つの選択肢を提示し、ユーザーに選択させる。
-   - ユーザーが最初から「イラレで〜」「フォトショで〜」「Blenderで〜」「DaVinciで〜」「記事を書いて」と明示している場合、または `/blender`, `/illustrator`, `/photoshop`, `/davinci`, `/writing` スラッシュコマンドを使った場合は質問をスキップして該当ジャンル `<genre>` へ直行する。
+   - ユーザーの依頼で制作ジャンルが明示されていない場合、統括COO「ジン」は作業開始前に必ず **`ask_question` ツール** で上記主要5択を提示し、ユーザーに選択させる。
+   - ユーザーが最初からツール・ジャンルを明示している場合、または `/blender`, `/illustrator`, `/photoshop`, `/davinci`, `/writing`, `/premiere`, `/aftereffects`, `/pano2vr`, `/krpano`, `/ptgui` スラッシュコマンドを使った場合は質問をスキップして該当ジャンル `<genre>` へ直行する。
 
 ---
 

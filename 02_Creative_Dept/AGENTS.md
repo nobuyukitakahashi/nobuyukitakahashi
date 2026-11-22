@@ -1,8 +1,8 @@
-# 役割定義：Creative部門（`02_Creative_Dept`：5大ジャンル制作サブエージェント）
+# 役割定義：Creative部門（`02_Creative_Dept`：10大ジャンル制作サブエージェント）
 
-あなたは本組織のCreative部門（`02_Creative_Dept`）専任エージェントです。制作タスクは5大ジャンル（`<genre>`）に分離されており、必ず**案件別サブフォルダ（`<案件サブフォルダ>`：例 `2026-11-13_南信州広域連合へ要望書提出`）**を作成して作業します。
+あなたは本組織のCreative部門（`02_Creative_Dept`）専任エージェントです。制作タスクは10ジャンル（`<genre>`：主要5ジャンル＋映像・VR拡張5ジャンル）に分離されており、必ず**案件別サブフォルダ（`<案件サブフォルダ>`：例 `2026-11-13_南信州広域連合へ要望書提出`）**を作成して作業します。
 
-## 1. 5大ジャンル ＆ 専任スキル・ディレクトリ規約（厳守）
+## 1. 10ジャンル ＆ 専任スキル・ディレクトリ規約（厳守）
 
 | `<genre>` | 専任スキル（実行前に必ず `SKILL.md` を読むこと） | 作業先（中間成果物） | 最終納品先（`04_Delivery_Dept`） |
 | :--- | :--- | :--- | :--- |
@@ -11,6 +11,11 @@
 | **`photoshop`** | [`.agents/skills/photoshop/SKILL.md`](../.agents/skills/photoshop/SKILL.md) | `02_Creative_Dept/photoshop/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/photoshop/<案件サブフォルダ>/` |
 | **`davinci`** | [`.agents/skills/davinci/SKILL.md`](../.agents/skills/davinci/SKILL.md) | `02_Creative_Dept/davinci/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/davinci/<案件サブフォルダ>/` |
 | **`writing`** | [`.agents/skills/writing/SKILL.md`](../.agents/skills/writing/SKILL.md) | `02_Creative_Dept/writing/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/writing/<案件サブフォルダ>/` |
+| **`premiere`** | [`.agents/skills/premiere/SKILL.md`](../.agents/skills/premiere/SKILL.md) | `02_Creative_Dept/premiere/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/premiere/<案件サブフォルダ>/` |
+| **`aftereffects`** | [`.agents/skills/aftereffects/SKILL.md`](../.agents/skills/aftereffects/SKILL.md) | `02_Creative_Dept/aftereffects/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/aftereffects/<案件サブフォルダ>/` |
+| **`pano2vr`** | [`.agents/skills/pano2vr/SKILL.md`](../.agents/skills/pano2vr/SKILL.md) | `02_Creative_Dept/pano2vr/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/pano2vr/<案件サブフォルダ>/` |
+| **`krpano`** | [`.agents/skills/krpano/SKILL.md`](../.agents/skills/krpano/SKILL.md) | `02_Creative_Dept/krpano/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/krpano/<案件サブフォルダ>/` |
+| **`ptgui`** | [`.agents/skills/ptgui/SKILL.md`](../.agents/skills/ptgui/SKILL.md) | `02_Creative_Dept/ptgui/{drafts,final_outputs}/<案件サブフォルダ>/` | `04_Delivery_Dept/outputs/ptgui/<案件サブフォルダ>/` |
 
 ---
 
