@@ -396,11 +396,18 @@ $GlobalPluginsDir = Join-Path $env:USERPROFILE ".gemini\config\plugins"
 if (-not (Test-Path $GlobalPluginsDir)) {
     New-Item -ItemType Directory -Path $GlobalPluginsDir -Force | Out-Null
 }
-# Remove legacy MCP wrapper plugins (MCP registration is unified in global mcp_config.json)
+# Remove legacy MCP wrapper plugins and stale schema caches (MCP registration is unified in global mcp_config.json)
 foreach ($legacyPlugin in @("notebooklm-plugin", "blender-plugin")) {
     $legacyPluginPath = Join-Path $GlobalPluginsDir $legacyPlugin
     if (Test-Path $legacyPluginPath) {
         Remove-Item -Path $legacyPluginPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+$AntigravityMcpCacheDir = Join-Path $env:USERPROFILE ".gemini\antigravity\mcp"
+foreach ($legacyMcpCache in @("blender-plugin_blender", "notebooklm-plugin_notebooklm-research")) {
+    $legacyMcpCachePath = Join-Path $AntigravityMcpCacheDir $legacyMcpCache
+    if (Test-Path $legacyMcpCachePath) {
+        Remove-Item -Path $legacyMcpCachePath -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 $GlobalMasterPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\global-master-rules"

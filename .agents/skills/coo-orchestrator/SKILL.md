@@ -19,14 +19,10 @@ description: >-
 ## Step 0: 最適モデル判定・切替ゲート ＆ ジャンル選択ルーティング（`ask_question` UI）
 
 ### 0-A. 最適モデル判定（提案ゲート ＋ Blender Swarm動的切替）
-1. 作業着手前に [`00_COO/AGENTS.md`](../../../00_COO/AGENTS.md) の「Step 0-A」に基づき、現在選択モデルとタスク難易度を照合する。
-2. **Blender案件の場合の判定基準**:
-   - **軽量・定型**（シーン確認、単体移動/回転/リネーム/単色変更）➔ `Gemini 4 Hydrogen (Low/Medium)`（`gemini-4-hydrogen-low`）
-   - **制作・`bpy`・ノード・アニメ・デバッグ** ➔ **`Gemini 4 Neon (High)`**（`gemini-4-neon-high`）
-   - **極限幾何・連続エラー再試行** ➔ **`Gemini 4 Neon (XHigh)`**（`gemini-4-neon-xhigh`）
-3. **モード選択**:
-   - 現行モデルと不一致かつ自動委任未指定時（**案A**）：`ask_question` 等で「① `swarm` ワーカーに最適実名モデルを割り当てて実行」「② 画面のモデル選択を推奨モデルへ切替」「③ サブエージェント（`pro`/`flash`）で簡易委譲」「④ 現行のまま続行」を提案する。
-   - 「自動切替で」「お任せ」または ① 選択時（**案B**）：`swarm(action="title", ...)` ➔ `swarm(action="add", name="blender-worker", model="<最適モデルID>", brief="...")` で実行し、エラー時は `swarm(action="model", name="blender-worker", model="gemini-4-neon-high" / "gemini-4-neon-xhigh")` で昇格再実行する（公式 Blender Lab MCP の `execute_blender_code` / `result = {...}` 規約・視覚監査を `brief` に明記）。
+1. 作業着手前に `global-master-rules`（および Blender 案件の場合は [`.agents/skills/blender/SKILL.md`](../blender/SKILL.md) §2-0 の Tier 1〜4 基準）に基づき、現在選択モデルとタスク難易度を照合する。
+2. **モード選択**:
+   - 現行モデルと不一致かつ自動委任未指定時（**案A**）：`global-master-rules` §1 パターンAの4択を提案する。
+   - 「自動切替で」「お任せ」または `swarm` 指定時（**案B**）：`swarm(action="title", ...)` ➔ `swarm(action="add", name="blender-worker", model="<最適モデルID>", brief="...")` で実行し、エラー時は `swarm(action="model", ...)` で上位モデルへ昇格再実行する（対象 `SKILL.md` の遵守・視覚監査を `brief` に明記）。
 
 ### 0-B. ジャンル選択ルーティング（`ask_question` UI）
 
@@ -79,7 +75,10 @@ description: >-
 5. **`delivery-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `04_Delivery_Dept` 専任の最終納品・出力統合エージェント。`01`〜`03`（および該当時は `06`）の中間成果物を集約し、ジャンル別固定出力フォルダ `04_Delivery_Dept/outputs/<genre>/` に格納して `04_Delivery_Dept/outputs/INDEX.md` を更新する。
    - **SystemPrompt**: [`04_Delivery_Dept/AGENTS.md`](../../../04_Delivery_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
-6. **`system-evolution-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
+6. **`qa-verifier`**（**`EnableWriteTools: false`, `EnableMCPTools: false`, `EnableSubagentTools: false`** ※Maker-Checker 独立検証用）：
+   - **Description**: 制作・改修完了後の成果物を独立検証する読み取り専用QAエージェント。実行役の自己申告に頼らず、元のユーザー要件・対象ファイルパス・実画像（`read_file`）を直接検査し、`PASS` または `FAIL（具体的NG箇所）` のみを返す。
+   - **SystemPrompt**: `global-master-rules` §6（Maker-Checker Gate）および対象ジャンルの品質基準を付与し、ファイルの編集・推測による合格判定を厳禁とする。
+7. **`system-evolution-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `05_System_Evolution_Dept` 専任の自律組織改善・Antigravity最新仕様監査エージェント。Antigravity最新仕様と実行ログを点検し、指示を待たずに自律的にルール（`AGENTS.md`）やスキル（`SKILL.md`）を改善する。
    - **SystemPrompt**: [`05_System_Evolution_Dept/AGENTS.md`](../../../05_System_Evolution_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
 
@@ -98,6 +97,10 @@ description: >-
 
 ### 3-3.5. 【条件付き】法務・コンプライアンス審査工程（`06_Legal_Dept` ※該当案件のみ）
 1. 通常案件ではスキップ。5大法務リスクトリガー該当案件のみ `legal-dept` を起動し、`06_Legal_Dept/reviews/review_[テーマ名].md` を作成させる。
+
+### 3-3.8. 独立検証ゲート（`qa-verifier` / Maker-Checker）【必須】
+1. `global-master-rules` §6 に該当する案件では、`invoke_subagent(TypeName="qa-verifier", Role="Independent QA Verifier", Prompt="...")` を起動し、元のユーザー要件・検証対象ファイルパス一覧・合格基準のみを渡して検査させる。
+2. `FAIL` 判定の場合は制作/実行エージェントへ差し戻して修正させ、再検証で `PASS` を得てから次の納品工程へ進む。
 
 ### 3-4. 最終出力・納品統合工程（`04_Delivery_Dept/outputs/<genre>/`）【必須】
 1. `invoke_subagent(TypeName="delivery-dept", Role="Delivery Dept Agent", Prompt="...")` を呼び出し、上流の中間成果物を統合・変換して **`04_Delivery_Dept/outputs/<genre>/`** に最終成果物を格納し、`04_Delivery_Dept/outputs/INDEX.md` の該当ジャンルセクションを更新させる。

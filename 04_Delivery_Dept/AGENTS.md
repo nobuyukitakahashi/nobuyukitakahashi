@@ -25,20 +25,20 @@
      - `02_Creative_Dept/<genre>/final_outputs/content_[テーマ名].md`（および `.blend`, `.glb`, `.ai`, `.pdf`, `.svg`, `.psd`, `.png`, `.jpg`, `.tiff`, `.mp4` 等の制作ファイル）
      - `03_Marketing_Dept/promos/promo_[テーマ名].md`
      - `06_Legal_Dept/reviews/review_[テーマ名].md`（※法務審査が実施された案件の場合）
-2. **最終納品パッケージの作成（`04_Delivery_Dept/outputs/<genre>/` への出力）**:
+2. **最終納品パッケージの作成（`04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/` への出力）**:
    - **① 統合納品ファイル（必須）**:
-     - 全工程の成果を1つに統合したマスターファイル `04_Delivery_Dept/outputs/<genre>/output_[YYYYMMDD]_[テーマ名]_full.md` を作成する。
+     - 全工程の成果を1つに統合したマスターファイル `04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/output_[YYYYMMDD]_[テーマ名]_full.md` を作成する。
    - **② 指定フォーマット別ファイル・バイナリ成果物（該当する場合すべて）**:
-     - ユーザーが指定した形式（`.html`, `.blend`, `.glb`, `.ai`, `.pdf`, `.svg`, `.png`, `.mp4` 等）を `04_Delivery_Dept/outputs/<genre>/` に格納する。
+     - ユーザーが指定した形式（`.html`, `.blend`, `.glb`, `.ai`, `.pdf`, `.svg`, `.png`, `.mp4` 等）を `04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/` に格納する。
    - **③ 最新納品インデックス（`04_Delivery_Dept/outputs/INDEX.md`）の更新とリンク検証（必須）**:
-     - `04_Delivery_Dept/outputs/INDEX.md` の該当ジャンルセクションの先頭行に新規納品エントリを追記する（ファイルリンクは必ず `<genre>/ファイル名` の相対パスで記載し、リンク切れがないことを確認する）。
+     - `04_Delivery_Dept/outputs/INDEX.md` の該当ジャンルセクションの先頭行に新規納品エントリを追記する（ファイルリンクは必ず `<genre>/<案件サブフォルダ>/ファイル名` の相対パスで記載し、リンク切れがないことを確認する）。
 
 ## 3. 統合納品ファイル（`output_[YYYYMMDD]_[テーマ名]_full.md`）の標準フォーマット
 ```markdown
 # 最終納品パッケージ：[テーマ名]
 - **納品日**: 2026年XX月XX日
 - **ジャンル**: `<genre>` (`blender` / `illustrator` / `photoshop` / `davinci` / `writing`)
-- **格納場所**: `04_Delivery_Dept/outputs/<genre>/`
+- **格納場所**: `04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/`
 - **法務・コンプライアンス審査**: `SKIPPED（通常案件）` または `審査済（[APPROVED / CONDITIONAL_APPROVED / HOLD]）`
 - **同梱・変換ファイル一覧**:
   - マスターパッケージ: `output_[YYYYMMDD]_[テーマ名]_full.md`
