@@ -409,9 +409,13 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
       command: nodeBin,
       args: [process.argv[15]]
     };
+    json.mcpServers["gemini-notebook"] = {
+      command: nodeBin,
+      args: [process.argv[16]]
+    };
 
     fs.writeFileSync(cfgPath, JSON.stringify(json, null, 2) + "\n", "utf8");
-  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js"
+  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/gemini-notebook-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
 
@@ -512,7 +516,7 @@ if [ -x "$DETECTED_BLENDER_BIN" ]; then
 fi
 
 echo ""
-echo "=== [7/7] Checking NotebookLM Auth Directory ==="
+echo "=== [7/7] Checking NotebookLM & Gemini Notebook Official API Auth Directories ==="
 NOTEBOOKLM_STATE_DIR="$HOME/Library/Application Support/notebooklm-mcp/browser_state"
 mkdir -p "$NOTEBOOKLM_STATE_DIR"
 NOTEBOOKLM_STATE_FILE="$NOTEBOOKLM_STATE_DIR/state.json"
@@ -520,6 +524,15 @@ if [ -f "$NOTEBOOKLM_STATE_FILE" ]; then
   echo "  [OK] NotebookLM state.json exists ($NOTEBOOKLM_STATE_FILE)"
 else
   echo "  [INFO] NotebookLM state.json not found on this Mac yet (run setup_auth when needed)"
+fi
+
+GEMINI_NB_DIR="$HOME/Library/Application Support/gemini-notebook-mcp"
+mkdir -p "$GEMINI_NB_DIR"
+chmod 700 "$GEMINI_NB_DIR" 2>/dev/null || true
+if [ -f "$GEMINI_NB_DIR/tokens.json" ]; then
+  echo "  [OK] Gemini Notebook Official API tokens.json exists ($GEMINI_NB_DIR/tokens.json)"
+else
+  echo "  [INFO] Gemini Notebook Official API not authenticated on this Mac yet (run: node .agents/mcp/gemini-notebook-mcp/cli.js auth-setup ... && login)"
 fi
 
 echo ""

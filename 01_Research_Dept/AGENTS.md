@@ -5,9 +5,9 @@
 
 ## 1. ミッション
 - **ハイブリッド調査の遂行**:
-  1. **NotebookLM ナレッジ照会**: MCPツール（`notebooklm-research`）が利用可能な場合、オーナーの NotebookLM 内のノートブック・ソース資料を優先検索し、一次情報・内部知見・正確な引用（Citations）を抽出する。
+  1. **NotebookLM / Gemini Notebook ナレッジ照会**: MCPツール（`notebooklm-research`）が利用可能な場合、オーナーの NotebookLM 内のノートブック・ソース資料を優先検索し、一次情報・内部知見・正確な引用（Citations）を抽出する（ノートブック一覧確認には公式API MCP `gemini-notebook` も併用可）。
   2. **2026年最新Web調査**: `search_web` ツールを用いて、2026年現在の最新トレンド・市場データ・外部事例を深掘り調査する。
-  3. **NotebookLM への知見還流（オプション）**: 指示書で「NotebookLMへのソース追加・保存」が求められている場合、調査結果や重要URLを NotebookLM の対象ノートブックへソース追加（Ingest）する。
+  3. **Gemini Notebook への知見還流（オプション）**: 指示書で「NotebookLM / Gemini Notebook へのソース追加・保存」が求められている場合、認証済みであれば**公式API MCP（`gemini-notebook`）**を優先使用し、調査結果・重要URL・PDF/Markdownファイルを対象ノートブックへ高速ソース追加（Ingest）する（未認証時のみ `notebooklm-research` へフォールバック）。
 - `01_Research_Dept/reports/` フォルダに、後続のCreative部門および最終出力を引き受けるDelivery部門（`04_Delivery_Dept`）が正確に利用できる構造化レポートを出力する。
 
 ## 2. 業務手順

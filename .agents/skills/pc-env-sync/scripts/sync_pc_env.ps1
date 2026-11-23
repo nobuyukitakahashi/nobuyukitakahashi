@@ -498,9 +498,10 @@ if ($IsOfficialBlenderMcp) {
     Write-Host "  [INFO] Will use uvx for official Blender Lab blender-mcp: $UvxPath"
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, illustrator, photoshop, premiere, aftereffects & ptgui) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, notebooklm-research, gemini-notebook, illustrator, photoshop, premiere, aftereffects & ptgui) ==="
 $NodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $NodeExe = if ($NodeCmd) { $NodeCmd.Source } else { "node" }
+$GeminiNotebookMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\gemini-notebook-mcp\server.js"
 $IllustratorMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\illustrator-mcp\server.js"
 $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server.js"
 $PremiereMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\premiere-mcp\server.js"
@@ -582,6 +583,12 @@ foreach ($cfgPath in $McpConfigPaths) {
         args    = @($NotebookLmMcpScript)
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "notebooklm-research" -Value $notebookLmEntry -Force
+
+    $geminiNotebookEntry = [PSCustomObject]@{
+        command = $NodeExe
+        args    = @($GeminiNotebookMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "gemini-notebook" -Value $geminiNotebookEntry -Force
 
     $illustratorEntry = [PSCustomObject]@{
         command = $NodeExe
@@ -790,7 +797,7 @@ if ($DetectedBlenderExe -and (Test-Path $DetectedBlenderExe)) {
     Write-Host "  [INFO] Blender executable not found on this PC yet; install Blender 5.1+ then re-run sync."
 }
 
-Write-Host "`n=== [6/6] Checking NotebookLM Auth Directory ==="
+Write-Host "`n=== [6/6] Checking NotebookLM & Gemini Notebook Official API Auth Directories ==="
 $NotebookLmStateDir = Join-Path $env:LOCALAPPDATA "notebooklm-mcp\Data\browser_state"
 if (-not (Test-Path $NotebookLmStateDir)) {
     New-Item -ItemType Directory -Path $NotebookLmStateDir -Force | Out-Null
@@ -800,6 +807,17 @@ if (Test-Path $NotebookLmStateFile) {
     Write-Host "  [OK] NotebookLM state.json exists ($NotebookLmStateFile)"
 } else {
     Write-Host "  [INFO] NotebookLM state.json not found on this PC yet (run setup_auth when needed)"
+}
+
+$GeminiNotebookAuthDir = Join-Path $env:LOCALAPPDATA "gemini-notebook-mcp"
+if (-not (Test-Path $GeminiNotebookAuthDir)) {
+    New-Item -ItemType Directory -Path $GeminiNotebookAuthDir -Force | Out-Null
+}
+$GeminiNotebookTokensFile = Join-Path $GeminiNotebookAuthDir "tokens.json"
+if (Test-Path $GeminiNotebookTokensFile) {
+    Write-Host "  [OK] Gemini Notebook Official API tokens.json exists ($GeminiNotebookTokensFile)"
+} else {
+    Write-Host "  [INFO] Gemini Notebook Official API not authenticated on this PC yet (run: node .agents/mcp/gemini-notebook-mcp/cli.js auth-setup ... && login)"
 }
 
 Write-Host "`n=== [6.5/6] Configuring SessionStart Hook & Auto-Sync Launch Shortcuts ==="
