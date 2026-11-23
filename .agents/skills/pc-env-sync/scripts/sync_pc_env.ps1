@@ -813,10 +813,38 @@ $GeminiNotebookAuthDir = Join-Path $env:LOCALAPPDATA "gemini-notebook-mcp"
 if (-not (Test-Path $GeminiNotebookAuthDir)) {
     New-Item -ItemType Directory -Path $GeminiNotebookAuthDir -Force | Out-Null
 }
+$GeminiNotebookDriveDir = Join-Path $DriveRoot "_private_backup\gemini-notebook-mcp"
+if (-not (Test-Path $GeminiNotebookDriveDir)) {
+    New-Item -ItemType Directory -Path $GeminiNotebookDriveDir -Force | Out-Null
+}
+foreach ($authFileName in @("config.json", "tokens.json")) {
+    $localAuthPath = Join-Path $GeminiNotebookAuthDir $authFileName
+    $driveAuthPath = Join-Path $GeminiNotebookDriveDir $authFileName
+    $hasLocal = Test-Path $localAuthPath
+    $hasDrive = Test-Path $driveAuthPath
+
+    if ($hasLocal -and -not $hasDrive) {
+        Copy-Item -Path $localAuthPath -Destination $driveAuthPath -Force
+        Write-Host "  [OK] Backed up Gemini Notebook $authFileName -> Google Drive (_private_backup)"
+    } elseif ($hasDrive -and -not $hasLocal) {
+        Copy-Item -Path $driveAuthPath -Destination $localAuthPath -Force
+        Write-Host "  [OK] Restored Gemini Notebook $authFileName <- Google Drive (_private_backup)"
+    } elseif ($hasLocal -and $hasDrive) {
+        $localMtime = (Get-Item $localAuthPath).LastWriteTimeUtc
+        $driveMtime = (Get-Item $driveAuthPath).LastWriteTimeUtc
+        if ($localMtime -gt $driveMtime.AddSeconds(2)) {
+            Copy-Item -Path $localAuthPath -Destination $driveAuthPath -Force
+            Write-Host "  [OK] Synced newer local Gemini Notebook $authFileName -> Google Drive"
+        } elseif ($driveMtime -gt $localMtime.AddSeconds(2)) {
+            Copy-Item -Path $driveAuthPath -Destination $localAuthPath -Force
+            Write-Host "  [OK] Synced newer Drive Gemini Notebook $authFileName -> local PC"
+        } else {
+            Write-Host "  [OK] Gemini Notebook $authFileName in sync ($localAuthPath)"
+        }
+    }
+}
 $GeminiNotebookTokensFile = Join-Path $GeminiNotebookAuthDir "tokens.json"
-if (Test-Path $GeminiNotebookTokensFile) {
-    Write-Host "  [OK] Gemini Notebook Official API tokens.json exists ($GeminiNotebookTokensFile)"
-} else {
+if (-not (Test-Path $GeminiNotebookTokensFile)) {
     Write-Host "  [INFO] Gemini Notebook Official API not authenticated on this PC yet (run: node .agents/mcp/gemini-notebook-mcp/cli.js auth-setup ... && login)"
 }
 

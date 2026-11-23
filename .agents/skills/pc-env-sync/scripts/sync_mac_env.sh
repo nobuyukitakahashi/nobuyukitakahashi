@@ -527,11 +527,35 @@ else
 fi
 
 GEMINI_NB_DIR="$HOME/Library/Application Support/gemini-notebook-mcp"
-mkdir -p "$GEMINI_NB_DIR"
+GEMINI_NB_DRIVE_DIR="$DRIVE_ROOT/_private_backup/gemini-notebook-mcp"
+mkdir -p "$GEMINI_NB_DIR" "$GEMINI_NB_DRIVE_DIR"
 chmod 700 "$GEMINI_NB_DIR" 2>/dev/null || true
-if [ -f "$GEMINI_NB_DIR/tokens.json" ]; then
-  echo "  [OK] Gemini Notebook Official API tokens.json exists ($GEMINI_NB_DIR/tokens.json)"
-else
+
+for auth_file in config.json tokens.json; do
+  local_f="$GEMINI_NB_DIR/$auth_file"
+  drive_f="$GEMINI_NB_DRIVE_DIR/$auth_file"
+  if [ -f "$local_f" ] && [ ! -f "$drive_f" ]; then
+    cp "$local_f" "$drive_f"
+    echo "  [OK] Backed up Gemini Notebook $auth_file -> Google Drive (_private_backup)"
+  elif [ -f "$drive_f" ] && [ ! -f "$local_f" ]; then
+    cp "$drive_f" "$local_f"
+    chmod 600 "$local_f" 2>/dev/null || true
+    echo "  [OK] Restored Gemini Notebook $auth_file <- Google Drive (_private_backup)"
+  elif [ -f "$local_f" ] && [ -f "$drive_f" ]; then
+    if [ "$local_f" -nt "$drive_f" ]; then
+      cp "$local_f" "$drive_f"
+      echo "  [OK] Synced newer local Gemini Notebook $auth_file -> Google Drive"
+    elif [ "$drive_f" -nt "$local_f" ]; then
+      cp "$drive_f" "$local_f"
+      chmod 600 "$local_f" 2>/dev/null || true
+      echo "  [OK] Synced newer Drive Gemini Notebook $auth_file -> local Mac"
+    else
+      echo "  [OK] Gemini Notebook $auth_file in sync ($local_f)"
+    fi
+  fi
+done
+
+if [ ! -f "$GEMINI_NB_DIR/tokens.json" ]; then
   echo "  [INFO] Gemini Notebook Official API not authenticated on this Mac yet (run: node .agents/mcp/gemini-notebook-mcp/cli.js auth-setup ... && login)"
 fi
 

@@ -19,6 +19,10 @@ Google 公式 **Gemini Notebook REST API（`https://notebook.googleapis.com/v1` 
 - **Windows**: `%LOCALAPPDATA%\gemini-notebook-mcp\`
 - **macOS**: `~/Library/Application Support/gemini-notebook-mcp/`
 
+### 複数端末間での自動同期
+`/pc-env-sync`（`sync_pc_env.ps1` / `sync_mac_env.sh`）を実行すると、上記ローカル領域の `config.json` と `tokens.json` が **Git 管理外の Google Drive プライベート領域（`<DriveRoot>/_private_backup/gemini-notebook-mcp/`）** と更新日時ベースで双方向自動同期されます。
+これにより、1台のPCで初回ログインを完了すれば、他の Windows / Mac 端末では再ログインや `client_secret.json` の再設定なしで即座に利用できます。
+
 ## 初回セットアップ手順（個人 Google アカウント向け）
 
 ### 前提条件
