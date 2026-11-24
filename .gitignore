@@ -1,6 +1,7 @@
-# Python cache & Blender backup files
+# Python cache, virtualenvs & Blender backup files
 **/__pycache__/
 *.pyc
+.venv/
 *.blend1
 
 # Large rendered DaVinci Resolve full-length video/audio files (>100MB, synced via Google Drive)
