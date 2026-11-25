@@ -13,6 +13,12 @@ This skill provides operational standards, architectural patterns, and safety gu
 
 ## 1. Avada & Fusion Builder Shortcode Standards
 
+### 1.0 Core Principle: Back-End Builder Maintainability & Refined Design (MANDATORY)
+For all WordPress sites built with the **Avada** theme set (`https://avada.com/`):
+- **Research Latest Shortcodes & Official Samples**: Always research and utilize the latest standard shortcodes, elements, and layout patterns supported by the installed **Avada Back-End Builder (Fusion Builder)** and official Avada documentation/samples (`https://avada.com/`).
+- **Human-Maintainable Structure**: Avoid raw HTML/inline CSS/custom JS workarounds whenever a native Fusion Builder element exists. Structure every section using standard containers, rows, columns, and native Fusion elements so that human editors can easily inspect, edit, and maintain both appearance and functionality directly in the WordPress **Back-End Builder** UI.
+- **Refined Design & Functionality**: Ensure spacing, typography, color harmony, responsive visibility, and interactive behavior are polished and cohesive.
+
 ### 1.1 Structural Hierarchy
 Fusion Builder pages must strictly adhere to the nesting structure:
 ```text
