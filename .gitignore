@@ -42,3 +42,20 @@ id_ecdsa*
 *.key
 *.pem
 *.ppk
+
+# After Effects / Photoshop temporary audit frames, TTS trials & large media synced via Google Drive
+**/自動保存/
+02_Creative_Dept/aftereffects/**/audit*/
+02_Creative_Dept/aftereffects/**/final_audit_frames*/
+02_Creative_Dept/aftereffects/**/google_tts_clips/
+02_Creative_Dept/aftereffects/**/narration_clips/
+02_Creative_Dept/aftereffects/**/*.mp4
+02_Creative_Dept/aftereffects/**/*.wav
+02_Creative_Dept/aftereffects/**/*.aep
+04_Delivery_Dept/outputs/aftereffects/**/*.mp4
+04_Delivery_Dept/outputs/aftereffects/**/*.wav
+04_Delivery_Dept/outputs/aftereffects/**/*.psd
+02_Creative_Dept/photoshop/**/audit_*.png
+02_Creative_Dept/photoshop/**/*.psd
+02_Creative_Dept/photoshop/final_outputs/furusato2026_youtube_thumb/*.png
+02_Creative_Dept/photoshop/final_outputs/furusato2026_youtube_thumb/*.jpg
