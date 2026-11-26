@@ -474,6 +474,9 @@ if ($UvExe) {
 }
 
 $BlenderMcpExe = Join-Path $env:USERPROFILE ".local\bin\blender-mcp.exe"
+$UvToolDir = if ($UvExe) { (& $UvExe tool dir 2>$null | Out-String).Trim() } else { Join-Path $env:APPDATA "uv\tools" }
+$BlenderMcpPython = if ($UvToolDir) { Join-Path $UvToolDir "blender-mcp\Scripts\python.exe" } else { $null }
+
 function Test-OfficialBlenderMcpExe {
     param([string]$ExePath)
     if (-not (Test-Path $ExePath)) { return $false }
@@ -484,16 +487,33 @@ function Test-OfficialBlenderMcpExe {
     return ($helpText -match "MCP server for Blender" -and $helpText -notmatch "mcp-for-blender")
 }
 
+function Test-OfficialBlenderMcpPython {
+    param([string]$PythonPath)
+    if (-not $PythonPath -or -not (Test-Path $PythonPath)) { return $false }
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $helpText = (& $PythonPath -m blmcp --help 2>&1 | Out-String)
+    $ErrorActionPreference = $prevEap
+    return ($helpText -match "MCP server for Blender" -and $helpText -notmatch "mcp-for-blender")
+}
+
 $IsOfficialBlenderMcp = Test-OfficialBlenderMcpExe -ExePath $BlenderMcpExe
-if (-not $IsOfficialBlenderMcp -and $UvExe) {
+$IsOfficialBlenderMcpPython = if (-not $IsOfficialBlenderMcp) { Test-OfficialBlenderMcpPython -PythonPath $BlenderMcpPython } else { $false }
+
+if (-not $IsOfficialBlenderMcp -and -not $IsOfficialBlenderMcpPython -and $UvExe) {
     Write-Host "  Installing official Blender Lab blender-mcp via uv tool (--force)..."
     $ErrorActionPreference = "Continue"
     & $UvExe tool install --force --python 3.12 --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp 2>&1 | Out-Host
     $ErrorActionPreference = "Stop"
     $IsOfficialBlenderMcp = Test-OfficialBlenderMcpExe -ExePath $BlenderMcpExe
+    if (-not $IsOfficialBlenderMcp) {
+        $IsOfficialBlenderMcpPython = Test-OfficialBlenderMcpPython -PythonPath $BlenderMcpPython
+    }
 }
 if ($IsOfficialBlenderMcp) {
     Write-Host "  [OK] Official Blender Lab blender-mcp ready: $BlenderMcpExe"
+} elseif ($IsOfficialBlenderMcpPython) {
+    Write-Host "  [OK] Official Blender Lab blender-mcp ready via Python (-m blmcp): $BlenderMcpPython"
 } else {
     Write-Host "  [INFO] Will use uvx for official Blender Lab blender-mcp: $UvxPath"
 }
@@ -559,6 +579,16 @@ foreach ($cfgPath in $McpConfigPaths) {
         $blenderEntry = [PSCustomObject]@{
             command = $BlenderMcpExe
             args    = @()
+            env     = [PSCustomObject]@{
+                BLENDER_PATH     = $DetectedBlenderExe
+                BLENDER_MCP_HOST = "localhost"
+                BLENDER_MCP_PORT = "9876"
+            }
+        }
+    } elseif ($IsOfficialBlenderMcpPython) {
+        $blenderEntry = [PSCustomObject]@{
+            command = $BlenderMcpPython
+            args    = @("-m", "blmcp")
             env     = [PSCustomObject]@{
                 BLENDER_PATH     = $DetectedBlenderExe
                 BLENDER_MCP_HOST = "localhost"
