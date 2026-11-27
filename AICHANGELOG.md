@@ -1,5 +1,28 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v35): 全30プロジェクト＋Obsidian 横断改善（Phase A〜D 完了：緊急Git復旧・全19サイト `AGENTS.md` 統一・SQL 1.25GB圧縮・一時資産 6.06GB整理・迷子納品物回収）
+
+### 変更理由
+1. `nobuyukitakahashi` 以外の全30プロジェクトおよび Obsidian Vault を横断監査した結果、Git インデックス破損・916件誤削除ステージング・WordPress 11サイトへの偽 `Framework: Streamlit` 混入・18プロジェクトの旧3スキル複製・非圧縮SQL 1.4GB蓄積・Obsidian直下の迷子納品物が判明したため。
+2. 全 WordPress 保守サイトの共通規約を [`wordpress-avada-maintenance/SKILL.md`](.agents/skills/wordpress-avada-maintenance/SKILL.md) §8 へ単一ソース集約し、全プロジェクト横断監査ツール [`07_QA_Dept/scripts/verify_all_projects.py`](07_QA_Dept/scripts/verify_all_projects.py) を常設するため。
+
+### Before / After
+- **Phase A（緊急復旧・迷子回収）**:
+  - `antigravity/httpsrecruit.kumashiro.co.jp`: 破損 `.git/index` を再構築し `.gitignore` 新設。
+  - `antigravity/wn-sekizenkai.or.jp`: 放置 `.git/index.lock` 解除＋`git reset` で 916件の誤削除ステージングを無損失復旧。
+  - `G:\マイドライブ\obsidian`: 直下に誤作成されていた `02_Creative_Dept` / `04_Delivery_Dept` から「cvn プラスモバイル ハガキ」納品物一式を `nobuyukitakahashi/04_Delivery_Dept/outputs/illustrator/2026-11-11_cvn_plus_mobile_postcard/` へ正式回収・[`INDEX.md`](04_Delivery_Dept/outputs/INDEX.md) 登録。
+  - `antigravity/kumashiro.co.jp`: 追跡済み `.bak` ファイルを `git rm --cached` で追跡解除。
+- **Phase B（ルール統一・脱コピペ・横断監査常設）**:
+  - [`wordpress-avada-maintenance/SKILL.md`](.agents/skills/wordpress-avada-maintenance/SKILL.md) §8 へ全WPサイト共通の5部門分離・デュアル保守・再開時原則・バックアップ圧縮規約を集約。
+  - 全16サイトの `AGENTS.md` を外科手術的にクリーン化（偽 `Streamlit` 11件一掃、`iidajob.com` 本番WP接続情報補完、`castvision.net` v34参照ズレ修正、`go.castvision.net` 旧 `view_file` 修正、`iida-hs.ed.jp` BOM除去、`kumashiro.co.jp` 重複段落除去）。
+  - 18プロジェクトから旧複製3スキル（`loop-step` / `plan` / `review`）を一括撤去、`your-project-template/AGENTS.md` を v34 標準へ刷新、[`07_QA_Dept/scripts/verify_all_projects.py`](07_QA_Dept/scripts/verify_all_projects.py) を新設。
+- **Phase C & D（Git保護・計 7.31 GB 容量削減）**:
+  - 未管理2サイト（`iidajob.com`, `kumashiro-planning.co.jp`）へ `.gitignore`＋ローカル Git 保護を導入。
+  - 全12サイトの非圧縮 `backups/*.sql` 73件（`1,399.0 MB`）を `.sql.gz`（`148.6 MB`）へ整合検証付き圧縮置換（**`-1,250.4 MB` / `-89.4%`**）。
+  - `antigravity/blender` の連番フレーム `frames_v3/v5/v6`・`.blend1`（`5.84 GB`）、移行済 `antigravity/moho/moho-control`、展開済 `krpano-1.24.zip`（`222.8 MB`）を安全削除（**`-6,062.1 MB`**）し、`blender` の大容量52ファイルを `git rm --cached` で追跡解除。
+
+---
+
 ## 2026-11-28 (v34): Phase 1〜4 全面組織刷新（`GEMINI.md` 圧縮・3レーン制・`07_QA_Dept` 新設・Hooks ガードレール・約 4.0GB ストレージ整理・Git 軽量化）
 
 ### 変更理由

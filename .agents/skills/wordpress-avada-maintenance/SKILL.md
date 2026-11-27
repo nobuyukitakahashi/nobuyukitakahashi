@@ -148,4 +148,22 @@ UI・レイアウト・CSS・HTML・Avadaショートコード改修時は、以
 3. **実ブラウザ DOM / CSSOM・`getComputedStyle` 実機検証**: 静的文字列一致で推測せず、ヘッドレスブラウザ上の実DOMおよび `window.getComputedStyle(el)`（インライン `style` 再シリアライズや詳細度競合含む）でスタイル適用結果を検証する。
 4. **3デバイス実画面スクリーンショットの `read_file` 目視監査**: テストの `Exit Code 0` だけで完了報告せず、PC（`1920px`）・タブレット（`768px`）・スマホ（`375px`）の3画面を撮影し、`read_file` で視覚的に「余白対称性」「テーブル枠内横スクロール・文字潰れ」「要素重なり・崩れ」を確認する。
 
+---
+
+## 8. 共通運用ガバナンス（全 WordPress 保守サイト単一ソース）
+
+各サイトの `AGENTS.md` へ重複コピーせず、以下を全 WordPress 保守サイトの共通基準とする：
+1. **作業開始・再開時の応答原則**: ユーザーから「再開OK？」「始めます」等の挨拶・再開確認のみを受けた段階では、裏で Git/SSH/疎通コマンドを無闇に実行せず即座に応答し、具体的な更新指示を受けてから `start-maint.ps1` / `fetch_pages.py` 等を必要最小限で実行する。
+2. **デュアル保守（管理画面手動編集 × WP-CLI）4原則**:
+   - 更新前に必ず `fetch_pages.py`（または `start-maint.ps1`）で最新ライブ状態を取得し、スタッフ手動編集の上書きを防ぐ。
+   - 生の `<iframe>` / `<script>` はページ本文へ直書きせず子テーマ `functions.php` でショートコード化する。
+   - `wp_revisions_to_keep = 30` と `fusion_builder_status = active` / `_wp_page_template = 100-width.php` を維持する。
+   - 反映後は `wp cache flush` ＆ Avada/WP-Optimize キャッシュクリアを実施する。
+3. **5部門分離・サブエージェント分業体制（`global-master-rules` §1・§5 統合版）**:
+   - 単純質問・1ファイル軽微誤字修正を除き、①**統括（メイン）** ➔ ②**実装計画（`planner`, 読取専用）** ➔ ③**データバックアップ（`backup-manager`）** ➔ ④**更新実装（`implementer`）** ➔ ⑤**独立目視検証（`visual-qa-verifier`, 読取専用・§7 準拠）** に分離実行する。
+   - 着手前に「部門・担当・推奨LLM（軽微: `flash`/`gemini-4-hydrogen-medium`、横断・視覚監査: `pro`/`gemini-4-neon-high`・`argon-high`）・実行方式（`invoke_subagent`/`swarm`）」の表を1回提示して承認を得る（`global-master-rules` §1 の単体ゲートと二重提示しない）。
+   - `visual-qa-verifier` が `global-master-rules` §5 の `qa-verifier` を兼ね、`PASS` まで完了報告しない。
+4. **バックアップ圧縮・世代ローテーション**: ローカル `backups/` の DB ダンプは `.sql.gz` 圧縮で直近5〜10世代のみ保持し、`.gitignore` で Git 追跡から除外する。
+
+
 
