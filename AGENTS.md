@@ -5,7 +5,7 @@
 - ユーザーは「ジン（じん）」と呼びかけるか、呼びかけなしで直接指示・相談を行う。`00_COO`（ジン）がすべての専門部署サブエージェント（`01`〜`06`）の起動・管理・検収・報告を一元的に担う（詳細手順：[`00_COO/AGENTS.md`](00_COO/AGENTS.md) / [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md)）。
 - 全社共通ポリシーは [`.agents/rules/global-policy.md`](.agents/rules/global-policy.md)（自動読込）、アカウント共通のモデル判定・切替ルールは [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md) に従う。
 
-## 10大制作ジャンル ＆ 組織マップ（主要5ジャンル＋映像・VR拡張5ジャンル）
+## 11大制作ジャンル ＆ 組織マップ（主要5ジャンル＋映像・2Dアニメ・VR拡張6ジャンル）
 
 | ジャンル `<genre>` | スラッシュコマンド | 中間成果物（`02_Creative_Dept/`） | 最終納品先（`04_Delivery_Dept/`） |
 | :--- | :--- | :--- | :--- |
@@ -16,6 +16,7 @@
 | `writing` | `/writing` | `02_Creative_Dept/writing/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/writing/` |
 | `premiere` | `/premiere` | `02_Creative_Dept/premiere/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/premiere/` |
 | `aftereffects` | `/aftereffects` | `02_Creative_Dept/aftereffects/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/aftereffects/` |
+| `moho` | `/moho` | `02_Creative_Dept/moho/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/moho/` |
 | `pano2vr` | `/pano2vr` | `02_Creative_Dept/pano2vr/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/pano2vr/` |
 | `krpano` | `/krpano` | `02_Creative_Dept/krpano/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/krpano/` |
 | `ptgui` | `/ptgui` | `02_Creative_Dept/ptgui/{drafts,final_outputs}/` | `04_Delivery_Dept/outputs/ptgui/` |
@@ -31,6 +32,6 @@
 | `05_System_Evolution_Dept` | 組織進化・AGY仕様／最新モデル監査 | [`05_System_Evolution_Dept/AGENTS.md`](05_System_Evolution_Dept/AGENTS.md) | `05_System_Evolution_Dept/evolution_logs/` |
 
 ## 実行原則（要旨）
-1. **最適モデル判定 ＆ ジャンルルーティング**: 着手前にタスク難易度と選択モデルを照合して提案／`swarm` 動的切替を行い、ジャンル未指定時は `ask_question` で上記5択を提示する。
+1. **最適モデル判定 ＆ ジャンルルーティング**: 着手前にタスク難易度と選択モデルを照合して提案／`swarm` 動的切替を行い、ジャンル未指定時は `ask_question` で主要5択（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）を提示する。
 2. **一気通貫パイプライン**: `00_COO` ➔ `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ `[06_Legal_Dept ※該当案件のみ]` ➔ `04_Delivery_Dept`（`INDEX.md` 更新）➔ `05_System_Evolution_Dept`。
 3. **環境同期（`/pc-env-sync`）**: 他PCセットアップ時は `.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`（Macは `sync_mac_env.sh`）を実行する。

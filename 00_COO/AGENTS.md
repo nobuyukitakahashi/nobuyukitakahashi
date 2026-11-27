@@ -4,7 +4,7 @@
 
 ## 1. 最重要原則
 1. **窓口の一元化と直接作業の禁止**: 単体指示がない限りCOO自身がレポート・本文・告知文・納品物を直接作成せず、必ず各部署サブエージェント（`invoke_subagent`）または `swarm` ワーカーに実行させること。
-2. **ジャンル選択ルーティング（`ask_question`）**: 制作ジャンル（主要5ジャンル：`blender` / `illustrator` / `photoshop` / `davinci` / `writing`、映像・VR拡張5ジャンル：`premiere` / `aftereffects` / `pano2vr` / `krpano` / `ptgui`）が未明示の場合は、着手前に `ask_question` で主要5択（または該当拡張ジャンル）を提示する（明示やスラッシュコマンド指定時は直行）。
+2. **ジャンル選択ルーティング（`ask_question`）**: 制作ジャンル（主要5ジャンル：`blender` / `illustrator` / `photoshop` / `davinci` / `writing`、映像・2Dアニメ・VR拡張6ジャンル：`premiere` / `aftereffects` / `moho` / `pano2vr` / `krpano` / `ptgui`）が未明示の場合は、着手前に `ask_question` で主要5択（または該当拡張ジャンル）を提示する（明示やスラッシュコマンド指定時は直行）。
 3. **最終出力固定 ＆ 案件別サブフォルダ**: あらゆる形式の最終成果物は必ず `04_Delivery_Dept` を経由し、`04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/`（上流は `02_Creative_Dept/<genre>/{drafts,final_outputs}/<案件サブフォルダ>/`）へ格納して [`04_Delivery_Dept/outputs/INDEX.md`](../04_Delivery_Dept/outputs/INDEX.md) を更新させること。
 4. **自律的組織改善**: 業務完了時や定期点検時に `05_System_Evolution_Dept` を稼働させ、Antigravity仕様・最新モデル・ルール/スキルを点検・改善させること。
 

@@ -1,0 +1,20 @@
+{
+  "name": "moho-control",
+  "version": "1.0.0",
+  "description": "Moho Pro 14.5.1 Full-Control Hybrid Engine (MCP Server + CLI Bridge + Live Lua 5.4 Bridge + Headless .moho JSON/ZIP Engine + CLI Renderer)",
+  "private": true,
+  "main": "server.js",
+  "bin": {
+    "moho-mcp": "./server.js",
+    "moho-cli": "./cli.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node cli.js",
+    "install-bridge": "node install-bridge.js",
+    "test": "node scripts/test-e2e.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -518,7 +518,7 @@ if ($IsOfficialBlenderMcp) {
     Write-Host "  [INFO] Will use uvx for official Blender Lab blender-mcp: $UvxPath"
 }
 
-Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, notebooklm-research, gemini-notebook, illustrator, photoshop, premiere, aftereffects & ptgui) ==="
+Write-Host "`n=== [5/6] Updating Global MCP Configs (obsidian, blender, notebooklm-research, gemini-notebook, illustrator, photoshop, premiere, aftereffects, ptgui & moho) ==="
 $NodeCmd = Get-Command node -ErrorAction SilentlyContinue
 $NodeExe = if ($NodeCmd) { $NodeCmd.Source } else { "node" }
 $GeminiNotebookMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\gemini-notebook-mcp\server.js"
@@ -527,6 +527,8 @@ $PhotoshopMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\photoshop-mcp\server
 $PremiereMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\premiere-mcp\server.js"
 $AfterEffectsMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\aftereffects-mcp\server.js"
 $PtguiMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\ptgui-mcp\server.js"
+$MohoMcpScript = Join-Path $WorkspaceRoot ".agents\mcp\moho-mcp\server.js"
+$MohoInstallBridgeScript = Join-Path $WorkspaceRoot ".agents\mcp\moho-mcp\install-bridge.js"
 
 $DetectedBlenderExe = @("C:\Program Files\Blender Foundation", "$env:LOCALAPPDATA\Programs\Blender Foundation") |
     Where-Object { Test-Path $_ } |
@@ -650,9 +652,31 @@ foreach ($cfgPath in $McpConfigPaths) {
     }
     $json.mcpServers | Add-Member -MemberType NoteProperty -Name "ptgui" -Value $ptguiEntry -Force
 
+    $mohoEntry = [PSCustomObject]@{
+        command = $NodeExe
+        args    = @($MohoMcpScript)
+    }
+    $json.mcpServers | Add-Member -MemberType NoteProperty -Name "moho" -Value $mohoEntry -Force
+
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($cfgPath, ($json | ConvertTo-Json -Depth 10), $utf8NoBom)
     Write-Host "  [OK] Updated MCP config: $cfgPath"
+}
+
+if (Test-Path $MohoInstallBridgeScript) {
+    $ErrorActionPreference = "Continue"
+    $mohoBridgeOut = (& $NodeExe $MohoInstallBridgeScript --no-mcp --if-installed 2>&1 | Out-String)
+    $mohoBridgeExit = $LASTEXITCODE
+    $ErrorActionPreference = "Stop"
+    if ($mohoBridgeExit -eq 0) {
+        if ($mohoBridgeOut -match '"skipped":\s*true') {
+            Write-Host "  [INFO] Moho Pro not detected on this PC; skipped Lua 5.4 Bridge deployment"
+        } else {
+            Write-Host "  [OK] Synced Moho Pro Live Lua 5.4 Bridge scripts into EditableFilesDir/Scripts"
+        }
+    } else {
+        Write-Warning "Moho Lua Bridge sync warning: $mohoBridgeOut"
+    }
 }
 
 # Ensure antigravity-obsidian profile has trustedWorkspaces and OAuth marker for Obsidian plugin v1.0.15+ compatibility on Windows

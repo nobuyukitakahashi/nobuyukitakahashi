@@ -1,5 +1,39 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v32): Moho Pro 14 完全制御MCP（`moho`）・専任スキル（`/moho`）の組織完全統合 ＆ 11大制作ジャンル整合化・`/system-evolution` 定期監査
+
+### 変更理由
+1. `g:\マイドライブ\git\antigravity\moho\moho-control` で構築した Moho Pro 14.5.1 外部依存ゼロ4層ハイブリッド制御環境（MCP 15ツール・CLIブリッジ・Live Lua 5.4 Bridge・Headless `.moho` Engine・CLIレンダラ）を `nobuyukitakahashi` 正本へ統合し、Windows / macOS のどのPCでも `/pc-env-sync` 一発で `moho` MCPサーバー・Lua Bridge・`/moho` スキルが自動展開・維持されるようにするため。
+2. `/system-evolution` 定期監査の結果、部門スキル（`coo-orchestrator` / `creative-dept` / `delivery-dept`）に残っていた旧「5大ジャンル」表記のズレを解消し、全ルール・スキル・台帳を **11大制作ジャンル（主要5ジャンル＋映像・2Dアニメ・VR拡張6ジャンル）** へ統一するため。
+
+### Before / After
+- **Before (v31)**:
+  - `moho-control` は別フォルダに独立配置されており、`sync_pc_env.ps1` / `sync_mac_env.sh` の対象外だったため、SessionStart 自動同期後に `mcp_config.json` へ `moho` が登録されず、別PCへも展開されなかった。
+  - 制作ジャンルは10ジャンル（`moho` 未登録）であり、`creative-dept` / `delivery-dept` の `SKILL.md` が旧「5大ジャンル」表記のままだった。
+- **After (v32)**:
+  - **`.agents/mcp/moho-mcp/` 新設 ＆ ポータブル強化**: `moho-control` 一式を正本統合し、`install-bridge.js` へ `--if-installed` オプション（Moho 未導入PCでは安全スキップ）と `antigravity-obsidian/mcp_config.json` 対応を追加、`lib/env.js` のフォールバック探索を強化。
+  - **専任スキル `/moho`（`.agents/skills/moho/SKILL.md`）＆ 専用フォルダ新設**: 100%ネイティブベクター・ボーンリグ・スイッチレイヤー・完全透過3形式（ProRes 4444 `.mov` / VP9 Alpha `.webm` / 白背景 `.mp4`）＆透過チェッカーボード視覚監査・`qa-verifier` 検収フローを標準化し、`02_Creative_Dept/moho/`・`04_Delivery_Dept/outputs/moho/`・`INDEX.md` セクションを新設。
+  - **クロスプラットフォーム自動同期（`sync_pc_env.ps1` / `sync_mac_env.sh`）対応**: 全3 `mcp_config.json` への `moho` 登録と、`install-bridge.js --no-mcp --if-installed` による Live Lua 5.4 Bridge 自動配備を組み込み。
+  - **11大制作ジャンル統一 ＆ `/system-evolution` 監査完了**: 全ルールファイルが 24KB 上限内（切り捨てゼロ）であることを確認し、`global-master-rules` 領域Aへ Moho 2Dアニメ/Lua 5.4 を追記、全関連 `AGENTS.md` / `SKILL.md` を11ジャンル構成へ整合化。
+
+### 影響範囲
+- 新規作成:
+  - [`.agents/mcp/moho-mcp/`](.agents/mcp/moho-mcp/README.md)（全20ファイル）
+  - [`.agents/skills/moho/SKILL.md`](.agents/skills/moho/SKILL.md)
+  - `02_Creative_Dept/moho/{drafts,final_outputs}/.gitkeep`、`04_Delivery_Dept/outputs/moho/.gitkeep`
+  - [`05_System_Evolution_Dept/evolution_logs/evolution_20261128_moho_integration_and_audit.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261128_moho_integration_and_audit.md)
+- 更新:
+  - [`.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1)
+  - [`.agents/skills/pc-env-sync/scripts/sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh)
+  - [`.agents/skills/pc-env-sync/SKILL.md`](.agents/skills/pc-env-sync/SKILL.md)
+  - [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md)
+  - [`AGENTS.md`](AGENTS.md)、[`00_COO/AGENTS.md`](00_COO/AGENTS.md)、[`02_Creative_Dept/AGENTS.md`](02_Creative_Dept/AGENTS.md)、[`04_Delivery_Dept/AGENTS.md`](04_Delivery_Dept/AGENTS.md)
+  - [`.agents/skills/coo-orchestrator/SKILL.md`](.agents/skills/coo-orchestrator/SKILL.md)、[`.agents/skills/creative-dept/SKILL.md`](.agents/skills/creative-dept/SKILL.md)、[`.agents/skills/delivery-dept/SKILL.md`](.agents/skills/delivery-dept/SKILL.md)
+  - [`04_Delivery_Dept/outputs/INDEX.md`](04_Delivery_Dept/outputs/INDEX.md)
+  - [`AICHANGELOG.md`](AICHANGELOG.md)
+
+---
+
 ## 2026-11-19 (v31): 全プロジェクト ＆ マスター設定のルール重複・24KB上限超過（切り捨て）の全面整理
 
 ### 変更理由

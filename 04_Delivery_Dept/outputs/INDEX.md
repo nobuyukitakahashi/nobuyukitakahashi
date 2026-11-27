@@ -1,7 +1,7 @@
-# 最終成果物（Output）納品インデックス（5大ジャンル別台帳）
+# 最終成果物（Output）納品インデックス（11大ジャンル別台帳）
 
 本フォルダ（`04_Delivery_Dept/outputs/`）は、AIバーチャル組織が生成するすべての最終成果物を受け取るための**唯一の固定出力フォルダ**です。
-成果物は制作ジャンル別の5つのサブフォルダ（[`blender/`](blender/)、[`illustrator/`](illustrator/)、[`photoshop/`](photoshop/)、[`davinci/`](davinci/)、[`writing/`](writing/)）に体系的に分類・格納されています。
+成果物は制作ジャンル別の11のサブフォルダ（主要5ジャンル：[`blender/`](blender/)、[`illustrator/`](illustrator/)、[`photoshop/`](photoshop/)、[`davinci/`](davinci/)、[`writing/`](writing/) ＋ 映像・2Dアニメ・VR拡張6ジャンル：[`premiere/`](premiere/)、[`aftereffects/`](aftereffects/)、[`moho/`](moho/)、[`pano2vr/`](pano2vr/)、[`krpano/`](krpano/)、[`ptgui/`](ptgui/)）に体系的に分類・格納されています。
 
 | ジャンル | 格納サブフォルダ | 対応スラッシュコマンド | 主な用途・ファイル形式 |
 | :--- | :--- | :--- | :--- |
@@ -10,6 +10,12 @@
 | **🖼️ 3. Adobe Photoshop** | [`04_Delivery_Dept/outputs/photoshop/`](photoshop/) | `/photoshop` | 画像編集、フォトレタッチ、マルチレイヤーPSD合成、バナー・サムネイル制作（`.psd`, `.png`, `.jpg`, `.tiff`） |
 | **🎬 4. DaVinci Resolve** | [`04_Delivery_Dept/outputs/davinci/`](davinci/)（案件別：[`davinci/2026-11-19_ワインとジャズのコンサート/`](davinci/2026-11-19_ワインとジャズのコンサート/) / [`davinci/2026-11-15_PC初期化用_DaVinci全プロジェクト完全バックアップ/`](davinci/2026-11-15_PC初期化用_DaVinci全プロジェクト完全バックアップ/) / [`davinci/2026-11-13_南信州広域連合議会_全員協議会/`](davinci/2026-11-13_南信州広域連合議会_全員協議会/) / [`davinci/2026-11-13_南信州広域連合へ要望書提出/`](davinci/2026-11-13_南信州広域連合へ要望書提出/)） | `/davinci` | 映像編集、カラーグレーディング、テロップ・VFX合成（`.mp4`, `.mov`, `.drp`） |
 | **📝 5. Writing & Documents** | [`04_Delivery_Dept/outputs/writing/`](writing/) | `/writing` | 記事・コラム、調査レポート、会議資料、法務・システム仕様書（`.md`, `.html`, `.csv`, `.json`） |
+| **🎞️ 6. Adobe Premiere Pro** | [`04_Delivery_Dept/outputs/premiere/`](premiere/) | `/premiere` | 映像編集、シーケンス構築、メディア書き出し（`.prproj`, `.mp4`, `.mov`） |
+| **✨ 7. Adobe After Effects** | [`04_Delivery_Dept/outputs/aftereffects/`](aftereffects/) | `/aftereffects` | モーショングラフィックス、TVCM、VFX合成（`.aep`, `.mp4`, `.mov`, `.wav`） |
+| **🎞️ 8. Moho Pro 14** | [`04_Delivery_Dept/outputs/moho/`](moho/) | `/moho` | 2Dベクターキャラクターアニメ、ボーンリギング、透過動画（`.moho`, ProRes 4444 `.mov`, VP9 `.webm`, `.mp4`, RGBA PNG連番） |
+| **🌐 9. Pano2VR 8** | [`04_Delivery_Dept/outputs/pano2vr/`](pano2vr/) | `/pano2vr` | 360°パノラマ・バーチャルツアー、スキン制作（`.ggsk`, HTML5出力, `.ggpkg`） |
+| **🥽 10. krpano 1.24** | [`04_Delivery_Dept/outputs/krpano/`](krpano/) | `/krpano` | 360°VRツアー、WebXR、ThreeJS、3D Gaussian Splatting（`tour.xml`, HTML5出力, マルチレゾタイル） |
+| **📸 11. PTGui Pro 13** | [`04_Delivery_Dept/outputs/ptgui/`](ptgui/) | `/ptgui` | 360°パノラマスティッチ、HDR合成（`.pts`, `.jpg`, `.tif`, `.psd`, `.exr`, `.dng`） |
 
 ---
 
@@ -109,3 +115,11 @@
 | 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
 | :--- | :--- | :--- | :--- | :--- |
 | 2026-11-26 | 飯田商工会議所・飯田職業安定協会「ふるさと合同企業説明会2026（2026年12月27日開催）」テレビCM（本編30秒＋前後3秒SMPTE HDカラーバー＝計36秒／`1920×1080` Full HD・`30fps`・**最終ブラッシュアップ版**：冒頭S1・S2圧縮〔2.2s＋3.8s／イベント名のみ宣言〕＆後半S3・S4増量〔7.8s＋6.4s／全6シーン完全原速1.0x〕・**UIターン統一・S4黄色吹き出し＆文字拡大＆大胆モーション・S5クオカード＆令和10年3月卒アグレッシブ動的レイアウト刷新・S6お問い合わせ先大幅拡大**・本番BGM＋Google公式 Gemini TTS〔`gemini-2.5-pro-preview-tts` / `Leda`〕MA完パケ＋BGMのみ版＋全音声ステム＆台本一式） | [`2026-12-27_ふるさと合同企業説明会2026_CM_36sec.mp4`](aftereffects/2026-12-27_furusato_cm/2026-12-27_ふるさと合同企業説明会2026_CM_36sec.mp4)<br>[`2026-12-27_ふるさと合同企業説明会2026_CM_36sec_BGMのみ.mp4`](aftereffects/2026-12-27_furusato_cm/2026-12-27_ふるさと合同企業説明会2026_CM_36sec_BGMのみ.mp4)<br>[`furusato2026_cm_master.aep`](aftereffects/2026-12-27_furusato_cm/furusato2026_cm_master.aep)<br>[`ma_30sec_prod_bgm_google_tts.wav`](aftereffects/2026-12-27_furusato_cm/ma_30sec_prod_bgm_google_tts.wav) / [`google_tts_narration_only_30sec.wav`](aftereffects/2026-12-27_furusato_cm/google_tts_narration_only_30sec.wav) / [`prod_bgm_30sec.wav`](aftereffects/2026-12-27_furusato_cm/prod_bgm_30sec.wav)<br>[`narration_script_30sec.md`](aftereffects/2026-12-27_furusato_cm/narration_script_30sec.md) / [`narration_script_30sec.txt`](aftereffects/2026-12-27_furusato_cm/narration_script_30sec.txt)<br>[`preview_contact_36s.png`](aftereffects/2026-12-27_furusato_cm/preview_contact_36s.png)<br>[`2026-12-27_ふるさと合同企業説明会2026_YouTubeサムネイル_1280x720.png`](aftereffects/2026-12-27_furusato_cm/2026-12-27_ふるさと合同企業説明会2026_YouTubeサムネイル_1280x720.png) / [`.jpg`](aftereffects/2026-12-27_furusato_cm/2026-12-27_ふるさと合同企業説明会2026_YouTubeサムネイル_1280x720.jpg) | MP4動画×2 (`1920×1080`, `30fps`, `36.00秒`, 1080フレーム, H.264 + AAC 48kHz Stereo, `-18.7 LUFS` / `-6.3 dBTP`) / After Effects 2027 (`.aep`) / WAV (48kHz 16-bit Stereo ×3) / Markdown / TXT / PNG | **Adobe After Effects 2027 実機構築＆独立検証 `qa-verifier` PASS ＋ Google公式 Gemini TTS（`gemini-2.5-pro-preview-tts` / `Leda`）ハイテンション新尺MA完パケ**：①冒頭S1（2.2s一息情熱フック）＋S2（3.8sイベント名のみ宣言＋100社以上/103社視覚カウントアップ）へ3.5秒圧縮し間延びを解消、②削った尺を後半S3（7.8s）・S4（6.4s）・S5（4.8s）へ再配分して全6シーン完全原速（1.000x）・高テンションで収録（「UIターン」表記・音声完全統一）、③**SCENE 4の黄色吹き出し3点を約1.65倍面積（46%/49%/46%）へ拡大しジャンプイン＋弾性バウンス＋傾きスイング＋順次拡大パルスを実装、下部バナー文字も38pt/53ptへ大型化＋「大歓迎！」同期パルス追加**、④**SCENE 5を回転サンバースト背景×逆傾斜ポスター構成（上段`-2.2°`白＋黄枠＋紺ハードシャドウ＋「来場特典！」星型シール／下段`+1.6°`濃紺＋シアン枠＋黄ハードシャドウ、「大歓迎！」`54pt`スタンプ、「令和10年3月」`106pt`黄×「卒業予定者」`94pt`白＋シアン下線スラッシュ＋`46pt`親御さん白帯）へ全面刷新**、⑤**SCENE 6最終カットのお問い合わせ先を大型高コントラスト紺バー（`1520×140px`・協会名`46pt`・`TEL. 0265-24-1234`を`58pt`黄色極太）へ大幅拡大**、⑥アップロード本番BGMの最強サビ〜公式エンディング（`00:54.52〜01:24.52`）と自動ダッキング（約-9dB）＋`-18.7 LUFS`整音、新映像同期済みBGMのみ版MP4・分離ステムWAV同梱、前後3秒SMPTE HDカラーバー完全無音確認済 |
+
+---
+
+## 🎞️ Moho Pro 14（2Dベクターアニメーション・ボーンリグ・透過動画／単体スキル `/moho`） — `outputs/moho/`
+
+| 納品日 | テーマ | メイン出力ファイル | フォーマット | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| （随時追記） | — | — | `.moho` / ProRes 4444 透過 `.mov` / VP9 Alpha `.webm` / 確認用 `.mp4` / 32-bit RGBA PNG連番 | 専任スキル [`.agents/skills/moho/SKILL.md`](../../.agents/skills/moho/SKILL.md) およびローカルMCPサーバー `moho`（[`.agents/mcp/moho-mcp/server.js`](../../.agents/mcp/moho-mcp/server.js)）により管理 |

@@ -413,11 +413,27 @@ for cfg_path in "${MCP_CONFIG_PATHS[@]}"; do
       command: nodeBin,
       args: [process.argv[16]]
     };
+    json.mcpServers["moho"] = {
+      command: nodeBin,
+      args: [process.argv[17]]
+    };
 
     fs.writeFileSync(cfgPath, JSON.stringify(json, null, 2) + "\n", "utf8");
-  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/gemini-notebook-mcp/server.js"
+  ' "$cfg_path" "$NODE_BIN" "$MCP_VAULT_SCRIPT" "$OBSIDIAN_VAULT_PATH" "$NOTEBOOKLM_SCRIPT" "$DAVINCI_MCP_DIR" "$IS_OFFICIAL_BLENDER_MCP" "$BLENDER_MCP_BIN" "${UVX_BIN:-uvx}" "$DETECTED_BLENDER_BIN" "$WORKSPACE_ROOT/.agents/mcp/illustrator-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/photoshop-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/premiere-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/aftereffects-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/ptgui-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/gemini-notebook-mcp/server.js" "$WORKSPACE_ROOT/.agents/mcp/moho-mcp/server.js"
   echo "  [OK] Updated MCP config: $cfg_path"
 done
+
+MOHO_INSTALL_BRIDGE="$WORKSPACE_ROOT/.agents/mcp/moho-mcp/install-bridge.js"
+if [ -f "$MOHO_INSTALL_BRIDGE" ]; then
+  MOHO_BRIDGE_OUT="$("$NODE_BIN" "$MOHO_INSTALL_BRIDGE" --no-mcp --if-installed 2>&1 || true)"
+  if printf '%s' "$MOHO_BRIDGE_OUT" | grep -q '"skipped": true'; then
+    echo "  [INFO] Moho Pro not detected on this Mac; skipped Lua 5.4 Bridge deployment"
+  elif printf '%s' "$MOHO_BRIDGE_OUT" | grep -q '"ok": true'; then
+    echo "  [OK] Synced Moho Pro Live Lua 5.4 Bridge scripts into EditableFilesDir/Scripts"
+  else
+    echo "  [WARN] Moho Lua Bridge sync output: $MOHO_BRIDGE_OUT"
+  fi
+fi
 
 # Ensure antigravity-obsidian profile trustedWorkspaces and migrate desktop obsidian.json if needed
 "$NODE_BIN" -e '

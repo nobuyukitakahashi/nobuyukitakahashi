@@ -2,7 +2,7 @@
 name: coo-orchestrator
 description: >-
   AIバーチャル組織の統括COO「ジン」として、ユーザーから与えられたテーマや課題の制作ジャンル
-  （blender / illustrator / photoshop / davinci / writing）を判定（未指定時は ask_question で5択提示）し、
+  （主要5ジャンル：blender / illustrator / photoshop / davinci / writing、映像・2Dアニメ・VR拡張6ジャンル：premiere / aftereffects / moho / pano2vr / krpano / ptgui）を判定（未指定時は ask_question で主要5択提示）し、
   リサーチ部門（01：NotebookLM×Web調査）・制作部門（02：02_Creative_Dept/<genre>/）・マーケティング部門（03）・
   条件付き法務・コンプライアンス部門（06_Legal_Dept ※該当案件のみ）・最終出力納品部門（04_Delivery_Dept）・
   組織自律進化部門（05_System_Evolution_Dept）の専任サブエージェントを順次定義・起動し、
@@ -26,18 +26,18 @@ description: >-
 
 ### 0-B. ジャンル選択ルーティング（`ask_question` UI）
 
-1. **10ジャンル定義（主要5ジャンル＋映像・VR拡張5ジャンル）**:
+1. **11ジャンル定義（主要5ジャンル＋映像・2Dアニメ・VR拡張6ジャンル）**:
    - **主要5ジャンル（未指定時の `ask_question` 既定提示対象）**:
      - **`blender`** (`/blender`): `Blender（3Dモデリング・CG・3Dアニメ）`
      - **`illustrator`** (`/illustrator`): `Illustrator（ベクターロゴ・DTP・印刷データ）`
      - **`photoshop`** (`/photoshop`): `Photoshop（画像編集・レタッチ・PSD合成・バナー制作）`
      - **`davinci`** (`/davinci`): `DaVinci Resolve（動画編集・グレーディング・テロップ）`
      - **`writing`** (`/writing`): `Writing / Document（記事執筆・企画書・Web HTML）`
-   - **映像・VR拡張5ジャンル（明示・スラッシュコマンド指定時に直行）**:
-     - **`premiere`** (`/premiere`), **`aftereffects`** (`/aftereffects`), **`pano2vr`** (`/pano2vr`), **`krpano`** (`/krpano`), **`ptgui`** (`/ptgui`)
+   - **映像・2Dアニメ・VR拡張6ジャンル（明示・スラッシュコマンド指定時に直行）**:
+     - **`premiere`** (`/premiere`), **`aftereffects`** (`/aftereffects`), **`moho`** (`/moho`), **`pano2vr`** (`/pano2vr`), **`krpano`** (`/krpano`), **`ptgui`** (`/ptgui`)
 2. **ジャンル判定ルール**:
    - ユーザーの依頼で制作ジャンルが明示されていない場合、統括COO「ジン」は作業開始前に必ず **`ask_question` ツール** で上記主要5択を提示し、ユーザーに選択させる。
-   - ユーザーが最初からツール・ジャンルを明示している場合、または `/blender`, `/illustrator`, `/photoshop`, `/davinci`, `/writing`, `/premiere`, `/aftereffects`, `/pano2vr`, `/krpano`, `/ptgui` スラッシュコマンドを使った場合は質問をスキップして該当ジャンル `<genre>` へ直行する。
+   - ユーザーが最初からツール・ジャンルを明示している場合、または `/blender`, `/illustrator`, `/photoshop`, `/davinci`, `/writing`, `/premiere`, `/aftereffects`, `/moho`, `/pano2vr`, `/krpano`, `/ptgui` スラッシュコマンドを使った場合は質問をスキップして該当ジャンル `<genre>` へ直行する。
 
 ---
 
@@ -66,8 +66,8 @@ description: >-
    - **Description**: `01_Research_Dept` 専任の調査エージェント。`inputs/` の指示に基づき Google NotebookLM（MCP `notebooklm-research`）および Web検索（`search_web`）でハイブリッド調査を行い、`reports/` に出典付き調査レポート（中間成果物）を作成する。
    - **SystemPrompt**: [`01_Research_Dept/AGENTS.md`](../../../01_Research_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
 2. **`creative-dept`**（**`EnableWriteTools: true`, `EnableMCPTools: true`, `EnableSubagentTools: false`**）:
-   - ※Blender MCP（`blender`）、Adobe Illustrator MCP（`illustrator`）、および Adobe Photoshop MCP（`photoshop`）を実行できるよう、必ず **`EnableMCPTools: true`** を付与する。
-   - **Description**: `02_Creative_Dept` 専任のマルチジャンルクリエイティブエージェント。対象ジャンル `<genre>`（`blender` / `illustrator` / `photoshop` / `davinci` / `writing`）に応じ、`02_Creative_Dept/<genre>/drafts/` で試作を行い、`02_Creative_Dept/<genre>/final_outputs/` に完成成果物（中間成果物）を出力する。
+   - ※Blender MCP（`blender`）、Adobe MCP（`illustrator` / `photoshop` / `premiere` / `aftereffects`）、PTGui MCP（`ptgui`）、および Moho MCP（`moho`）を実行できるよう、必ず **`EnableMCPTools: true`** を付与する。
+   - **Description**: `02_Creative_Dept` 専任のマルチジャンルクリエイティブエージェント。対象ジャンル `<genre>`（主要5ジャンル＋拡張6ジャンル計11ジャンル）に応じ、`02_Creative_Dept/<genre>/drafts/` で試作を行い、`02_Creative_Dept/<genre>/final_outputs/` に完成成果物（中間成果物）を出力する。
    - **SystemPrompt**: [`02_Creative_Dept/AGENTS.md`](../../../02_Creative_Dept/AGENTS.md) および [`.agents/rules/global-policy.md`](../../rules/global-policy.md) の内容を付与する。
 3. **`marketing-dept`**（`EnableWriteTools: true`, `EnableMCPTools: false`, `EnableSubagentTools: false`）:
    - **Description**: `03_Marketing_Dept` 専任のマーケティング・広報エージェント。`02_Creative_Dept/<genre>/final_outputs/` の完成原稿から `promos/` にSNS・PR告知文（中間成果物）を作成する。
