@@ -1,0 +1,16 @@
+{
+  "org-governance-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "write_file|edit_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/org_guard.js",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,14 +1,16 @@
-# 役割定義：Research部門（`01_Research_Dept`：NotebookLM × Webハイブリッド調査）
+# 役割定義：Research & Knowledge部門（`01_Research_Dept`：調査・クライアントカルテ・ナレッジ統合）
 
-`01_Research_Dept/inputs/` の指示に基づき、NotebookLM / Gemini Notebook と 2026年基準 Web調査（`search_web`）を組み合わせて中間レポートを作成する。
+Lane B 案件の事前調査（NotebookLM / Gemini Notebook × 2026年基準 Web調査）に加え、継続クライアントの統括カルテ（`projects/`）、音声議事録（`audio-meeting-minutes`）、Obsidian ナレッジ連携を一元管理する。
 
-## 1. 業務手順
-1. `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` を読み込む。
-2. **NotebookLM / Gemini Notebook 連携**:
-   - 照会・引用抽出・音声生成は `notebooklm-research` を使用（ノート一覧・新規作成・高速ソース投入は認証済みなら公式API `gemini-notebook` を優先、未認証時は `notebooklm-research` へフォールバック）。
-   - 未認証・セッション切れ時はレポートに `※NotebookLM未認証（Web検索のみで実施）` と明記し、止めずにWeb調査へ進む。
-3. **Web調査**: `search_web` で 2026年基準の一次情報・最新データ・出典URLを収集する。
-4. **出力 ＆ 完了マーク**: 下記フォーマットで `01_Research_Dept/reports/report_[テーマ名].md` を保存し、対応する `inputs/` タスク先頭に `[完了]` を追記する。
+## 1. 管轄領域
+1. **ハイブリッド調査（`inputs/` ➔ `reports/`）**:
+   - `01_Research_Dept/inputs/task_[YYYYMMDD]_[テーマ名].md` に基づき調査。
+   - ノート一覧・作成・高速ソース投入は認証済みなら `gemini-notebook` を優先、照会・引用抽出・音声生成は `notebooklm-research` を使用（未認証時は `※NotebookLM未認証（Web検索のみで実施）` と明記しWeb調査へ進む）。
+   - `search_web` で 2026年基準の一次情報・出典URLを収集し、`01_Research_Dept/reports/report_[テーマ名].md` を保存、タスク先頭へ `[完了]` 追記。
+2. **継続クライアント統括カルテ（`projects/<client_id>/`）**:
+   - 複数ジャンルを横断する継続顧客の `PROJECT_MASTER.md`（基本情報・ブランド規定・NotebookLM ID・意思決定ログ・関連成果物一覧）と参照原本（`sources/`）を管理する。
+3. **音声議事録・Obsidian連携**:
+   - 会議録音は `.agents/skills/audio-meeting-minutes/SKILL.md`、Obsidian Vault 連携は `obsidian-*` スキル群に準拠する。
 
 ## 2. レポート出力フォーマット（厳守）
 ```markdown
@@ -36,4 +38,4 @@
 
 ## 3. 禁止事項
 - 推測・虚偽の記載禁止（未裏付けは `※ソース不明（要人間確認）` と明記）。
-- `01_Research_Dept/reports/` は中間成果物置き場であり、他部署フォルダや `04_Delivery_Dept/outputs/` へ直接書き込まない（`global-policy.md` 遵守）。
+- `04_Delivery_Dept/outputs/` へ直接書き込まない（`global-policy.md` 遵守）。

@@ -206,7 +206,7 @@ echo "=== [3/7] Syncing Global Skills (~/.gemini/config/skills) ==="
 GLOBAL_SKILLS_DIR="$HOME/.gemini/config/skills"
 mkdir -p "$GLOBAL_SKILLS_DIR"
 
-for legacy_skill in adobe-illustrator adobe-photoshop adobe-premiere adobe-aftereffects; do
+for legacy_skill in adobe-illustrator adobe-photoshop adobe-premiere adobe-aftereffects research-dept creative-dept marketing-dept delivery-dept; do
   rm -rf "$GLOBAL_SKILLS_DIR/$legacy_skill"
 done
 

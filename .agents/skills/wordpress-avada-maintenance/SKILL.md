@@ -138,3 +138,14 @@ When working across multiple machines or handoffs:
 2. **Post-Task Commit & Push**:
    - Without waiting for explicit user prompts, always stage, commit, and `git push origin master` all project files, scripts, and theme changes at the end of each task.
 
+---
+
+## 7. Web・フロントエンド・CMS 4大検証義務（表層チェック・手抜き禁止）
+
+UI・レイアウト・CSS・HTML・Avadaショートコード改修時は、以下の4対策をすべて満たしてから完了報告する：
+1. **要素単位の深層ジオメトリ検証**: `document.documentElement.scrollWidth` だけで合格判定せず、内部カラムラッパー（`.fusion-column-wrapper` 等）の行単位の左右余白対称性（`getBoundingClientRect()` による `left` と `viewportWidth - right` の一致）、および `overflow-x: auto` コンテナ・テーブル要素（`el.scrollWidth <= el.clientWidth`）・セル見切れ・極小幅1文字折り返しまで要素単位で検査する。
+2. **親テーマ・フレームワーク実装ソースの事前確認**: CSS上書きやショートコード実装前に、親テーマ（PHP/CSS/JS）の実ソースコード・登録定義を直接検索読解し、インライン `!important` や `@media` 強制指定（`white-space: nowrap`、`width: calc(...) !important` 等）を特定してから実装する。
+3. **実ブラウザ DOM / CSSOM・`getComputedStyle` 実機検証**: 静的文字列一致で推測せず、ヘッドレスブラウザ上の実DOMおよび `window.getComputedStyle(el)`（インライン `style` 再シリアライズや詳細度競合含む）でスタイル適用結果を検証する。
+4. **3デバイス実画面スクリーンショットの `read_file` 目視監査**: テストの `Exit Code 0` だけで完了報告せず、PC（`1920px`）・タブレット（`768px`）・スマホ（`375px`）の3画面を撮影し、`read_file` で視覚的に「余白対称性」「テーブル枠内横スクロール・文字潰れ」「要素重なり・崩れ」を確認する。
+
+

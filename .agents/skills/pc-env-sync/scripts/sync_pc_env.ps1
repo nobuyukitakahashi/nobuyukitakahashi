@@ -353,7 +353,7 @@ if (-not (Test-Path $GlobalSkillsDir)) {
     New-Item -ItemType Directory -Path $GlobalSkillsDir -Force | Out-Null
 }
 
-foreach ($legacySkill in @("adobe-illustrator", "adobe-photoshop", "adobe-premiere", "adobe-aftereffects")) {
+foreach ($legacySkill in @("adobe-illustrator", "adobe-photoshop", "adobe-premiere", "adobe-aftereffects", "research-dept", "creative-dept", "marketing-dept", "delivery-dept")) {
     $legacyPath = Join-Path $GlobalSkillsDir $legacySkill
     if (Test-Path $legacyPath) {
         Remove-Item -Path $legacyPath -Recurse -Force -ErrorAction SilentlyContinue
@@ -396,6 +396,10 @@ foreach ($legacyMcpCache in @("blender-plugin_blender", "notebooklm-plugin_noteb
 }
 $GlobalMasterPluginSrc = Join-Path $WorkspaceRoot ".agents\plugins\global-master-rules"
 if (Test-Path $GlobalMasterPluginSrc) {
+    $GlobalMasterPluginDst = Join-Path $GlobalPluginsDir "global-master-rules"
+    if (Test-Path $GlobalMasterPluginDst) {
+        Remove-Item -Path $GlobalMasterPluginDst -Recurse -Force -ErrorAction SilentlyContinue
+    }
     Copy-Item -Path $GlobalMasterPluginSrc -Destination $GlobalPluginsDir -Recurse -Force
     # Remove legacy duplicate rule copies so global-master-rules is injected only once within the 20k-token rules budget
     $GlobalConfigDir = Join-Path $env:USERPROFILE ".gemini\config"
