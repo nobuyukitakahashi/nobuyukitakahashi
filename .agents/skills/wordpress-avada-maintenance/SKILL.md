@@ -1,8 +1,8 @@
 ---
 name: wordpress-avada-maintenance
-description: |
-  Comprehensive guide and operational runbook for WordPress and Avada Theme (Fusion Builder) development, maintenance, and safe deployment.
-  Use when managing WordPress sites running Avada, editing Fusion Builder layouts/shortcodes, managing child themes, interacting via WP-CLI or SSH, scheduling timed post/page content swaps, handling Windows PowerShell UTF-8 character encoding, or managing page templates, post meta, and Avada caches.
+description: >-
+  WordPress・Avada Theme（Fusion Builder）・子テーマ・WP-CLI/SSH・日時切替・UTF-8保守の運用ランブック。
+  Avadaサイト改修やWordPress保守作業時に使用。
 ---
 
 # WordPress & Avada Maintenance Guide

@@ -1,9 +1,8 @@
 ---
 name: audio-meeting-minutes
-description: |
-  音声・動画の録音ファイル（MP3, WAV, M4A, AAC, MP4, WebM 等）から高精度な文字起こしを実行し、
-  決定事項、アクションアイテム（担当者・期日）、重要論点、発言タイムラインを網羅した詳細な議事録（Markdown）を自動生成するスキル。
-  Whisper（ローカル/API）およびGoogle GeminiマルチモーダルAPIによる音声解析、長尺音声の自動分割処理、GitHub/Jira連携用タスク抽出に対応。
+description: >-
+  音声・動画録音（MP3/WAV/M4A/MP4等）をWhisper/Geminiで文字起こしし、決定事項・アクション・タイムライン付きMarkdown議事録を生成するスキル。
+  録音ファイルからの議事録作成時に使用。
 ---
 
 # Audio Meeting Minutes Generator (audio-meeting-minutes)

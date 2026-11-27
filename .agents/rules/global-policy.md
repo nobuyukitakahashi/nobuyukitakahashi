@@ -1,27 +1,14 @@
-# 組織全体共通ポリシー（Global Security & Governance Rules）
+# 組織全体共通ポリシー（Global Governance Rules）
 
-本ファイルは、このプロジェクトに参加するすべてのAIエージェント（統括COOおよび全専門部署のサブエージェント）が行動を開始する前に必ず遵守しなければならない最上位の共通規則です。
+本ワークスペースの全エージェント（`00_COO`〜`06_Legal_Dept`）が遵守する共通規則。モデル判定・実証ファースト・自動同期・`qa-verifier`・ハルシネーション防止・基準年2026年・UTF-8（BOMなし）は単一ソース [`.agents/plugins/global-master-rules/rules/AGENTS.md`](../plugins/global-master-rules/rules/AGENTS.md) に一元委任する。
 
-## 0. 【最優先】最適モデル判定 ＆ 実証ファースト（アカウント共通マスタールール委任）
-- モデル選定・アンダースペック／オーバースペック警告・`swarm` 動的昇格・不具合調査時の実証ファースト原則・ルール改訂時の自動同期は、単一ソースであるアカウント共通マスタールール（[`.agents/plugins/global-master-rules/rules/AGENTS.md`](../plugins/global-master-rules/rules/AGENTS.md)）に一元定義されており、全エージェントがこれを最優先で遵守すること（※本ファイルへ重複記述しない）。
+## 1. ディレクトリ権限境界
+- 各サブエージェントは自部署フォルダおよび明示された入出力先以外のファイルを作成・変更・削除してはならない。
+- **ルール・スキル改訂権限**: `01`〜`04`・`06` による `AGENTS.md` / `.agents/` 改訂は禁止。**`05_System_Evolution_Dept`** のみが `00_COO` 管理下で自律改訂特権を持つ。
 
-## 1. ディレクトリ（縄張り）と権限境界の厳守
-- すべてのサブエージェントは、自身に割り当てられた部署フォルダ内、および明確に許可された連携先フォルダ（指定されたインプット読み込み先／アウトプット出力先）以外のファイルを**変更・削除・作成**してはならない。
-- **ルール改訂権限の原則と唯一の例外**:
-  - 一般業務サブエージェント（`01_Research_Dept`〜`04_Delivery_Dept` および `06_Legal_Dept`）が共通ルール（`AGENTS.md` や `.agents/` 配下）および他部署の `AGENTS.md` を書き換えることは厳密に禁止する。
-  - **例外**: **`05_System_Evolution_Dept`（組織進化・Antigravity監査部門）** のみ、Antigravityの最新機能追従および業務フローの自律的改善を目的として、`00_COO` の管理下で各部署の `AGENTS.md` および `.agents/` 配下のスキル・ルールを更新する特権を持つ。
+## 2. 単方向パイプライン ＆ 最終出力（Output）一元化
+- **標準フロー**: `00_COO` ➔ `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ `[06_Legal_Dept ※該当案件のみ]` ➔ **`04_Delivery_Dept`** ➔ `05_System_Evolution_Dept`
+- **固定出力の絶対原則**: `01`・`02`・`03`・`06` の出力物はすべて**中間成果物**であり、ユーザーへ引き渡す最終成果物は形式を問わず必ず **`04_Delivery_Dept`** が **`04_Delivery_Dept/outputs/<genre>/<案件サブフォルダ>/`** へ統合・変換格納し `INDEX.md` を更新する。
 
-## 2. 単方向パイプラインと最終出力（Output）一元化の絶対原則
-- 業務ファイルの書き込み（編集・作成）は「上流から下流へ」の単方向フローに限定する。
-  - **標準業務パイプライン**:
-    `00_COO` ➔ `01_Research_Dept` ➔ `02_Creative_Dept` ➔ `03_Marketing_Dept` ➔ `[06_Legal_Dept（※条件付き法務審査ゲート）]` ➔ **`04_Delivery_Dept`（最終出力窓口）**
-- **【全サブエージェント徹底事項】最終成果物（Output）固定フォルダの原則**:
-  - `01_Research_Dept`・`02_Creative_Dept`・`03_Marketing_Dept`・`06_Legal_Dept` の各フォルダ内に出力されるファイルはすべて**「中間成果物（工程内ファイル）」**である。
-  - ユーザーがどのような形式（Markdown、HTML、CSV、JSON、プレーンテキスト、コード、統合パッケージ等）で成果物を要求した場合であっても、ユーザーへ引き渡す**すべての最終成果物（Output）は必ず `04_Delivery_Dept`（出力・納品部門）が引き受け、固定フォルダ [`04_Delivery_Dept/outputs/`](../../04_Delivery_Dept/outputs/) に集約・変換して格納**しなければならない。
-  - 上流の各サブエージェント（`01`〜`03` および `06`）は、最終的に `04_Delivery_Dept` が任意のフォーマットへ正確に変換・パッケージングできるよう、構造化された中間成果物を作成して引き継ぐ義務を負う。
-
-## 3. Antigravity最新機能の常時確認と自律的組織改善（Self-Evolution）
-- 本組織は、人間のオーナーから都度「組織やルールを改善して」と指示されなくても、**`05_System_Evolution_Dept`** を通じて常時Antigravityの最新機能・仕様（内蔵スキル `agy-customizations` / `antigravity-guide` および公式ドキュメント・Changelog）と業務ログを監査し、自律的に組織構造・ルール・スキルを最新化する。
-- `00_COO` は業務パイプラインの実行時（および定期点検時）に `05_System_Evolution_Dept` を稼働させ、組織の継続的アップデートを維持しなければならない。
-
-（※ハルシネーション防止・基準年2026年・UTF-8 BOMなし・`qa-verifier`・最適モデル判定等のアカウント共通原則は `global-master-rules` に一元化済み）
+## 3. 自律的組織改善（Self-Evolution）
+- `00_COO` はパイプライン完了時・定期点検時に `05_System_Evolution_Dept` を稼働させ、Antigravity最新仕様・利用可能モデル・実行ログを監査してルール・スキルを自律最新化する。

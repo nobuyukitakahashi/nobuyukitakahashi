@@ -1,10 +1,7 @@
 ---
 name: auto-git-sync
-description: |
-  Mandatory automated Git & GitHub synchronization workflow for cross-device maintenance.
-  Ensures that before starting tasks, 'git pull origin main' is executed to fetch updates from other devices,
-  and after completing tasks, all changes are automatically committed and pushed via 'git push origin main'
-  without waiting for explicit user instructions.
+description: >-
+  作業前の git pull origin main と完了後の自動 commit / git push origin main によるマルチデバイスGit同期ワークフロー。
 ---
 
 # Auto Git Sync Workflow

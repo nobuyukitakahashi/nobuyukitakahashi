@@ -1,5 +1,30 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v33): 全ルール・全スキルの徹底効率化最適化（毎ターン常時注入 `-51.8%`・`blender`/`davinci` の `references/` 分離・隠れバグ5件撲滅）
+
+### 変更理由
+1. 毎ターン全チャットに常時注入されるアカウント共通マスタールール（`14.3 KB`）、ワークスペース常時ルール（`9.2 KB`）、および全28スキルの YAML Frontmatter（`16.5 KB`）の合計が **`40.0 KB`** に達しており、トークン効率と保守性を圧迫していたため。
+2. `blender/SKILL.md`（`12.7 KB`）と `davinci/SKILL.md`（`15.2 KB`）に特定案件向け長大ガイドが直書きされており、Progressive Disclosure 最適化（`references/` 分離）の余地が大きかったため。
+3. 全数監査で発見されたデッド見出し参照・旧パス（`02_Creative_Dept/final_outputs/`）・`INDEX.md` 見出し番号ズレを完全解消するため。
+
+### Before / After
+- **毎ターン常時注入コンテキスト合計**: `40,021 B` ➔ **`19,281 B`（`-51.8%` / `-20.7 KB`）**
+  - `global-master-rules/rules/AGENTS.md`: `14,327 B` ➔ `6,919 B`（全7原則を §1〜§6 へ高密度化、ロジック・4択ゲート完全保持）
+  - `global-policy.md` ＋ `AGENTS.md`: `9,163 B` ➔ `4,616 B`
+  - 全28スキル YAML Frontmatter: `16,531 B` ➔ `7,746 B`（`-53.1%`）
+- **全10ルールファイル合計**: `64,209 B` ➔ **`28,693 B`（`-55.3%`）**
+- **全28スキル `SKILL.md` 本文合計**: `156,820 B` ➔ **`87,812 B`（`-44.0%`）**
+- **`references/` 分離（技術ノウハウ100%保全）**:
+  - [`.agents/skills/blender/references/mascot-animation-v8.md`](.agents/skills/blender/references/mascot-animation-v8.md) 新設
+  - [`.agents/skills/davinci/references/live-action-production-guide.md`](.agents/skills/davinci/references/live-action-production-guide.md) 新設
+- **隠れバグ5件修正**: デッド見出し参照、旧 `<genre>` 欠落パス、`writing/SKILL.md` の `INDEX.md` 番号ズレ、旧5大ジャンル注記、マスタールール §参照番号整合。
+
+### 影響範囲
+- 新規: `blender/references/mascot-animation-v8.md`, `davinci/references/live-action-production-guide.md`, `05_System_Evolution_Dept/evolution_logs/evolution_20261128_context_and_skills_optimization.md`
+- 更新: 全10ルールファイル、自作22スキル `SKILL.md`、`AICHANGELOG.md`、およびローカル `~/.gemini/config/` 同期先一式
+
+---
+
 ## 2026-11-28 (v32): Moho Pro 14 完全制御MCP（`moho`）・専任スキル（`/moho`）の組織完全統合 ＆ 11大制作ジャンル整合化・`/system-evolution` 定期監査
 
 ### 変更理由

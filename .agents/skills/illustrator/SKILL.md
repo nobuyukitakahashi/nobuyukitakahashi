@@ -1,39 +1,23 @@
 ---
 name: illustrator
 description: >-
-  Adobe Illustrator 2027（MCPサーバー illustrator および CLIブリッジ .agents/mcp/illustrator-mcp/cli.js）を用いた
-  ベクターロゴデザイン、CMYK印刷入稿データ、テキストのアウトライン化（.ai / .pdf / .svg / .eps）、および
-  DTPレイアウト制作を専任で実行し、中間成果物を 02_Creative_Dept/illustrator/ に、
-  最終成果物を 04_Delivery_Dept/outputs/illustrator/ に格納するスキル。
-  ユーザーが /illustrator を指定した際、またはジャンル選択で「Illustrator（ベクターロゴ・DTP・印刷データ）」を選択した際に使用する。
+  Adobe Illustrator 2027（MCP illustrator / CLI）によるベクターロゴ・CMYK印刷入稿データ・アウトライン化・DTP制作スキル。
+  /illustrator 指定時、またはベクター/印刷データ制作依頼時に使用。
 ---
 
 # ✒️ Adobe Illustrator ベクター・DTP・CMYK印刷データ専任スキル (`/illustrator`)
 
-## 1. ジャンル別ディレクトリ規約（厳守）
-- **試作・JSXスクリプト・検証用ファイル置き場**:
-  - [`02_Creative_Dept/illustrator/drafts/`](../../../02_Creative_Dept/illustrator/drafts/)
-- **制作部門の完成中間成果物置き場**:
-  - [`02_Creative_Dept/illustrator/final_outputs/`](../../../02_Creative_Dept/illustrator/final_outputs/)
-- **最終納品フォルダ（`04_Delivery_Dept` による格納先）**:
-  - [`04_Delivery_Dept/outputs/illustrator/`](../../../04_Delivery_Dept/outputs/illustrator/)
-  - ※納品台帳 [`04_Delivery_Dept/outputs/INDEX.md`](../../../04_Delivery_Dept/outputs/INDEX.md) の「`## ✒️ 2. Adobe Illustrator`」セクションにリンク（`illustrator/ファイル名`）を追記する。
+## 1. ディレクトリ規約
+- 試作・JSX：`02_Creative_Dept/illustrator/drafts/<案件サブフォルダ>/`
+- 中間成果物：`02_Creative_Dept/illustrator/final_outputs/<案件サブフォルダ>/`
+- 最終納品先：`04_Delivery_Dept/outputs/illustrator/<案件サブフォルダ>/`（[`INDEX.md`](../../../04_Delivery_Dept/outputs/INDEX.md) の `2. Adobe Illustrator` を更新）
 
----
+## 2. 実行手順（MCP `illustrator` ＆ CLI ハイブリッド）
+詳細JSXパターンは [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照。
 
-## 2. 実行手順（MCP `illustrator` ＆ CLI ハイブリッド運用）
-
-詳細なExtendScript（JSX）実装パターンは [`references/extendscript-guide.md`](references/extendscript-guide.md) を参照してください。
-
-1. **Illustrator 2027 ステータス確認**:
-   - MCPサーバー `illustrator` の `get_illustrator_status` または CLI `node .agents/mcp/illustrator-mcp/cli.js status` を実行する。
-2. **ExtendScript (JSX) スクリプトによるベクター構築・CMYK管理**:
-   - スクリプトを `02_Creative_Dept/illustrator/drafts/build_[テーマ名].jsx` に作成し、`execute_illustrator_jsx` または `node .agents/mcp/illustrator-mcp/cli.js exec --file "02_Creative_Dept/illustrator/drafts/build_[テーマ名].jsx"` で実行する。
-   - **CMYKカラー厳守**: `DocumentColorSpace.CMYK` および `new CMYKColor()` で印刷指定色（例：CVNブランドグリーン `C:90 M:0 Y:70 K:0`）を正確に設定し、名前付きスウォッチ（`doc.swatches`）として登録する。
-   - **座標系の注意**: アートボード矩形 `artboardRect = [left, top, right, bottom]` はY軸が上向き正（下に向かうほどYが減少）であり、`rectangle(top, left, width, height)` の引数順に注意する。
-3. **アートボードPNG書き出し＋`read_file` 視覚監査ループ**:
-   - `export_artboard_png`（または `node .agents/mcp/illustrator-mcp/cli.js export-png --out "02_Creative_Dept/illustrator/final_outputs/[テーマ名].png" --scale 200`）で200%高解像度PNGを書き出す。
-   - `read_file` で書き出されたPNG画像を実際に目視確認し、余白バランス・文字配置・カーニング・重なり・CMYK発色を監査・修正する。
-4. **フォント保持版・アウトライン化済み入稿版の保存と最終納品**:
-   - `save_illustrator_document`（または `node .agents/mcp/illustrator-mcp/cli.js save --out "02_Creative_Dept/illustrator/final_outputs/[テーマ名].ai" --outline-text true`）で `.ai` / `.pdf` / `.svg` / `.eps` および制作仕様書 `content_[テーマ名].md` を `02_Creative_Dept/illustrator/final_outputs/` に保存する。
-   - 続けて `04_Delivery_Dept` を通じて `04_Delivery_Dept/outputs/illustrator/` に最終成果物を格納し、`04_Delivery_Dept/outputs/INDEX.md` を更新する。
+1. **稼働確認**: MCP `get_illustrator_status` または `node .agents/mcp/illustrator-mcp/cli.js status`。
+2. **JSX ベクター構築**: `drafts/<案件サブフォルダ>/build_[テーマ名].jsx` を作成し、`execute_illustrator_jsx` または `cli.js exec --file <jsx>` で実行。
+   - **CMYK厳守**: `DocumentColorSpace.CMYK`・`new CMYKColor()`・名前付きスウォッチ（`doc.swatches`）を使用。
+   - **座標系注意**: `artboardRect = [left, top, right, bottom]` は Y上向き正、`rectangle(top, left, width, height)` の引数順に注意。
+3. **視覚監査ループ**: `export_artboard_png`（`cli.js export-png --out <png> --scale 200`）で200%高解像度PNGを出力し、`read_file` で余白・文字配置・カーニング・CMYK発色を監査・修正。
+4. **保存・納品**: `save_illustrator_document`（入稿版は `--outline-text true`）で `.ai`/`.pdf`/`.svg`/`.eps` と `content_[テーマ名].md` を保存し、`qa-verifier` 合格後に `04_Delivery_Dept/outputs/illustrator/<案件サブフォルダ>/` へ納品・`INDEX.md` 更新。
