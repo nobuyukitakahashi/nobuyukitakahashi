@@ -1031,7 +1031,7 @@ if ($AgyExe) {
     Write-Host "  [INFO] agy CLI not installed on this PC yet (see https://antigravity.google/docs/getting-started)"
 }
 
-Write-Host "`n=== [6.9/6] Syncing 3-Kit Helper Scripts (colab_api.py / nb.py) & Checking clasp / colab CLI ==="
+Write-Host "`n=== [6.9/6] Syncing 3-Kit Helper Scripts (colab_api.py / nb.py), Auto-Installing clasp/colab & Setting Colab Project ==="
 $LocalBinDir3Kit = Join-Path $env:USERPROFILE ".local\bin"
 if (-not (Test-Path $LocalBinDir3Kit)) {
     New-Item -ItemType Directory -Path $LocalBinDir3Kit -Force | Out-Null
@@ -1044,16 +1044,58 @@ foreach ($helperName in @("colab_api.py", "nb.py")) {
     }
 }
 $claspCmdObj = Get-Command clasp.cmd -ErrorAction SilentlyContinue
+if (-not $claspCmdObj) {
+    $npmCmdObj = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if ($npmCmdObj) {
+        Write-Host "  Installing @google/clasp@3..."
+        $ErrorActionPreference = "Continue"
+        & $npmCmdObj.Source install -g @google/clasp@3 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
+        $claspCmdObj = Get-Command clasp.cmd -ErrorAction SilentlyContinue
+    }
+}
 if ($claspCmdObj) {
     Write-Host "  [OK] clasp CLI ready: $($claspCmdObj.Source)"
 } else {
-    Write-Host "  [INFO] clasp CLI not installed yet (run: npm.cmd install -g @google/clasp@3)"
+    Write-Host "  [INFO] clasp CLI not installed (run: npm.cmd install -g @google/clasp@3)"
 }
 $colabExePath = Join-Path $LocalBinDir3Kit "colab.exe"
+if (-not (Test-Path $colabExePath)) {
+    $uvCmdObj = Get-Command uv -ErrorAction SilentlyContinue
+    if ($uvCmdObj) {
+        Write-Host "  Installing google-colab-cli (with keyrings.alt)..."
+        $ErrorActionPreference = "Continue"
+        & $uvCmdObj.Source tool install --with keyrings.alt google-colab-cli 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
+    }
+}
 if (Test-Path $colabExePath) {
     Write-Host "  [OK] Google Colab CLI ready: $colabExePath"
 } else {
-    Write-Host "  [INFO] Google Colab CLI not installed yet (run: uv tool install --with keyrings.alt google-colab-cli)"
+    Write-Host "  [INFO] Google Colab CLI not installed (run: uv tool install --with keyrings.alt google-colab-cli)"
+}
+$colabCfgPath = Join-Path $env:USERPROFILE ".config\colab-api\config.json"
+$colabApiPyPath = Join-Path $LocalBinDir3Kit "colab_api.py"
+if ((-not (Test-Path $colabCfgPath)) -and (Test-Path $colabApiPyPath)) {
+    $defaultColabProj = "gemini-notebook-mcp-515611"
+    $nbCfgLocal = Join-Path $env:LOCALAPPDATA "gemini-notebook-mcp\config.json"
+    if (Test-Path $nbCfgLocal) {
+        try {
+            $nbCfgObj = Get-Content -Path $nbCfgLocal -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($nbCfgObj.project_id) { $defaultColabProj = [string]$nbCfgObj.project_id }
+        } catch {}
+    }
+    $pyCmdObj = Get-Command python -ErrorAction SilentlyContinue
+    if ($pyCmdObj) {
+        $ErrorActionPreference = "Continue"
+        & $pyCmdObj.Source $colabApiPyPath config --project $defaultColabProj 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
+        if (Test-Path $colabCfgPath) {
+            Write-Host "  [OK] Configured Colab quota project ($defaultColabProj) -> $colabCfgPath"
+        }
+    }
+} elseif (Test-Path $colabCfgPath) {
+    Write-Host "  [OK] Colab quota project config exists: $colabCfgPath"
 }
 
 Write-Host "`n=== PC Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="

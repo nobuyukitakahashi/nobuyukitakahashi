@@ -54,6 +54,7 @@ GPU_MAP = {
     "L4": ("VARIANT_GPU", "L4"),
     "G4": ("VARIANT_GPU", "G4"),
     "A100": ("VARIANT_GPU", "A100"),
+    "H100": ("VARIANT_GPU", "H100"),
 }
 
 BLOCKED_NAMES = (
@@ -146,6 +147,11 @@ def _decode_keyring_value(raw_val: str):
     val = raw_val.strip()
     if (val.startswith("b'") and val.endswith("'")) or (val.startswith('b"') and val.endswith('"')):
         val = val[2:-1]
+    if val.startswith("{"):
+        try:
+            return json.loads(val)
+        except Exception:
+            pass
     for decoder in (base64.b64decode, base64.urlsafe_b64decode):
         try:
             padded = val + "=" * (-len(val) % 4)
