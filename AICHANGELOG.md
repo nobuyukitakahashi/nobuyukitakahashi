@@ -1,5 +1,24 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v36): マスタールール双方向モデル停止ゲート強化・参考原本忠実性厳格化 ＆ `/system-evolution` 定期監査（Antigravity v2.36.0 対応確認）
+
+### 変更理由
+1. 派生デザイン（PC版→スマホ版等）制作・監査時に、参考原本と異なる人物トリミング・早期フェードを「境界が滑らか」等の好意的解釈で許容してしまう見逃しを恒久防止するため。
+2. アンダースペック時だけでなく、上位モデルで軽量・定型作業（領域D）を実行するオーバースペック時も実作業前に一時停止して警告・4択提示を行い、クォータ消費を最適化するため。
+3. `/system-evolution` 定期点検として Antigravity v2.36.0 最新仕様・全27モデル残クォータ・`verify_org.py` 機械監査・`org_guard.js` Hooks 実機ドライランを検証・記録するため。
+
+### Before / After
+- **参考原本・派生デザイン忠実性 ＆ 好意的許容禁止（コミット `f4f8de9`）**:
+  - [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md) §5 および [`07_QA_Dept/AGENTS.md`](07_QA_Dept/AGENTS.md) §1・§2 へ、原本・参考案と異なる処置の禁止および差異検知時の必須 `FAIL` 差し戻し規定を追加。
+- **パターンB オーバースペック実行前一時停止ゲート統一（コミット `985ffae`）**:
+  - [`.agents/plugins/global-master-rules/rules/AGENTS.md`](.agents/plugins/global-master-rules/rules/AGENTS.md) §1 パターンBをパターンAと同一の「実行前一時停止＋4択提示（画面切替 / `swarm`軽量 / `flash`委譲 / 続行）」へ強化（ツール不要の挨拶・1手即答の単純質問のみ例外）。
+- **`/system-evolution` 監査結果**:
+  - Antigravity v2.36.0（別ドライブプラグイン検出修正・`~/.agents/skills` 対応等）および全27モデル（Claude 5.5: 100%, Gemini 4 / Orchestrator: 75%、未記載主力モデルなし）を確認。
+  - `verify_org.py`: **PASS**（ルール11件 38,364B・スキル24件・`INDEX.md` 21,928B・違反0件）、`org_guard.js` 3ケース実機検証 **PASS**。
+  - 監査ログ: [`05_System_Evolution_Dept/evolution_logs/evolution_20261128.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261128.md)
+
+---
+
 ## 2026-11-28 (v35): 全30プロジェクト＋Obsidian 横断改善（Phase A〜D 完了：緊急Git復旧・全19サイト `AGENTS.md` 統一・SQL 1.25GB圧縮・一時資産 6.06GB整理・迷子納品物回収）
 
 ### 変更理由
