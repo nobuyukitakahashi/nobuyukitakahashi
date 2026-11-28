@@ -70,6 +70,14 @@ application_default_credentials.json
 gemini-notebook-config.json
 gemini-notebook-tokens.json
 tokens.json
+token.json
+token_cache.json
+pkce_state.json
+.clasprc.json
+clasprc.json
+keyring_pass.cfg
+colab-keyring.cfg
+colab-config.json
 .env
 .env.*
 !.env.example

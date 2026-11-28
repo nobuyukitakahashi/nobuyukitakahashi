@@ -670,4 +670,25 @@ else
 fi
 
 echo ""
+echo "=== [7.9/7] Syncing 3-Kit Helper Scripts (colab_api.py / nb.py) & Checking clasp / colab CLI ==="
+mkdir -p "$HOME/.local/bin"
+for helper_name in colab_api.py nb.py; do
+  if [ -f "$WORKSPACE_ROOT/.agents/scripts/$helper_name" ]; then
+    cp "$WORKSPACE_ROOT/.agents/scripts/$helper_name" "$HOME/.local/bin/$helper_name"
+    chmod 755 "$HOME/.local/bin/$helper_name"
+    echo "  [OK] Synced helper script -> $HOME/.local/bin/$helper_name"
+  fi
+done
+if command -v clasp >/dev/null 2>&1; then
+  echo "  [OK] clasp CLI ready: $(command -v clasp)"
+else
+  echo "  [INFO] clasp CLI not installed yet (run: npm install -g @google/clasp@3)"
+fi
+if command -v colab >/dev/null 2>&1; then
+  echo "  [OK] Google Colab CLI ready: $(command -v colab)"
+else
+  echo "  [INFO] Google Colab CLI not installed yet (run: uv tool install --with keyrings.alt google-colab-cli)"
+fi
+
+echo ""
 echo "=== Mac Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="

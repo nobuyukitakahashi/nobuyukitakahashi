@@ -19,7 +19,7 @@ description: >-
 - **GitHub リソース併設ルール**: Remote Agents ではローカル `~/.gemini/config/` が参照されないため、作業対象リポジトリ（例：`castvision.net` 等）と同じ Remote Project の **GitHub Resources** へ **`nobuyukitakahashi`** を併設する（同一オーナー `nobuyukitakahashi` 配下の複数リポを1プロジェクトへ接続可能）。これにより `AGENTS.md`・`.agents/skills/`・`global-master-rules`・`gemini-notebook-mcp` が自動で効く。
 - **外部連携**:
   - **Cloud Plugins**: `/plugin`（または App `Customizations > Marketplace`）で `github` / `gdrive` / `gdocs` / `gsheets` / `gslides` / `gcalendar` を OAuth 接続。
-  - **Gemini Notebook API**: [`/gemini-notebook`](../gemini-notebook/SKILL.md) 参照（`gemini-notebook-config.json` / `gemini-notebook-tokens.json` を Project の **Upload Files** で `/home/antigravity/upload/` へ配置、Git 厳禁）。
+  - **クラウド3点セット（`clasp` / `Gemini Notebook` / `Colab GPU`）**: Remote Agents の Linux VM 上で `bash .agents/scripts/bootstrap_remote_3kit.sh`（状態確認のみは `--check`）を実行すれば、`@google/clasp@3`・`uv`・`google-colab-cli`・`~/.local/bin/colab_api.py`・`~/.local/bin/nb.py` が自動導入され、Project の **Upload Files**（`/home/antigravity/upload/`）へ置いた認証ファイル（`gemini-notebook-config.json` / `gemini-notebook-tokens.json` / `clasprc.json` / `colab-keyring.cfg` / `colab-config.json`）も `0600` で自動シードされる（**秘密ファイルは Git 厳禁**）。詳細は [`/gemini-notebook`](../gemini-notebook/SKILL.md)・[`/clasp-gas-deploy`](../clasp-gas-deploy/SKILL.md)・[`/colab-api-gpu`](../colab-api-gpu/SKILL.md) を参照。
   - **ローカル専用リソース**: Blender / Adobe / Moho / DaVinci / PTGui / ローカル Obsidian Vault は Remote Agents では動作しないため **Remote Control** を使う。
 
 ## 3. `agy` CLI コマンド早見表

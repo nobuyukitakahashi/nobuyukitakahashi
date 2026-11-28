@@ -1031,4 +1031,29 @@ if ($AgyExe) {
     Write-Host "  [INFO] agy CLI not installed on this PC yet (see https://antigravity.google/docs/getting-started)"
 }
 
+Write-Host "`n=== [6.9/6] Syncing 3-Kit Helper Scripts (colab_api.py / nb.py) & Checking clasp / colab CLI ==="
+$LocalBinDir3Kit = Join-Path $env:USERPROFILE ".local\bin"
+if (-not (Test-Path $LocalBinDir3Kit)) {
+    New-Item -ItemType Directory -Path $LocalBinDir3Kit -Force | Out-Null
+}
+foreach ($helperName in @("colab_api.py", "nb.py")) {
+    $helperSrc = Join-Path $WorkspaceRoot ".agents\scripts\$helperName"
+    if (Test-Path $helperSrc) {
+        Copy-Item -Path $helperSrc -Destination (Join-Path $LocalBinDir3Kit $helperName) -Force
+        Write-Host "  [OK] Synced helper script -> $LocalBinDir3Kit\$helperName"
+    }
+}
+$claspCmdObj = Get-Command clasp.cmd -ErrorAction SilentlyContinue
+if ($claspCmdObj) {
+    Write-Host "  [OK] clasp CLI ready: $($claspCmdObj.Source)"
+} else {
+    Write-Host "  [INFO] clasp CLI not installed yet (run: npm.cmd install -g @google/clasp@3)"
+}
+$colabExePath = Join-Path $LocalBinDir3Kit "colab.exe"
+if (Test-Path $colabExePath) {
+    Write-Host "  [OK] Google Colab CLI ready: $colabExePath"
+} else {
+    Write-Host "  [INFO] Google Colab CLI not installed yet (run: uv tool install --with keyrings.alt google-colab-cli)"
+}
+
 Write-Host "`n=== PC Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="

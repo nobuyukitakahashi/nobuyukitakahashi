@@ -1,5 +1,26 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v38): 3点セット（`clasp` GASデプロイ・`Google Colab API GPU`・`Gemini Notebook API`）の Antigravity ローカル＋Remote Agents 完全統合
+
+### 変更理由
+1. Gemini タスク VM 向け3点セット（`gemini-task-vm-3kit`：`clasp` / `Gemini Notebook API` / `Google Colab GPU`）の全機能を、Antigravity ローカルPC（Windows/macOS）および Remote Agents（クラウド Linux VM）の双方から統一的に利用・同期できるようにするため。
+2. `colab_api.py` を Linux の `keyrings.alt` だけでなく、Remote Agents の `/home/antigravity/upload/` 自動シードおよび Windows/macOS ネイティブ OS キーリングへフォールバック対応させ、秘密情報の Git 混入防止（`.gitignore`）と安全運用ルールを定着させるため。
+
+### Before / After
+- **スクリプト正本統合**:
+  - [`.agents/scripts/colab_api.py`](.agents/scripts/colab_api.py): HTTPS + SSE 経由 Colab GPU 実行 CLI（Upload Files 自動シード＋Windows/macOS OSキーリングフォールバック追加）。
+  - [`.agents/scripts/nb.py`](.agents/scripts/nb.py): Python 標準ライブラリのみの Gemini Notebook API CLI（ヘッドレス PKCE 認証対応）。
+  - [`.agents/scripts/bootstrap_remote_3kit.sh`](.agents/scripts/bootstrap_remote_3kit.sh): Remote Agents Linux VM 向け 3点セット自動導入＆`--check` 診断スクリプト。
+- **スキル新設・統合**:
+  - 新設：[`.agents/skills/clasp-gas-deploy/SKILL.md`](.agents/skills/clasp-gas-deploy/SKILL.md)（GAS 作成・pull/push/deploy・`MYSELF`既定・安全ルール）、[`.agents/skills/colab-api-gpu/SKILL.md`](.agents/skills/colab-api-gpu/SKILL.md)（GPU実行・自動ランタイム削除・台帳管理・T4注意）。
+  - 統合更新：[`.agents/skills/gemini-notebook/SKILL.md`](.agents/skills/gemini-notebook/SKILL.md)（削除API無し安全ルール・`nb.py` ヘッドレス認証統合）、[`.agents/skills/remote-agents/SKILL.md`](.agents/skills/remote-agents/SKILL.md)（3点セット `bootstrap_remote_3kit.sh` 運用追記）。
+- **秘密情報保護・同期拡張**:
+  - [`.gitignore`](.gitignore) へ `.clasprc.json`, `keyring_pass.cfg`, `colab-keyring.cfg`, `colab-config.json`, `token_cache.json`, `pkce_state.json`, `token.json` を追加。
+  - [`sync_pc_env.ps1`](.agents/skills/pc-env-sync/scripts/sync_pc_env.ps1) / [`sync_mac_env.sh`](.agents/skills/pc-env-sync/scripts/sync_mac_env.sh) へ `~/.local/bin/{colab_api.py,nb.py}` 自動同期と `clasp` / `colab` CLI 検証を追加。
+  - ローカルPCへ `@google/clasp@3`（`v3.4.1`）・`google-colab-cli`（`v0.8.0` + `keyrings.alt`）を導入し、`colab_api.py` 既定プロジェクト ID（`gemini-notebook-mcp-515611`）を設定済み。
+
+---
+
 ## 2026-11-28 (v37): Antigravity Remote Agents サブ機構成・`gemini-notebook-mcp` クラウド対応・Remote Control 設定整備
 
 ### 変更理由
