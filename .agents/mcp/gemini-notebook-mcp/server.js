@@ -38,8 +38,10 @@ const DEFAULT_SCOPES = [
 const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // 200 MiB per official API limit
 const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000; // refresh 5 minutes before expiry
 
-// In-memory cache for refreshed ADC tokens (so we don't hit oauth2 endpoint on every call)
+// In-memory cache for refreshed ADC / env / read-only OAuth tokens
 let cachedAdcToken = null;
+let cachedEnvOAuthToken = null;
+let cachedFallbackOAuthToken = null;
 
 /**
  * Resolve local OS config directory (strictly outside Git repository).
@@ -66,6 +68,78 @@ function getConfigPaths() {
     configFile: path.join(dir, "config.json"),
     tokensFile: path.join(dir, "tokens.json")
   };
+}
+
+function getUploadDirs() {
+  const dirs = [];
+  if (process.env.ANTIGRAVITY_UPLOAD_DIR) {
+    dirs.push(path.resolve(process.env.ANTIGRAVITY_UPLOAD_DIR));
+  }
+  if (!IS_WIN) {
+    dirs.push("/home/antigravity/upload");
+  }
+  return dirs.filter((d, idx) => d && dirs.indexOf(d) === idx && fs.existsSync(d));
+}
+
+function findUploadedSeedFiles() {
+  const uploadDirs = getUploadDirs();
+  let configSeed = null;
+  let tokensSeed = null;
+
+  for (const dir of uploadDirs) {
+    if (!configSeed) {
+      for (const name of ["gemini-notebook-config.json", "config.json"]) {
+        const cand = path.join(dir, name);
+        const parsed = readJsonIfExists(cand);
+        if (parsed && typeof parsed.clientId === "string" && parsed.clientId && typeof parsed.projectId === "string" && parsed.projectId) {
+          configSeed = { path: cand, data: parsed };
+          break;
+        }
+      }
+    }
+    if (!tokensSeed) {
+      for (const name of ["gemini-notebook-tokens.json", "tokens.json"]) {
+        const cand = path.join(dir, name);
+        const parsed = readJsonIfExists(cand);
+        if (parsed && (typeof parsed.refresh_token === "string" || typeof parsed.access_token === "string")) {
+          tokensSeed = { path: cand, data: parsed };
+          break;
+        }
+      }
+    }
+  }
+  return { uploadDirs, configSeed, tokensSeed };
+}
+
+function seedFromUploadDirIfNeeded(paths) {
+  const existingCfg = readJsonIfExists(paths.configFile);
+  const existingTokens = readJsonIfExists(paths.tokensFile);
+  if (existingCfg && existingCfg.clientId && existingTokens && (existingTokens.refresh_token || existingTokens.access_token)) {
+    return { cfg: existingCfg, tokens: existingTokens, seededConfig: null, seededTokens: null };
+  }
+
+  const { configSeed, tokensSeed } = findUploadedSeedFiles();
+  let resolvedCfg = existingCfg;
+  let resolvedTokens = existingTokens;
+  let seededConfig = null;
+  let seededTokens = null;
+
+  if ((!resolvedCfg || !resolvedCfg.clientId) && configSeed) {
+    resolvedCfg = configSeed.data;
+    seededConfig = configSeed.path;
+    try {
+      writePrivateJson(paths.configFile, resolvedCfg);
+    } catch (_) {}
+  }
+  if ((!resolvedTokens || (!resolvedTokens.refresh_token && !resolvedTokens.access_token)) && tokensSeed) {
+    resolvedTokens = tokensSeed.data;
+    seededTokens = tokensSeed.path;
+    try {
+      writePrivateJson(paths.tokensFile, resolvedTokens);
+    } catch (_) {}
+  }
+
+  return { cfg: resolvedCfg, tokens: resolvedTokens, seededConfig, seededTokens };
 }
 
 function ensurePrivateDir(dirPath) {
@@ -262,13 +336,15 @@ async function refreshAccessToken({ clientId, clientSecret, refreshToken }) {
  * Resolve active OAuth Bearer token and GCP Project ID.
  * Priority:
  * 1. Explicit env var GEMINI_NOTEBOOK_ACCESS_TOKEN
- * 2. Local OAuth Desktop Client config.json + tokens.json (auto-refreshing)
- * 3. gcloud ADC authorized_user JSON (direct Node.js auto-refresh, no gcloud binary required)
- * 4. gcloud CLI print-access-token fallback
+ * 2. Local OAuth Desktop Client config.json + tokens.json (auto-seeded from Remote Agents /home/antigravity/upload if needed)
+ * 3. Env OAuth Desktop Client refresh_token (GEMINI_NOTEBOOK_CLIENT_ID + GEMINI_NOTEBOOK_REFRESH_TOKEN)
+ * 4. gcloud ADC authorized_user JSON (direct Node.js auto-refresh, no gcloud binary required)
+ * 5. gcloud CLI print-access-token fallback
  */
 async function resolveAuthContext({ forceRefresh = false } = {}) {
   const paths = getConfigPaths();
-  const localCfg = readJsonIfExists(paths.configFile);
+  const seeded = seedFromUploadDirIfNeeded(paths);
+  const localCfg = seeded.cfg;
   const envProjectId =
     process.env.GEMINI_NOTEBOOK_PROJECT_ID ||
     process.env.GOOGLE_CLOUD_PROJECT ||
@@ -286,11 +362,25 @@ async function resolveAuthContext({ forceRefresh = false } = {}) {
     };
   }
 
-  // 2. Local OAuth 2.0 Desktop Client + tokens.json (recommended, auto-refreshing)
-  const localTokens = readJsonIfExists(paths.tokensFile);
+  // 2. Local OAuth 2.0 Desktop Client + tokens.json (or Remote Agents upload-seeded config)
+  const localTokens = seeded.tokens;
   if (localCfg && localCfg.clientId && localTokens) {
     const projectId = envProjectId || localCfg.projectId || null;
     const now = Date.now();
+    if (
+      !forceRefresh &&
+      cachedFallbackOAuthToken &&
+      cachedFallbackOAuthToken.clientId === localCfg.clientId &&
+      cachedFallbackOAuthToken.expiryDate - now > TOKEN_REFRESH_MARGIN_MS
+    ) {
+      return {
+        source: "oauth_desktop_memory_cached",
+        accessToken: cachedFallbackOAuthToken.accessToken,
+        projectId,
+        expiryDate: cachedFallbackOAuthToken.expiryDate
+      };
+    }
+
     const isValid =
       !forceRefresh &&
       localTokens.access_token &&
@@ -299,7 +389,7 @@ async function resolveAuthContext({ forceRefresh = false } = {}) {
 
     if (isValid) {
       return {
-        source: "oauth_desktop_cached",
+        source: seeded.seededTokens ? "oauth_upload_seeded_cached" : "oauth_desktop_cached",
         accessToken: localTokens.access_token,
         projectId,
         expiryDate: localTokens.expiry_date
@@ -312,13 +402,20 @@ async function resolveAuthContext({ forceRefresh = false } = {}) {
         clientSecret: localCfg.clientSecret || "",
         refreshToken: localTokens.refresh_token
       });
-      writePrivateJson(paths.tokensFile, {
-        ...localTokens,
-        ...refreshed,
-        updatedAt: new Date().toISOString()
-      });
+      cachedFallbackOAuthToken = {
+        clientId: localCfg.clientId,
+        accessToken: refreshed.access_token,
+        expiryDate: refreshed.expiry_date
+      };
+      try {
+        writePrivateJson(paths.tokensFile, {
+          ...localTokens,
+          ...refreshed,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (_) {}
       return {
-        source: "oauth_desktop_refreshed",
+        source: seeded.seededTokens ? "oauth_upload_seeded_refreshed" : "oauth_desktop_refreshed",
         accessToken: refreshed.access_token,
         projectId,
         expiryDate: refreshed.expiry_date
@@ -326,7 +423,41 @@ async function resolveAuthContext({ forceRefresh = false } = {}) {
     }
   }
 
-  // 3. gcloud ADC authorized_user JSON (direct refresh without gcloud binary)
+  // 3. Env OAuth 2.0 Desktop Client refresh_token (useful for Remote Agents / CI without local files)
+  if (process.env.GEMINI_NOTEBOOK_CLIENT_ID && process.env.GEMINI_NOTEBOOK_REFRESH_TOKEN) {
+    const clientId = process.env.GEMINI_NOTEBOOK_CLIENT_ID.trim();
+    const clientSecret = (process.env.GEMINI_NOTEBOOK_CLIENT_SECRET || "").trim();
+    const refreshToken = process.env.GEMINI_NOTEBOOK_REFRESH_TOKEN.trim();
+    const projectId = envProjectId || (localCfg && localCfg.projectId) || null;
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      cachedEnvOAuthToken &&
+      cachedEnvOAuthToken.clientId === clientId &&
+      cachedEnvOAuthToken.expiryDate - now > TOKEN_REFRESH_MARGIN_MS
+    ) {
+      return {
+        source: "env_oauth_cached",
+        accessToken: cachedEnvOAuthToken.accessToken,
+        projectId,
+        expiryDate: cachedEnvOAuthToken.expiryDate
+      };
+    }
+    const refreshed = await refreshAccessToken({ clientId, clientSecret, refreshToken });
+    cachedEnvOAuthToken = {
+      clientId,
+      accessToken: refreshed.access_token,
+      expiryDate: refreshed.expiry_date
+    };
+    return {
+      source: "env_oauth_refreshed",
+      accessToken: refreshed.access_token,
+      projectId,
+      expiryDate: refreshed.expiry_date
+    };
+  }
+
+  // 4. gcloud ADC authorized_user JSON (direct refresh without gcloud binary)
   const adcFile = findAdcFile();
   if (adcFile) {
     const adc = readJsonIfExists(adcFile);
@@ -738,8 +869,10 @@ async function pollSourceUntilDone(sourceName, { timeout_seconds = 60, poll_inte
 
 async function getGeminiNotebookStatus(args = {}) {
   const paths = getConfigPaths();
-  const localCfg = readJsonIfExists(paths.configFile);
-  const localTokens = readJsonIfExists(paths.tokensFile);
+  const seeded = seedFromUploadDirIfNeeded(paths);
+  const uploadCheck = findUploadedSeedFiles();
+  const localCfg = seeded.cfg;
+  const localTokens = seeded.tokens;
   const adcFile = findAdcFile();
   const adcData = adcFile ? readJsonIfExists(adcFile) : null;
   const gcloud = detectGcloudCommand();
@@ -761,6 +894,11 @@ async function getGeminiNotebookStatus(args = {}) {
           : null,
       scope: (localTokens && localTokens.scope) || null
     },
+    remote_upload_seed: {
+      upload_dirs_detected: uploadCheck.uploadDirs,
+      config_seed_found: Boolean(uploadCheck.configSeed),
+      tokens_seed_found: Boolean(uploadCheck.tokensSeed)
+    },
     gcloud_adc: {
       adc_file_exists: Boolean(adcFile),
       adc_file: adcFile || null,
@@ -771,6 +909,7 @@ async function getGeminiNotebookStatus(args = {}) {
     },
     env_override: {
       has_access_token: Boolean(process.env.GEMINI_NOTEBOOK_ACCESS_TOKEN),
+      has_refresh_token: Boolean(process.env.GEMINI_NOTEBOOK_CLIENT_ID && process.env.GEMINI_NOTEBOOK_REFRESH_TOKEN),
       project_id:
         process.env.GEMINI_NOTEBOOK_PROJECT_ID ||
         process.env.GOOGLE_CLOUD_PROJECT ||
@@ -779,6 +918,7 @@ async function getGeminiNotebookStatus(args = {}) {
     },
     ready_for_api: Boolean(
       process.env.GEMINI_NOTEBOOK_ACCESS_TOKEN ||
+        (process.env.GEMINI_NOTEBOOK_CLIENT_ID && process.env.GEMINI_NOTEBOOK_REFRESH_TOKEN) ||
         (localCfg && localCfg.clientId && localTokens && (localTokens.refresh_token || localTokens.access_token)) ||
         (adcData && adcData.type === "authorized_user" && adcData.refresh_token) ||
         gcloud.installed

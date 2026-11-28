@@ -65,3 +65,11 @@ id_ecdsa*
 *.key
 *.pem
 *.ppk
+client_secret*.json
+application_default_credentials.json
+gemini-notebook-config.json
+gemini-notebook-tokens.json
+tokens.json
+.env
+.env.*
+!.env.example

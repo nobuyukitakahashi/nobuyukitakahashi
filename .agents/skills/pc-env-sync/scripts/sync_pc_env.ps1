@@ -963,4 +963,72 @@ if (Test-Path $AppExePath) {
     Write-Host "  [OK] Created launcher shortcut: $lnkPathApp"
 }
 
+Write-Host "`n=== [6.8/6] Checking agy CLI, settings.json & Remote Agents / Remote Control Status ==="
+$AgyCliSettingsDir = Join-Path $env:USERPROFILE ".gemini\antigravity-cli"
+if (-not (Test-Path $AgyCliSettingsDir)) {
+    New-Item -ItemType Directory -Path $AgyCliSettingsDir -Force | Out-Null
+}
+$AgyCliSettingsPath = Join-Path $AgyCliSettingsDir "settings.json"
+$cliSettingsObj = [ordered]@{}
+$hasSchema = $false
+if (Test-Path $AgyCliSettingsPath) {
+    try {
+        $rawCli = Get-Content -Path $AgyCliSettingsPath -Raw -Encoding UTF8
+        if ($rawCli -and $rawCli.Trim()) {
+            $parsedCli = $rawCli | ConvertFrom-Json
+            if ($parsedCli) {
+                foreach ($prop in $parsedCli.PSObject.Properties) {
+                    if ($prop.Name -eq '$schema') { $hasSchema = $true }
+                    $cliSettingsObj[$prop.Name] = $prop.Value
+                }
+            }
+        }
+    } catch {
+        $cliSettingsObj = [ordered]@{}
+    }
+}
+if (-not $hasSchema) {
+    $orderedCli = [ordered]@{ '$schema' = "https://antigravity.google/schemas/v1/settings.json" }
+    foreach ($k in $cliSettingsObj.Keys) {
+        $orderedCli[$k] = $cliSettingsObj[$k]
+    }
+    $utf8NoBomCli = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($AgyCliSettingsPath, ($orderedCli | ConvertTo-Json -Depth 10), $utf8NoBomCli)
+    Write-Host "  [OK] Added `$schema to $AgyCliSettingsPath"
+} else {
+    Write-Host "  [OK] agy CLI settings.json schema configured: $AgyCliSettingsPath"
+}
+
+$AgyCandidates = @(
+    (Join-Path $env:LOCALAPPDATA "agy\bin\agy.exe"),
+    (Join-Path $env:USERPROFILE ".gemini\bin\agy.exe")
+) | Where-Object { Test-Path $_ }
+$AgyExe = $AgyCandidates | Select-Object -First 1
+if (-not $AgyExe) {
+    $agyCmd = Get-Command agy -ErrorAction SilentlyContinue
+    if ($agyCmd) { $AgyExe = $agyCmd.Source }
+}
+if ($AgyExe) {
+    $ErrorActionPreference = "Continue"
+    $agyVerRaw = (& $AgyExe --version 2>&1 | Out-String).Trim()
+    $rcStatusRaw = (& $AgyExe remote-control status 2>&1 | Out-String).Trim()
+    $ErrorActionPreference = "Stop"
+    if ($agyVerRaw -match '(\d+\.\d+\.\d+)') {
+        $verObj = [Version]$Matches[1]
+        if ($verObj -ge [Version]"1.4.12") {
+            Write-Host "  [OK] agy CLI v$($Matches[1]) (--remote-agent ready): $AgyExe"
+        } else {
+            Write-Host "  [WARN] agy CLI v$($Matches[1]) < 1.4.12; run 'agy update' for --remote-agent support"
+        }
+    } else {
+        Write-Host "  [INFO] agy CLI detected ($AgyExe): $agyVerRaw"
+    }
+    $rcFirstLine = ($rcStatusRaw -split "`r?`n" | Select-Object -First 2) -join " | "
+    if ($rcFirstLine) {
+        Write-Host "  [INFO] Remote Control daemon: $rcFirstLine"
+    }
+} else {
+    Write-Host "  [INFO] agy CLI not installed on this PC yet (see https://antigravity.google/docs/getting-started)"
+}
+
 Write-Host "`n=== PC Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="

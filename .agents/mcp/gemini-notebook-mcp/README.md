@@ -18,10 +18,16 @@ Google 公式 **Gemini Notebook REST API（`https://notebook.googleapis.com/v1` 
 認証情報の保存先（Git 管理外のローカル OS 保護領域）：
 - **Windows**: `%LOCALAPPDATA%\gemini-notebook-mcp\`
 - **macOS**: `~/Library/Application Support/gemini-notebook-mcp/`
+- **Linux**: `${XDG_CONFIG_HOME:-~/.config}/gemini-notebook-mcp/`（Remote Agents では `/home/antigravity/upload/` から自動シード可）
 
 ### 複数端末間での自動同期
 `/pc-env-sync`（`sync_pc_env.ps1` / `sync_mac_env.sh`）を実行すると、上記ローカル領域の `config.json` と `tokens.json` が **Git 管理外の Google Drive プライベート領域（`<DriveRoot>/_private_backup/gemini-notebook-mcp/`）** と更新日時ベースで双方向自動同期されます。
 これにより、1台のPCで初回ログインを完了すれば、他の Windows / Mac 端末では再ログインや `client_secret.json` の再設定なしで即座に利用できます。
+
+### Remote Agents（クラウド Linux VM）での利用（Git 非保存）
+1. ローカルの `%LOCALAPPDATA%\gemini-notebook-mcp\`（または Google Drive の `_private_backup\gemini-notebook-mcp\`）にある `config.json` と `tokens.json` を、Antigravity Remote Project の **Resources > Upload Files**（または CLI `/projects`）からアップロードする（`gemini-notebook-config.json` / `gemini-notebook-tokens.json` へのリネーム推奨）。
+2. Remote Agents コンテナ起動時に `/home/antigravity/upload/` へ永続配置され、`cli.js` / `server.js` 実行時に `~/.config/gemini-notebook-mcp/` へ自動シードされる（**絶対に Git へコミットしないこと**）。
+3. 代替として環境変数（`GEMINI_NOTEBOOK_PROJECT_ID`, `GEMINI_NOTEBOOK_CLIENT_ID`, `GEMINI_NOTEBOOK_CLIENT_SECRET`, `GEMINI_NOTEBOOK_REFRESH_TOKEN`）でも OAuth リフレッシュ可能。
 
 ## 初回セットアップ手順（個人 Google アカウント向け）
 

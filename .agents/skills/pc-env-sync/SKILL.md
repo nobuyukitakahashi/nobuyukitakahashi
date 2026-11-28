@@ -34,3 +34,7 @@ PCローカル依存設定（`~/.gitconfig`, `~/.ssh/config`, `~/.gemini/config/
 - バックアップ：`node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" backup`
 - 復元（既存退避＋権限自動設定）：`node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" restore`
 - 検証（読取専用）：`node "$HOME/.gemini/config/skills/pc-env-sync/scripts/ssh_vault.js" verify`
+
+## Remote Agents（クラウドVM）・Remote Control 連携
+- PC非保有・電源OFF状態でのサブ機運用は [remote-agents](../remote-agents/SKILL.md)（`agy --remote-agent` / `antigravity.google`）を使用する。
+- クラウドVMへ `gemini-notebook-mcp` 認証（`config.json` / `tokens.json`）を渡す場合は Git へ入れず、Remote Project の **Upload Files**（`/home/antigravity/upload/`）経由で引き渡す（[gemini-notebook](../gemini-notebook/SKILL.md)）。

@@ -1,5 +1,19 @@
 # AI変更履歴 (AICHANGELOG)
 
+## 2026-11-28 (v37): Antigravity Remote Agents サブ機構成・`gemini-notebook-mcp` クラウド対応・Remote Control 設定整備
+
+### 変更理由
+1. ローカルPC非依存で稼働する **Remote Agents（`agy --remote-agent` / `antigravity.google`）** 上でも、`nobuyukitakahashi` 組織スキル・ルールおよび **`gemini-notebook-mcp`**（Google Cloud `gemini-notebook-mcp-515611` OAuth）を Git へ秘密情報を含めず安全に運用可能とするため。
+2. ローカル `agy` CLI（`v1.5.18`）・Remote Control（`msi-lunar-nova` / `msi-lunar-nova-cli`）設定と `pc-env-sync` 同期基盤を最新仕様（`v2.36.0` `~/.agents/skills` 自動ディスカバリ対応含む）に整合させるため。
+
+### Before / After
+- **`gemini-notebook-mcp` クラウドVM対応**: [`.agents/mcp/gemini-notebook-mcp/server.js`](.agents/mcp/gemini-notebook-mcp/server.js) へ Remote Agents `/home/antigravity/upload/` 自動シードおよび環境変数 OAuth リフレッシュ対応を追加。
+- **スキル新設**: [`.agents/skills/remote-agents/SKILL.md`](.agents/skills/remote-agents/SKILL.md)（4モード使い分け・GitHub併設運用）、[`.agents/skills/gemini-notebook/SKILL.md`](.agents/skills/gemini-notebook/SKILL.md)（ローカルMCP/リモートCLI統合）。
+- **秘密情報防衛 ＆ 同期強化**: [`.gitignore`](.gitignore) へ OAuth JSON・`.env` 除外を追加し、[`pc-env-sync`](.agents/skills/pc-env-sync/SKILL.md)（`sync_pc_env.ps1` / `sync_mac_env.sh`）へ `agy` CLI バージョン・Remote Control 状態確認・`settings.json` `$schema` 保全を追加。
+- **監査ログ**: [`05_System_Evolution_Dept/evolution_logs/evolution_20261128_remote_agents_setup.md`](05_System_Evolution_Dept/evolution_logs/evolution_20261128_remote_agents_setup.md)
+
+---
+
 ## 2026-11-28 (v36): マスタールール双方向モデル停止ゲート強化・参考原本忠実性厳格化 ＆ `/system-evolution` 定期監査（Antigravity v2.36.0 対応確認）
 
 ### 変更理由

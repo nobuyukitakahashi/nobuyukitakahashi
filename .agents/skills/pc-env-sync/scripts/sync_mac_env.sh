@@ -625,4 +625,49 @@ if [ -d "$DESKTOP_DIR" ]; then
 fi
 
 echo ""
+echo "=== [7.8/7] Checking agy CLI, settings.json & Remote Agents / Remote Control Status ==="
+AGY_CLI_DIR="$HOME/.gemini/antigravity-cli"
+mkdir -p "$AGY_CLI_DIR"
+AGY_CLI_SETTINGS="$AGY_CLI_DIR/settings.json"
+if command -v node >/dev/null 2>&1; then
+  "$NODE_BIN" -e '
+    const fs = require("fs");
+    const p = process.argv[1];
+    let obj = {};
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p, "utf8").trim();
+        if (raw) obj = JSON.parse(raw);
+      } catch (_) {}
+    }
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) obj = {};
+    if (!obj["$schema"]) {
+      const next = { "$schema": "https://antigravity.google/schemas/v1/settings.json", ...obj };
+      fs.writeFileSync(p, JSON.stringify(next, null, 2) + "\n", "utf8");
+      console.log("  [OK] Added $schema to " + p);
+    } else {
+      console.log("  [OK] agy CLI settings.json schema configured: " + p);
+    }
+  ' "$AGY_CLI_SETTINGS"
+fi
+
+AGY_BIN=""
+for cand in "$HOME/.local/bin/agy" "$HOME/.gemini/bin/agy" "$(command -v agy 2>/dev/null || true)"; do
+  if [ -n "$cand" ] && [ -x "$cand" ]; then
+    AGY_BIN="$cand"
+    break
+  fi
+done
+if [ -n "$AGY_BIN" ]; then
+  AGY_VER="$("$AGY_BIN" --version 2>/dev/null | head -n 1 || true)"
+  RC_STAT="$("$AGY_BIN" remote-control status 2>/dev/null | tr '\n' '|' | sed 's/|$//' || true)"
+  echo "  [OK] agy CLI detected ($AGY_BIN): $AGY_VER"
+  if [ -n "$RC_STAT" ]; then
+    echo "  [INFO] Remote Control daemon: $RC_STAT"
+  fi
+else
+  echo "  [INFO] agy CLI not installed on this Mac yet (see https://antigravity.google/docs/getting-started)"
+fi
+
+echo ""
 echo "=== Mac Environment Sync Complete (Reload Antigravity if MCP config was updated) ==="
